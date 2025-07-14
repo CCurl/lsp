@@ -168,7 +168,8 @@ char *genSym(char *name) {
         if (strcmp(syms[i], name) == 0) { return syms[i]; }
     }
     syms[numSyms] = hAlloc(strlen(name) + 1);
-    strcpy(syms[numSyms++], name);
+    strcpy(syms[numSyms], name);
+    return syms[numSyms++];
 }
 
 /* <term> ::= <id> | <int> | <paren_expr> */
@@ -502,5 +503,6 @@ int main(int argc, char *argv[]) {
     }
     if (sp) { error("-stack not empty-"); }
     hDump();
+    printf("\n");
     return 0;
 }

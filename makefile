@@ -1,4 +1,4 @@
-app := lsp
+app := tc
 
 ARCH ?= 32
 CXX := clang
@@ -18,7 +18,7 @@ clean:
 	rm -f $(app) $(app32)
 
 test: $(app)
-	./$(app) test.lsp
+	./$(app) test.tc
 
 run: $(app)
 	./$(app)
