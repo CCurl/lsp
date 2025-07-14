@@ -24,6 +24,7 @@
 #define BCASE break; case
 #define SNODE struct NODE_S
 
+typedef unsigned int uint;
 typedef unsigned long ulong;
 typedef char *PCHAR;
 
@@ -39,7 +40,7 @@ enum {
 
 enum {
 	ATOM_FREE, ATOM_LIST, ATOM_NUMBER, ATOM_STRING, ATOM_ENUM,
-	ATOM_NIL, ATOM_TRUE, ATOM_FALSE, ATOM_PGM,
+	ATOM_NIL, ATOM_TRUE, ATOM_FALSE, ATOM_PGM, ATOM_SEQ,
 	ATOM_ZTYPE, ATOM_ADD, ATOM_DOT
 };
 
@@ -68,7 +69,7 @@ char heap[HEAP_SZ];
 
 void hDump() {
 	printf("\nn-%u/h-%u",hiCount,hHere);
-	for (int i = 0; i < hiCount; i++) {
+	for (uint i = 0; i < hiCount; i++) {
 		PHEAP x = (PHEAP)&hIndex[i];
 		printf("\nhi-%d/iu-%u/sz-%u/off-%u/d:[%s]",
 			i, x->inUse, x->sz, x->off, &heap[x->off]);
@@ -76,9 +77,9 @@ void hDump() {
 	printf("\n");
 }
 
-int hFindFree(int sz) {
+int hFindFree(uint sz) {
 	int best = -1;
-	for (int i = 0; i < hiCount; i++) {
+	for (uint i = 0; i < hiCount; i++) {
 		PHEAP x = &hIndex[i];
 		if ((x->inUse == 0) && (sz <= x->sz)) {
 			if (x->sz == sz) { return i; }
@@ -88,7 +89,7 @@ int hFindFree(int sz) {
 	return best;
 }
 
-PCHAR hAlloc(int sz) {
+PCHAR hAlloc(uint sz) {
 	const int hASG = 8; // alloc size granularity
 	if (sz == 0) { sz = 1; }
 	if ((sz % hASG) != 0) { sz += hASG - (sz % hASG); }
@@ -113,7 +114,7 @@ PCHAR hAlloc(int sz) {
 int hFindData(char *data) {
 	int32_t off = data-&heap[0];
 	if (!BTWI(off,0,HEAP_SZ-1)) { return -1; }
-	for (int i = 0; i < hiCount; i++) {
+	for (uint i = 0; i < hiCount; i++) {
 		if (hIndex[i].off == off) { return i; }
 	}
 	return -1;
@@ -304,20 +305,20 @@ void dumpNode(PNODE obj) {
 	PNODE o = obj;
 	while (o) {
 		switch (o->type) {
-			case ATOM_LIST:    zType("( "); dumpNode((PNODE)o->val); zType(")");
-			BCASE ATOM_NUMBER: printf("%ld", (long)o->val);
-			BCASE ATOM_STRING: printf("'%s'", (PCHAR)o->val);
-			BCASE ATOM_ENUM:   printf("%s", (PCHAR)o->val);
-			BCASE ATOM_NIL:    zType("<nil>");
-			BCASE ATOM_TRUE:   zType("<true>");
-			BCASE ATOM_FALSE:  zType("<false>");
-			BCASE ATOM_ZTYPE:  zType("<ztype>");
-			BCASE ATOM_DOT:    zType("<.>");
-			BCASE ATOM_ADD:    zType("<+>");
+			case ATOM_LIST:    zType("( "); dumpNode((PNODE)o->val); zType(") ");
+			BCASE ATOM_NUMBER: printf("%ld ", (long)o->val);
+			BCASE ATOM_STRING: printf("'%s' ", (PCHAR)o->val);
+			BCASE ATOM_ENUM:   printf("%s ", (PCHAR)o->val);
+			BCASE ATOM_NIL:    zType("<nil> ");
+			BCASE ATOM_TRUE:   zType("<true> ");
+			BCASE ATOM_FALSE:  zType("<false> ");
+			BCASE ATOM_ZTYPE:  zType("<ztype> ");
+			BCASE ATOM_DOT:    zType("<.> ");
+			BCASE ATOM_ADD:    zType("<+> ");
 			BCASE ATOM_PGM:    zType("PGM: "); dumpNode((PNODE)o->val);
+			BCASE ATOM_SEQ:    zType("\nSEQ: "); dumpNode((PNODE)o->val);
 			break; default: break;
 		}
-		zType(" ");
 		if (o) { o = o->next; }
 	}
 }
@@ -328,10 +329,11 @@ PNODE parse() {
 
 	nextSym();
 	while (sym != SYM_EOI) {
-		PNODE a = buildAtom();
-		if (a == NULL) { break; }
-		if (seq) { seq->next = a; seq = a; }
-		else { seq = a; pgm->val = (long)seq; }
+		PNODE s = ndAlloc(ATOM_SEQ);
+		s->val = (long)buildAtom();
+		if (s->val == 0) { break; }
+		if (seq) { seq->next = s; seq = s; }
+		else { seq = s; pgm->val = (long)seq; }
 		nextSym();
 	}
 	return pgm;
@@ -364,6 +366,7 @@ void genCode(PNODE sTree) {
 			BCASE ATOM_DOT:    gen(DOT);
 			BCASE ATOM_ZTYPE:  gen(ZTYPE);
 			BCASE ATOM_PGM:    genCode((PNODE)o->val);
+			BCASE ATOM_SEQ:    genCode((PNODE)o->val);
 			break; default: break;
 		}
 		if (o) { o = o->next; }
