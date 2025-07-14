@@ -144,12 +144,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <None Include="boot.lsp" />
+    <None Include="test.tc" />
     <None Include="makefile" />
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="lsp.c" />
+    <ClCompile Include="heap.c" />
+    <ClCompile Include="tc.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="heap.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
