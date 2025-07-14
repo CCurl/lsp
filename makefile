@@ -1,9 +1,10 @@
 app := lsp
 
+ARCH ?= 32
 CXX := clang
-CFLAGS := -m32 -O3 -D IS_LINUX
+CFLAGS := -m$(ARCH) -O3 -D IS_LINUX
 
-srcfiles := $(shell find . -name "*.cpp")
+srcfiles := $(shell find . -name "*.c")
 incfiles := $(shell find . -name "*.h")
 LDLIBS   := -lm
 

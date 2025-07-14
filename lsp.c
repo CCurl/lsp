@@ -9,41 +9,38 @@
 	<atom>  ::=	<number> |
 				'<string>' |
 				"<string>" |
-				<enum> |
+				<id> |
 				"(" <list> ")" |
 				true |
 				false |
 				nil
 	<list> ::=	<atom> |
 				<list> <atom>
-	<enum> ::=	<alpha> |
-				<enum> <alphanum>
+	<id> ::=	<alpha> |
+				<id> <alphanum>
 */
 
-#define NUM_OBJECTS 100
 #define BTWI(n,l,h) (((l)<=(n)) && ((n)<=(h)))
 #define BCASE break; case
 #define SNODE struct NODE_S
 
 typedef unsigned long ulong;
 typedef char *PCHAR;
-typedef SNODE { SNODE *next; int type; char *val; } NODE_T, *PNODE;
 
 int ch = ' ', sym, state = 0;
 char sym_name[32], tib[1024], *toIn, tok[64];
 long theNum;
-NODE_T object[NUM_OBJECTS], *freeList;
 
 enum {
 	SYM_FREE, SYM_LPAR, SYM_RPAR, SYM_IF, SYM_TRUE, SYM_FALSE, SYM_NIL,
 	SYM_NUMBER, SYM_STRING, SYM_ENUM, SYM_EOI,
-	SYM_DEFUN, SYM_ADD, SYM_UNK
+	SYM_ZTYPE, SYM_ADD, SYM_UNK, SYM_DOT
 };
 
 enum {
 	ATOM_FREE, ATOM_LIST, ATOM_NUMBER, ATOM_STRING, ATOM_ENUM,
-	ATOM_NIL, ATOM_TRUE, ATOM_FALSE, ATOM_SEQ,
-	ATOM_FUNC, ATOM_ADD
+	ATOM_NIL, ATOM_TRUE, ATOM_FALSE, ATOM_PGM,
+	ATOM_ZTYPE, ATOM_ADD, ATOM_DOT
 };
 
 /*---------------------------------------------------------------------------*/
@@ -54,7 +51,7 @@ void message(const char *msg, int addLF) { fprintf(stderr, "%s%s", msg, addLF ? 
 void error(const char *err) { message("ERROR: ", 0); message(err, 1); exit(1); }
 void syntax_error() { error("syntax error"); }
 
-int isAlpha(int ch) { return BTWI(ch,'A','Z') || BTWI(ch,'a','z'); }
+int isAlpha(int ch) { return BTWI(ch,'A','Z') || BTWI(ch,'a','z') || (ch=='_'); }
 int isNum(int ch) { return BTWI(ch,'0','9'); }
 int isAlphaNum(int ch) { return isAlpha(ch) || isNum(ch); }
 
@@ -63,9 +60,7 @@ int isAlphaNum(int ch) { return isAlpha(ch) || isNum(ch); }
 #define HEAPINDEX_SZ 500
 #define HEAP_SZ 10000
 
-typedef struct {
-	uint32_t sz, inUse, off;
-} HEAP_T, *PHEAP;
+typedef struct { uint32_t sz, inUse, off; } HEAP_T, *PHEAP;
 
 uint32_t hHere = 0, hiCount = 0;
 HEAP_T hIndex[HEAPINDEX_SZ];
@@ -141,6 +136,10 @@ void hFree(char *data) {
 /*---------------------------------------------------------------------------*/
 /* NODE allocate/free */
 
+#define NUM_NODES 1000
+typedef SNODE { SNODE *next; int type; long val; } NODE_T, *PNODE;
+NODE_T nodes[NUM_NODES], *freeList;
+
 PNODE ndAlloc(int type) {
 	if (freeList) {
 		PNODE obj = freeList;
@@ -160,7 +159,7 @@ void ndFree(PNODE obj) {
 		switch (obj->type) {
 			case ATOM_ENUM:
 			case ATOM_STRING:
-				hFree(obj->val);
+				hFree((PCHAR)obj->val);
 				break;
 			case ATOM_LIST:
 				ndFree((PNODE)obj->val);
@@ -180,6 +179,7 @@ void ndFree(PNODE obj) {
 
 FILE *inputFp;
 char *getInput() {
+	restart:
 	if (inputFp == NULL) { zType("\nlsp>"); }
 	if (tib == fgets(tib, sizeof(tib), inputFp ? inputFp : stdin)) {
 		// printf("--%s", tib);
@@ -188,11 +188,11 @@ char *getInput() {
 		if (inputFp) { fclose(inputFp); }
 		return NULL;
 		// inputFp = NULL;
-		// return getInput();
+		// goto restart;
 	}
 }
 
-long isNum(const char *w) {
+int isNumber(const char *w) {
 	long x = 0, isNeg = (*w == '-');
 	if (isNeg) { ++w; if (*w == 0) { return 0; } }
 	while (*w) {
@@ -228,15 +228,17 @@ int symSub() {
 	while (*toIn > 32) { tok[len++] = *(toIn++); }
 	tok[len] = 0;
 	
-	if (isNum(tok)) { return SYM_NUMBER; }
+	if (isNumber(tok)) { return SYM_NUMBER; }
 	if (strcmp(tok, "(") == 0) { return SYM_LPAR; }
 	if (strcmp(tok, ")") == 0) { return SYM_RPAR; }
 	if (strcmp(tok, "if") == 0) { return SYM_IF; }
 	if (strcmp(tok, "true") == 0) { return SYM_TRUE; }
 	if (strcmp(tok, "false") == 0) { return SYM_FALSE; }
 	if (strcmp(tok, "nil") == 0) { return SYM_NIL; }
-	if (strcmp(tok, "defun") == 0) { return SYM_DEFUN; }
+	if (strcmp(tok, "defun") == 0) { return SYM_ZTYPE; }
 	if (strcmp(tok, "+") == 0) { return SYM_ADD; }
+	if (strcmp(tok, ".") == 0) { return SYM_DOT; }
+	if (strcmp(tok, "ztype") == 0) { return SYM_ZTYPE; }
 	if (isEnum(tok)) { return SYM_ENUM; }
 
 	message("Unknown symbol", 0);
@@ -262,42 +264,30 @@ PNODE buildAtom() {
 		case SYM_FALSE: return ndAlloc(ATOM_FALSE);
 		case SYM_NIL:   return ndAlloc(ATOM_NIL);
 		case SYM_ADD:   return ndAlloc(ATOM_ADD);
+		case SYM_DOT:   return ndAlloc(ATOM_DOT);
+		case SYM_ZTYPE: return ndAlloc(ATOM_ZTYPE);
 		case SYM_NUMBER:
 			x = ndAlloc(ATOM_NUMBER);
-			x->val = (PCHAR)theNum;
+			x->val = theNum;
 			return x;
 		case SYM_ENUM:
 			x = ndAlloc(ATOM_ENUM);
-			x->val = hAlloc(strlen(tok)+1);
-			strcpy(x->val, tok);
+			x->val = (long)hAlloc(strlen(tok)+1);
+			strcpy((PCHAR)x->val, tok);
 			return x;
 		case SYM_STRING:
 			x = ndAlloc(ATOM_STRING);
-			x->val = hAlloc(strlen(tok)+1);
-			strcpy(x->val, tok);
+			x->val = (long)hAlloc(strlen(tok)+1);
+			strcpy((PCHAR)x->val, tok);
 			return x;
-		case SYM_DEFUN:
-			x = ndAlloc(ATOM_FUNC);
-			nextSym();
-			if (assert(sym == SYM_LPAR, "defun ( ID ... )")) {
-				n = buildAtom();
-				if (assert(n->type == ATOM_LIST, "defun ( ID ... )")) {
-					// TODO: strcpy(x->val, tok);
-					x->val = n->val;
-					return x;
-				}
-			}
-			if (n) { ndFree(x); }
-			ndFree(x);
-			return NULL;
 		case SYM_LPAR:
 			x = ndAlloc(ATOM_LIST);
-			x->val = NULL;
+			x->val = 0;
 			nextSym();
 			while (sym != SYM_RPAR) {
 				if (sym == SYM_UNK) { return NULL; }
 				a = buildAtom();
-				if (x->val == NULL) { x->val = (PCHAR)a; }
+				if (x->val == 0) { x->val = (long)a; }
 				else if (n) { n->next = a; }
 				n = a;
 				nextSym();
@@ -309,20 +299,22 @@ PNODE buildAtom() {
 	return NULL;
 }
 
-void dumpAtom(PNODE obj) {
+void dumpNode(PNODE obj) {
 	if (obj == NULL) { message("<null>",0); }
 	PNODE o = obj;
 	while (o) {
 		switch (o->type) {
-			case ATOM_LIST:    zType("( "); dumpAtom((PNODE)o->val); zType(")");
+			case ATOM_LIST:    zType("( "); dumpNode((PNODE)o->val); zType(")");
 			BCASE ATOM_NUMBER: printf("%ld", (long)o->val);
-			BCASE ATOM_STRING: printf("'%s'", o->val);
-			BCASE ATOM_ENUM:   printf("%s", o->val);
+			BCASE ATOM_STRING: printf("'%s'", (PCHAR)o->val);
+			BCASE ATOM_ENUM:   printf("%s", (PCHAR)o->val);
 			BCASE ATOM_NIL:    zType("<nil>");
 			BCASE ATOM_TRUE:   zType("<true>");
 			BCASE ATOM_FALSE:  zType("<false>");
-			BCASE ATOM_FUNC:   zType("func <TODO>"); // zType(((PNODE)o->val)->val);
+			BCASE ATOM_ZTYPE:  zType("<ztype>");
+			BCASE ATOM_DOT:    zType("<.>");
 			BCASE ATOM_ADD:    zType("<+>");
+			BCASE ATOM_PGM:    zType("PGM: "); dumpNode((PNODE)o->val);
 			break; default: break;
 		}
 		zType(" ");
@@ -330,29 +322,94 @@ void dumpAtom(PNODE obj) {
 	}
 }
 
-void parse() {
+PNODE parse() {
+	PNODE pgm = ndAlloc(ATOM_PGM), seq = NULL;
 	toIn = getInput();
 
 	nextSym();
 	while (sym != SYM_EOI) {
 		PNODE a = buildAtom();
-		dumpAtom(a); printf("\n");
-		// hDump();
-		// ndFree(a);
+		if (a == NULL) { break; }
+		if (seq) { seq->next = a; seq = a; }
+		else { seq = a; pgm->val = (long)seq; }
 		nextSym();
 	}
+	return pgm;
 }
+
+/*---------------------------------------------------------------------------*/
+/* Code generation */
+
+enum { EXIT, LIT, DOT, ADD, ZTYPE };
+int here = 0;
+long code[64*1024];
+void gen(long val) {
+	code[here++] = val;
+	// printf("-gen:%ld-", val);
+}
+
+void genCode(PNODE sTree) {
+	PNODE o = sTree;
+	while (o) {
+		// printf("-gc:%d-", o->type);
+		switch (o->type) {
+			case ATOM_LIST:    genCode((PNODE)o->val);
+			BCASE ATOM_NUMBER: gen(LIT); gen(o->val);
+			BCASE ATOM_STRING: gen(LIT); gen(o->val);
+			BCASE ATOM_ENUM:   gen(LIT); gen(o->val);
+			BCASE ATOM_NIL:    gen(LIT); gen(0);
+			BCASE ATOM_TRUE:   gen(LIT); gen(-1);
+			BCASE ATOM_FALSE:  gen(LIT); gen(0);
+			BCASE ATOM_ADD:    gen(ADD);
+			BCASE ATOM_DOT:    gen(DOT);
+			BCASE ATOM_ZTYPE:  gen(ZTYPE);
+			BCASE ATOM_PGM:    genCode((PNODE)o->val);
+			break; default: break;
+		}
+		if (o) { o = o->next; }
+	}
+}
+
+/*---------------------------------------------------------------------------*/
+/* VM */
+
+#define NOS stk[sp]
+#define NCASE goto next; case
+
+long stk[32], sp, rstk[32], rsp, TOS;
+void push(long val) { sp = (sp+1)&31; stk[sp] = TOS; TOS = val; }
+void drop() { TOS = stk[sp]; sp = (sp-1)&31; }
+
+void runCode() {
+	int pc = 0;
+	next:
+	// printf("-ir:%ld-",code[pc]);
+	switch (code[pc++]) {
+		case EXIT: return;
+		NCASE LIT: push(code[pc++]);
+		NCASE ADD: NOS += TOS; drop();
+		NCASE DOT: printf("%ld ", TOS); drop();
+		NCASE ZTYPE: printf("%s", (PCHAR)TOS); drop();
+		goto next; default: return;
+	}
+}
+
+/*---------------------------------------------------------------------------*/
+/* Main */
 
 int main(int argc, char *argv[]) {
 	const char *boot_fn = (1 < argc) ? argv[1]  : "boot.lsp";
 	freeList = (PNODE)NULL;
-	for (long i = 0; i < NUM_OBJECTS; i++) {
-		object[i].next = 0;
-		object[i].type = ATOM_FREE;
-		ndFree(&object[i]);
+	for (long i = 0; i < NUM_NODES; i++) {
+		nodes[i].next = 0;
+		nodes[i].type = ATOM_FREE;
+		ndFree(&nodes[i]);
 	}
 	inputFp = fopen(boot_fn, "rb");
-	parse();
+	PNODE sTree = parse(); dumpNode(sTree);
+	printf("\n\nGEN: "); genCode(sTree);
+	printf("%d instructions", here);
+	printf("\n\nRUN: "); runCode();
 	hDump();
 	return 0;
 }
