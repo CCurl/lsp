@@ -161,8 +161,9 @@ void expect_sym(int exp) {
 
 node *paren_expr(); /* forward declaration */
 
+#define SYMBOLS_SZ 500
 typedef struct { char type, *name; int32_t val; } SYM_T;
-SYM_T symbols[500];
+SYM_T symbols[SYMBOLS_SZ];
 int numSymbols = 0;
 
 int genSymbol(char* name, char type) {
@@ -178,7 +179,7 @@ int genSymbol(char* name, char type) {
 }
 
 void dumpSymbols(int details) {
-    printf("\nsymbols: %d", numSymbols);
+    printf("\nsymbols: %d, %d used", SYMBOLS_SZ, numSymbols);
     if (details) {
         for (int i = 0; i < numSymbols; i++) {
             SYM_T *x = &symbols[i];
@@ -477,24 +478,24 @@ again:
     int p = (int)(pc - &vm[0]) + 1;
     fprintf(fp, "\n%04d: %02d ; ", p, *pc);
     switch (*pc++) {
-    case  IFETCH: fprintf(fp, "fetch %d", f2((byte*)pc)); pc += 2;
-        ACASE ISTORE : fprintf(fp, "store %d", f2((byte*)pc)); pc += 2;
-        ACASE IP1 : fprintf(fp, "lit1 %d", *(pc++));
-        ACASE IP2 : fprintf(fp, "lit2 %d", f2((byte*)pc)); pc += 2;
-        ACASE IP4 : fprintf(fp, "lit4 %d", f4((byte*)pc)); pc += 4;
-        ACASE IDROP : fprintf(fp, "drop");
-        ACASE IADD : fprintf(fp, "add");
-        ACASE ISUB : fprintf(fp, "sub");
-        ACASE IMUL : fprintf(fp, "mul");
-        ACASE IDIV : fprintf(fp, "div");
-        ACASE ILT : fprintf(fp, "lt");
-        ACASE IGT : fprintf(fp, "gt");
-        ACASE JMP : fprintf(fp, "jmp %d", p + 1 + (*pc++));
-        ACASE JZ : fprintf(fp, "jz %d", p + 1 + (*pc++));
-        ACASE JNZ : fprintf(fp, "jnz %d", p + 1 + (*pc++));
-        ACASE ICALL : fprintf(fp, "call %d", f2((byte*)pc)); pc += 2;
-        ACASE IRET : fprintf(fp, "ret");
-        ACASE HALT : fprintf(fp, "halt");
+        case  IFETCH: fprintf(fp, "fetch %d", f2((byte*)pc)); pc += 2;
+        ACASE ISTORE: fprintf(fp, "store %d", f2((byte*)pc)); pc += 2;
+        ACASE IP1:    fprintf(fp, "lit1 %d", *(pc++));
+        ACASE IP2:    fprintf(fp, "lit2 %d", f2((byte*)pc)); pc += 2;
+        ACASE IP4:    fprintf(fp, "lit4 %d", f4((byte*)pc)); pc += 4;
+        ACASE IDROP:  fprintf(fp, "drop");
+        ACASE IADD:   fprintf(fp, "add");
+        ACASE ISUB:   fprintf(fp, "sub");
+        ACASE IMUL:   fprintf(fp, "mul");
+        ACASE IDIV:   fprintf(fp, "div");
+        ACASE ILT:    fprintf(fp, "lt");
+        ACASE IGT:    fprintf(fp, "gt");
+        ACASE JMP:    fprintf(fp, "jmp %d", p + 1 + (*pc++));
+        ACASE JZ:     fprintf(fp, "jz %d", p + 1 + (*pc++));
+        ACASE JNZ:    fprintf(fp, "jnz %d", p + 1 + (*pc++));
+        ACASE ICALL:  fprintf(fp, "call %d", f2((byte*)pc)); pc += 2;
+        ACASE IRET:   fprintf(fp, "ret");
+        ACASE HALT:   fprintf(fp, "halt");
     }
     fprintf(fp, "\n");
     fclose(fp);
@@ -519,7 +520,7 @@ int main(int argc, char *argv[]) {
     }
     if (sp) { error("-stack not empty-"); }
     hDump(0);
-    dumpSymbols(1);
+    dumpSymbols(0);
     printf("\n");
     return 0;
 }

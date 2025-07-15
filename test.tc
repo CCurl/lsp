@@ -7,7 +7,7 @@ void Abc01_X() {
 }
 
 {
-	Abc00_X();
+	Abc01_X();
 	a = 11; b=a+2; z=999999;
 	if (a < 1) { c=a+b; }
 	else { d = a*(b+1); }
@@ -19,5 +19,5 @@ void Abc01_X() {
 	while (i) { i=i-1; }
 	i=n=0;
 	do { i=i+(n=n+1); } while (n<50);
-	aBC99_X();
+	abc999_X();
 }
