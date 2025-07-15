@@ -7,7 +7,7 @@
 
 typedef unsigned int uint;
 typedef struct {
-	uint inUse:1, sz:16, off:15;
+	uint inUse: 1, sz: 31, off;
 } HEAP_T, *PHEAP;
 
 static uint32_t hHere = 0, iHere = 0;
@@ -15,13 +15,15 @@ static HEAP_T index[HEAPINDEX_SZ];
 static char heap[HEAP_SZ];
 static const int hASG = 8; // alloc size granularity
 
-void hDump() {
-	printf("\niHere: %u, hHere: %u, struct: %u, asg: %d", iHere, hHere, sizeof(HEAP_T), hASG);
-	for (uint i = 0; i < iHere; i++) {
-		PHEAP x = (PHEAP)&index[i];
-		printf("\n%3d, inuse: %u, sz: %u, off: %u", i, x->inUse, x->sz, x->off);
+void hDump(int details) {
+	printf("\nheap - sz: %u/%u, iHere: %u, hHere: %u, struct: %u, asg: %d"
+		, HEAP_SZ, HEAPINDEX_SZ, iHere, hHere, sizeof(HEAP_T), hASG);
+	if (details) {
+		for (uint i = 0; i < iHere; i++) {
+			PHEAP x = (PHEAP)&index[i];
+			printf("\n%3d, inuse: %u, sz: %u, off: %u", i, x->inUse, x->sz, x->off);
+		}
 	}
-	// printf("\n");
 }
 
 static int hFindFree(uint sz) {

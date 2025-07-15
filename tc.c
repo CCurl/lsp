@@ -162,26 +162,28 @@ void expect_sym(int exp) {
 node *paren_expr(); /* forward declaration */
 
 typedef struct { char type, *name; int32_t val; } SYM_T;
-SYM_T syms[500];
-int numSyms = 0;
+SYM_T symbols[500];
+int numSymbols = 0;
 
 int genSymbol(char* name, char type) {
-    for (int i = 0; i < numSyms; i++) {
-        if (strcmp(syms[i].name, name) == 0) { return i; }
+    for (int i = 0; i < numSymbols; i++) {
+        if (strcmp(symbols[i].name, name) == 0) { return i; }
     }
-    syms[numSyms].name = hAlloc(strlen(name) + 1);
-    syms[numSyms].val = 0;
-    syms[numSyms].type = type;
-    strcpy(syms[numSyms].name, name);
-    numSyms++;
-    return numSyms - 1;
+    SYM_T *x = &symbols[numSymbols];
+    x->name = hAlloc(strlen(name) + 1);
+    x->val = 0;
+    x->type = type;
+    strcpy(x->name, name);
+    return numSymbols++;
 }
 
-void dumpSymbols() {
-    printf("\nsymbols/%d", numSyms);
-    for (int i = 0; i < numSyms; i++) {
-        SYM_T *x = &syms[i];
-        printf("\n%3d - type: %2d, val: %d  %s", i, x->type, x->val, x->name);
+void dumpSymbols(int details) {
+    printf("\nsymbols: %d", numSymbols);
+    if (details) {
+        for (int i = 0; i < numSymbols; i++) {
+            SYM_T *x = &symbols[i];
+            printf("\n%3d - type: %2d, val: %d  %s", i, x->type, x->val, x->name);
+        }
     }
 }
 
@@ -516,8 +518,8 @@ int main(int argc, char *argv[]) {
         if (globals[i] != 0) printf("%c = %d\n", 'a' + i, globals[i]);
     }
     if (sp) { error("-stack not empty-"); }
-    hDump();
-    dumpSymbols();
+    hDump(0);
+    dumpSymbols(1);
     printf("\n");
     return 0;
 }
