@@ -161,20 +161,28 @@ void expect_sym(int exp) {
 
 node *paren_expr(); /* forward declaration */
 
-typedef struct { char type, *name; int val; } SYM_T;
+typedef struct { char type, *name; int32_t val; } SYM_T;
 SYM_T syms[500];
 int numSyms = 0;
 
-int genSym(char *name, char type) {
+int genSymbol(char* name, char type) {
     for (int i = 0; i < numSyms; i++) {
         if (strcmp(syms[i].name, name) == 0) { return i; }
     }
     syms[numSyms].name = hAlloc(strlen(name) + 1);
     syms[numSyms].val = 0;
-    syms[numSyms].type = 0;;
+    syms[numSyms].type = type;
     strcpy(syms[numSyms].name, name);
     numSyms++;
-    return numSyms-1;
+    return numSyms - 1;
+}
+
+void dumpSymbols() {
+    printf("\nsymbols/%d", numSyms);
+    for (int i = 0; i < numSyms; i++) {
+        SYM_T *x = &syms[i];
+        printf("\n%3d - type: %2d, val: %d  %s", i, x->type, x->val, x->name);
+    }
 }
 
 /* <term> ::= <id> | <int> | <paren_expr> */
@@ -182,7 +190,7 @@ node *term() {
     node *x;
     if (sym == ID) {
         x = new_node(VAR);
-        x->sval = genSym(id_name, VAR);
+        x->sval = genSymbol(id_name, VAR);
         x->val = id_name[0] - 'a'; // Update this for longer names
         next_sym();
     }
@@ -266,7 +274,7 @@ node *statement() {
     }
     else if (sym == FUNC_SYM) { /* <id> "();" */
         x = new_node(FUNC_CALL);
-        x->sval = genSym(id_name, FUNC_SYM);
+        x->sval = genSymbol(id_name, FUNC_SYM);
         printf("-call %s()-", id_name);
         // TODO: call the function
         x->val = 12345;
@@ -314,7 +322,7 @@ node *defs(node *st) {
         if (sym == VOID_SYM) {
             next_sym(); expect_sym(FUNC_SYM);
             printf("-def %s()-", id_name);
-            genSym(id_name, FUNC_SYM);
+            genSymbol(id_name, FUNC_SYM);
             // TODO: Add the function
             expect_sym(LBRA);
             x = new_node(EMPTY);
@@ -327,7 +335,7 @@ node *defs(node *st) {
         }
         if (sym == INT_SYM) {
             next_sym(); expect_sym(ID);
-            genSym(id_name, VAR);
+            genSymbol(id_name, VAR);
             // printf("-VAR %s-", id_name);
             expect_sym(SEMI);
             continue;
@@ -509,6 +517,7 @@ int main(int argc, char *argv[]) {
     }
     if (sp) { error("-stack not empty-"); }
     hDump();
+    dumpSymbols();
     printf("\n");
     return 0;
 }
