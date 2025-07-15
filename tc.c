@@ -9,39 +9,40 @@
 #include "heap.h"
 
 /*
-  *This is a compiler for the Tiny-C language.  Tiny-C is a
-  *considerably stripped down version of C and it is meant as a
-  *pedagogical tool for learning about compilers.  The integer global
-  *variables "a" to "z" are predefined and initialized to zero, and it
-  *is not possible to declare new variables.  The compiler reads the
-  *program from standard input and prints out the value of the
-  *variables that are not zero.  The grammar of Tiny-C in EBNF is:
+ * This is a compiler for the Tiny-C language.  Tiny-C is a
+ * considerably stripped down version of C and it is meant as a
+ * pedagogical tool for learning about compilers.  The integer global
+ * variables "a" to "z" are predefined and initialized to zero, and it
+ * is not possible to declare new variables.  The compiler reads the
+ * program from standard input and prints out the value of the
+ * variables that are not zero.  The grammar of Tiny-C in EBNF is:
+ * 
+ * <program> ::= <defs>
+ * <defs> ::= <def> | <def> <def>
+ * <def> ::= <func_def> | <var_def>
+ * <func_def> ::= "void" <id> "(" ")" "{" <statement> "}" |
+ * <var_def> ::= "int" <id> ";"
+ * <statement> ::= "if" <paren_expr> <statement> |
+ *                 "if" <paren_expr> <statement> "else" <statement> |
+ *                 "while" <paren_expr> <statement> |
+ *                 "do" <statement> "while" <paren_expr> ";" |
+ *                 "{" { <statement> } "}" |
+ *                 <func> ";" |
+ *                 <expr> ";" |
+ *                 ";"
+ * <paren_expr> ::= "(" <expr> ")"
+ * <expr> ::= <test> | <id> "=" <expr>
+ * <test> ::= <math> | <math> "<" <math> | <math> ">" <math> | <math> "==" <math>
+ * <math> ::= <term> | <math> <math_op> <term>
+ * <math_op> ::= "+" | "-" | "*" | "/"
+ * <term> ::= <id> | <int> | <paren_expr>
+ * <id> ::= "a" | "b" | "c" | "d" | ... | "z" -- FOR NOW
+ * <id> ::= [A-Z|a-z][A-Z|a-z|0-9|_]* -- NEW
+ * <int> ::= <an_unsigned_decimal_integer>
+ * <func> ::= <id> "(" ")"
  *
-   *<program> ::= <defs>
-   *<defs> ::= <def> | <def> <def>
-   *<def> ::= <func_def> | <var_def>
-   *<func_def> ::= "void" <id> "(" ")" "{" <statement> "}" |
-   *<var_def> ::= "int" <id> ";"
-   *<statement> ::= "if" <paren_expr> <statement> |
-   *                "if" <paren_expr> <statement> "else" <statement> |
-   *                "while" <paren_expr> <statement> |
-   *                "do" <statement> "while" <paren_expr> ";" |
-   *                "{" { <statement> } "}" |
-   *                <expr> ";" |
-   *                ";"
-   *<paren_expr> ::= "(" <expr> ")"
-   *<expr> ::= <test> | <id> "=" <expr>
-   *<test> ::= <math> | <math> "<" <math> | <math> ">" <math> | <math> "==" <math>
-   *<math> ::= <term> | <math> <math_op> <term>
-   *<math_op> ::= "+" | "-" | "*" | "/"
-   *<term> ::= <id> | <int> | <paren_expr> | <func>
-   *<id> ::= "a" | "b" | "c" | "d" | ... | "z" -- FOR NOW
-   *<id> ::= [A-Z|a-z][A-Z|a-z|0-9|_]*
-   *<int> ::= <an_unsigned_decimal_integer>
-   *<func> ::= <id> "(" ")" ";"
- *
-  *The compiler does a minimal amount of error checking to help
-  *highlight the structure of the compiler.
+ * The compiler does a minimal amount of error checking to help
+ * highlight the structure of the compiler.
  */
 
  /*---------------------------------------------------------------------------*/
@@ -64,9 +65,10 @@ int ch = ' ', sym, int_val;
 char id_name[64];
 FILE *input_fp = NULL;
 
-void message(char *msg) { fprintf(stdout, "%s\n", msg); }
-void error(char *err) { message(err); exit(1); }
-void syntax_error() { error("-syntax error-"); }
+void message(char *msg, int cr) { fprintf(stdout, "%s%s", msg, cr ? "\n" : " "); }
+void warn(char *msg)  { message("WARN:",0); message(msg, 1); }
+void error(char *err) { message("ERROR:",0); message(err, 1); exit(1); }
+void syntax_error() { error("syntax error"); }
 
 int isAlpha(int ch) { return BTWI(ch, 'A', 'Z') || BTWI(ch, 'a', 'z') || (ch == '_'); }
 int isNum(int ch) { return BTWI(ch, '0', '9'); }
@@ -79,9 +81,8 @@ void next_ch() {
 }
 
 void next_sym() {
-again:
+    while (BTWI(ch,1,32)) { next_ch(); }
     switch (ch) {
-    case ' ': case 9: case 10: case 13: next_ch(); goto again;
     case EOF: sym = EOI; break;
     case '{': next_ch(); sym = LBRA;  break;
     case '}': next_ch(); sym = RBRA;  break;
@@ -118,7 +119,7 @@ again:
                 }
             }
         }
-        else { message("-ch-"); syntax_error(); }
+        else { message("-ch-", 0); syntax_error(); }
         break;
     }
 }
@@ -132,13 +133,13 @@ enum {
 };
 
 #define MAX_NODES 1000
-struct node_s { int kind; struct node_s *o1,  *o2,  *o3; int val; char *cval; };
+struct node_s { int kind; struct node_s *o1,  *o2,  *o3; int val, sval; };
 typedef struct node_s node;
 int num_nodes = 0;
 node nodes[MAX_NODES];
 
 node *new_node(int k) {
-    if (MAX_NODES <= num_nodes) { error(""); }
+    if (MAX_NODES <= num_nodes) { error("no nodes!"); }
     node *x = &nodes[num_nodes++];
     x->kind = k;
     return x;
@@ -160,16 +161,20 @@ void expect_sym(int exp) {
 
 node *paren_expr(); /* forward declaration */
 
-char *syms[1000];
+typedef struct { char type, *name; int val; } SYM_T;
+SYM_T syms[500];
 int numSyms = 0;
 
-char *genSym(char *name) {
+int genSym(char *name, char type) {
     for (int i = 0; i < numSyms; i++) {
-        if (strcmp(syms[i], name) == 0) { return syms[i]; }
+        if (strcmp(syms[i].name, name) == 0) { return i; }
     }
-    syms[numSyms] = hAlloc(strlen(name) + 1);
-    strcpy(syms[numSyms], name);
-    return syms[numSyms++];
+    syms[numSyms].name = hAlloc(strlen(name) + 1);
+    syms[numSyms].val = 0;
+    syms[numSyms].type = 0;;
+    strcpy(syms[numSyms].name, name);
+    numSyms++;
+    return numSyms-1;
 }
 
 /* <term> ::= <id> | <int> | <paren_expr> */
@@ -177,12 +182,12 @@ node *term() {
     node *x;
     if (sym == ID) {
         x = new_node(VAR);
-        x->cval = genSym(id_name);
+        x->sval = genSym(id_name, VAR);
         x->val = id_name[0] - 'a'; // Update this for longer names
         next_sym();
     }
     else if (sym == INT) {
-        x = new_node(CST);
+        x = new_node(CST); // CONSTANT
         x->val = int_val;
         next_sym();
     }
@@ -261,7 +266,7 @@ node *statement() {
     }
     else if (sym == FUNC_SYM) { /* <id> "();" */
         x = new_node(FUNC_CALL);
-        x->cval = genSym(id_name);
+        x->sval = genSym(id_name, FUNC_SYM);
         printf("-call %s()-", id_name);
         // TODO: call the function
         x->val = 12345;
@@ -309,6 +314,7 @@ node *defs(node *st) {
         if (sym == VOID_SYM) {
             next_sym(); expect_sym(FUNC_SYM);
             printf("-def %s()-", id_name);
+            genSym(id_name, FUNC_SYM);
             // TODO: Add the function
             expect_sym(LBRA);
             x = new_node(EMPTY);
@@ -321,12 +327,12 @@ node *defs(node *st) {
         }
         if (sym == INT_SYM) {
             next_sym(); expect_sym(ID);
-            genSym(id_name);
+            genSym(id_name, VAR);
             // printf("-VAR %s-", id_name);
             expect_sym(SEMI);
             continue;
         }
-        message("-def?-"); syntax_error();
+        message("-def?-", 0); syntax_error();
     }
     return st;
 }
