@@ -4,7 +4,7 @@
 #include "tc.h"
 
 long globals[26], sp, rsp;
-code vm[200];
+code vm[1000];
 
 #define ACASE    goto again; case
 #define BCASE    break; case
@@ -31,8 +31,8 @@ void initVM() {
 void runVM(int pc) {
     again:
     switch (vm[pc++]) {
-        case  IFETCH: stk[++sp] = globals[x2(pc)]; pc += 2;
-        ACASE ISTORE: globals[x2(pc)] = stk[sp]; pc += 2;
+        case  IFETCH: stk[++sp] = symbols[x2(pc)].val; pc += 2;
+        ACASE ISTORE: symbols[x2(pc)].val = stk[sp]; pc += 2;
         ACASE IP1: push(vm[pc++]);
         ACASE IP2: push(x2(pc)); pc += 2;
         ACASE IP4: push(x4(pc)); pc += 4;
@@ -47,10 +47,8 @@ void runVM(int pc) {
         ACASE JMP: pc = x2(pc);
         ACASE JZ:  if (pop() == 0) pc = x2(pc); else pc += 2;
         ACASE JNZ: if (pop() != 0) pc = x2(pc); else pc += 2;
-        ACASE ICALL: /* rst[rsp++] = pc+2; pc=x2(pc); */
-            printf("-run:call %d-\n", x2(pc)); pc += 2;
-        ACASE IRET: if (rsp) { pc = rstk[--rsp]; }
-            else { printf("-return?-"); } return;
+        ACASE ICALL: rstk[rsp++] = pc+2; pc = x2(pc);
+        ACASE IRET: if (rsp) { pc = rstk[--rsp]; } else { return; }
         ACASE HALT: return;
         default: printf("Invalid IR: %d", vm[pc-1]);  return;
     }
@@ -67,7 +65,7 @@ static pN2(FILE* fp, int n) { pN1(fp, n); pN1(fp, n >> 8); }
 static pN4(FILE *fp, int n) { pN2(fp, n); pN2(fp, n >> 16); }
 
 void dis(int here) {
-    code pc = 0;
+    code pc = 1;
     FILE *fp = fopen("list.txt", "wt");
     hDump(0, fp);
     fprintf(fp, "\n");
@@ -77,7 +75,8 @@ void dis(int here) {
     while (pc < here) {
         fprintf(fp, "\n%04x: %02d ", pc, vm[pc]);
         switch (vm[pc++]) {
-            case  IFETCH: pN2(fp, x2(pc)); pB(fp,6); pS(fp, "fetch"); pNX(fp, x2(pc)); pc += 2;
+            case  NOP:    pB(fp,12); pS(fp, "nop");
+            BCASE IFETCH: pN2(fp, x2(pc)); pB(fp,6); pS(fp, "fetch"); pNX(fp, x2(pc)); pc += 2;
             BCASE ISTORE: pN2(fp, x2(pc)); pB(fp,6); pS(fp, "store"); pNX(fp, x2(pc)); pc += 2;
             BCASE IP1:    pN1(fp, x2(pc)); pB(fp,9); pS(fp, "lit1");  pNX(fp, vm[pc++]);
             BCASE IP2:    pN2(fp, x2(pc)); pB(fp,6); pS(fp, "lit2");  pNX(fp, x2(pc)); pc += 2;

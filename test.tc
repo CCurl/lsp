@@ -6,7 +6,12 @@ void Abc01_X() {
 	q=t*t;
 }
 
-{
+void sub() {
+	count = 0;
+	while (count < 100) { count = count + 1; }
+}
+
+void main() {
 	Abc01_X();
 	a = 11; b=a+2; z=667788;
 	if (a < 1) { c=a+b; }
@@ -19,5 +24,5 @@ void Abc01_X() {
 	while (i) { i=i-1; }
 	i=n=0;
 	do { i=i+(n=n+1); } while (n<50);
-	abc999_X();
+	sub();
 }

@@ -1,105 +1,135 @@
-heap - size: 10000/152 bytes, index: 500/17, struct: 8, asg: 8
+heap - size: 10000/160 bytes, index: 500/19, struct: 8, asg: 8
 
-symbols: 500, 17 used
+symbols: 500, 19 used
   0 - type:  0, val: 0  nXYZ_abc_09
-  1 - type: 21, val: 0  Abc01_X
-  2 - type:  0, val: 0  r
-  3 - type:  0, val: 0  t
-  4 - type:  0, val: 0  q
-  5 - type:  0, val: 0  a
-  6 - type:  0, val: 0  b
-  7 - type:  0, val: 0  z
-  8 - type:  0, val: 0  c
-  9 - type:  0, val: 0  d
- 10 - type:  0, val: 0  g
- 11 - type:  0, val: 0  e
- 12 - type:  0, val: 0  f
- 13 - type:  0, val: 0  i
- 14 - type:  0, val: 0  s
- 15 - type:  0, val: 0  n
- 16 - type: 21, val: 0  abc999_X
+  1 - type: 22, val: 1  Abc01_X
+  2 - type:  0, val: 5  r
+  3 - type:  0, val: 25  t
+  4 - type:  0, val: 625  q
+  5 - type: 22, val: 30  sub
+  6 - type:  0, val: 100  count
+  7 - type: 22, val: 59  main
+  8 - type:  0, val: 11  a
+  9 - type:  0, val: 13  b
+ 10 - type:  0, val: 667788  z
+ 11 - type:  0, val: 0  c
+ 12 - type:  0, val: 154  d
+ 13 - type:  0, val: 121  g
+ 14 - type:  0, val: 91  e
+ 15 - type:  0, val: 30  f
+ 16 - type:  0, val: 1275  i
+ 17 - type:  0, val: 1  s
+ 18 - type:  0, val: 50  n
 
-code: 180 bytes (0xb4)
+code: 239 bytes (0xef)
 ----------------------------
-0000: 16 39 30       ; call 3039 
-0003: 02 0b          ; lit1 0b 
-0005: 01 00 00       ; store 00 
-0008: 05             ; drop 
-0009: 00 00 00       ; fetch 00 
-000c: 02 02          ; lit1 02 
-000e: 06             ; add 
-000f: 01 01 00       ; store 01 
-0012: 05             ; drop 
-0013: 04 8c 30 0a 00 ; lit4 a308c 
-0018: 01 19 00       ; store 19 
-001b: 05             ; drop 
-001c: 00 00 00       ; fetch 00 
-001f: 02 01          ; lit1 01 
-0021: 10             ; lt 
-0022: 13 33 00       ; jz 33 
-0025: 00 00 00       ; fetch 00 
-0028: 00 01 00       ; fetch 01 
-002b: 06             ; add 
-002c: 01 02 00       ; store 02 
-002f: 05             ; drop 
-0030: 15 41 00       ; jmp 41 
-0033: 00 00 00       ; fetch 00 
-0036: 00 01 00       ; fetch 01 
-0039: 02 01          ; lit1 01 
-003b: 06             ; add 
-003c: 08             ; mul 
-003d: 01 03 00       ; store 03 
-0040: 05             ; drop 
-0041: 00 00 00       ; fetch 00 
-0044: 02 01          ; lit1 01 
-0046: 11             ; gt 
-0047: 13 55 00       ; jz 55 
-004a: 00 00 00       ; fetch 00 
-004d: 00 00 00       ; fetch 00 
-0050: 08             ; mul 
-0051: 01 06 00       ; store 06 
-0054: 05             ; drop 
-0055: 00 01 00       ; fetch 01 
-0058: 02 07          ; lit1 07 
-005a: 08             ; mul 
-005b: 01 04 00       ; store 04 
-005e: 05             ; drop 
-005f: 00 04 00       ; fetch 04 
-0062: 02 03          ; lit1 03 
-0064: 09             ; div 
-0065: 01 05 00       ; store 05 
-0068: 05             ; drop 
-0069: 03 e8 03       ; lit2 3e8 
-006c: 03 e8 03       ; lit2 3e8 
-006f: 08             ; mul 
-0070: 01 08 00       ; store 08 
-0073: 05             ; drop 
-0074: 02 01          ; lit1 01 
-0076: 01 12 00       ; store 12 
-0079: 05             ; drop 
-007a: 00 08 00       ; fetch 08 
-007d: 13 8d 00       ; jz 8d 
-0080: 00 08 00       ; fetch 08 
-0083: 02 01          ; lit1 01 
-0085: 07             ; sub 
-0086: 01 08 00       ; store 08 
-0089: 05             ; drop 
-008a: 15 7a 00       ; jmp 7a 
-008d: 02 00          ; lit1 00 
-008f: 01 0d 00       ; store 0d 
-0092: 01 08 00       ; store 08 
-0095: 05             ; drop 
-0096: 00 08 00       ; fetch 08 
-0099: 00 0d 00       ; fetch 0d 
-009c: 02 01          ; lit1 01 
-009e: 06             ; add 
-009f: 01 0d 00       ; store 0d 
-00a2: 06             ; add 
-00a3: 01 08 00       ; store 08 
-00a6: 05             ; drop 
-00a7: 00 0d 00       ; fetch 0d 
-00aa: 02 32          ; lit1 32 
-00ac: 10             ; lt 
-00ad: 14 96 00       ; jnz 96 
-00b0: 16 39 30       ; call 3039 
-00b3: 18             ; halt 
+0001: 03 05          ; lit1 05 
+0003: 02 02 00       ; store 02 
+0006: 06             ; drop 
+0007: 01 02 00       ; fetch 02 
+000a: 01 02 00       ; fetch 02 
+000d: 09             ; mul 
+000e: 02 03 00       ; store 03 
+0011: 06             ; drop 
+0012: 01 03 00       ; fetch 03 
+0015: 01 03 00       ; fetch 03 
+0018: 09             ; mul 
+0019: 02 04 00       ; store 04 
+001c: 06             ; drop 
+001d: 18             ; ret 
+001e: 03 00          ; lit1 00 
+0020: 02 06 00       ; store 06 
+0023: 06             ; drop 
+0024: 01 06 00       ; fetch 06 
+0027: 03 64          ; lit1 64 
+0029: 11             ; lt 
+002a: 14 3a 00       ; jz 3a 
+002d: 01 06 00       ; fetch 06 
+0030: 03 01          ; lit1 01 
+0032: 07             ; add 
+0033: 02 06 00       ; store 06 
+0036: 06             ; drop 
+0037: 16 24 00       ; jmp 24 
+003a: 18             ; ret 
+003b: 17 01 00       ; call 01 
+003e: 03 0b          ; lit1 0b 
+0040: 02 08 00       ; store 08 
+0043: 06             ; drop 
+0044: 01 08 00       ; fetch 08 
+0047: 03 02          ; lit1 02 
+0049: 07             ; add 
+004a: 02 09 00       ; store 09 
+004d: 06             ; drop 
+004e: 05 8c 30 0a 00 ; lit4 a308c 
+0053: 02 0a 00       ; store 0a 
+0056: 06             ; drop 
+0057: 01 08 00       ; fetch 08 
+005a: 03 01          ; lit1 01 
+005c: 11             ; lt 
+005d: 14 6e 00       ; jz 6e 
+0060: 01 08 00       ; fetch 08 
+0063: 01 09 00       ; fetch 09 
+0066: 07             ; add 
+0067: 02 0b 00       ; store 0b 
+006a: 06             ; drop 
+006b: 16 7c 00       ; jmp 7c 
+006e: 01 08 00       ; fetch 08 
+0071: 01 09 00       ; fetch 09 
+0074: 03 01          ; lit1 01 
+0076: 07             ; add 
+0077: 09             ; mul 
+0078: 02 0c 00       ; store 0c 
+007b: 06             ; drop 
+007c: 01 08 00       ; fetch 08 
+007f: 03 01          ; lit1 01 
+0081: 12             ; gt 
+0082: 14 90 00       ; jz 90 
+0085: 01 08 00       ; fetch 08 
+0088: 01 08 00       ; fetch 08 
+008b: 09             ; mul 
+008c: 02 0d 00       ; store 0d 
+008f: 06             ; drop 
+0090: 01 09 00       ; fetch 09 
+0093: 03 07          ; lit1 07 
+0095: 09             ; mul 
+0096: 02 0e 00       ; store 0e 
+0099: 06             ; drop 
+009a: 01 0e 00       ; fetch 0e 
+009d: 03 03          ; lit1 03 
+009f: 10             ; div 
+00a0: 02 0f 00       ; store 0f 
+00a3: 06             ; drop 
+00a4: 04 e8 03       ; lit2 3e8 
+00a7: 04 e8 03       ; lit2 3e8 
+00aa: 09             ; mul 
+00ab: 02 10 00       ; store 10 
+00ae: 06             ; drop 
+00af: 03 01          ; lit1 01 
+00b1: 02 11 00       ; store 11 
+00b4: 06             ; drop 
+00b5: 01 10 00       ; fetch 10 
+00b8: 14 c8 00       ; jz c8 
+00bb: 01 10 00       ; fetch 10 
+00be: 03 01          ; lit1 01 
+00c0: 08             ; sub 
+00c1: 02 10 00       ; store 10 
+00c4: 06             ; drop 
+00c5: 16 b5 00       ; jmp b5 
+00c8: 03 00          ; lit1 00 
+00ca: 02 12 00       ; store 12 
+00cd: 02 10 00       ; store 10 
+00d0: 06             ; drop 
+00d1: 01 10 00       ; fetch 10 
+00d4: 01 12 00       ; fetch 12 
+00d7: 03 01          ; lit1 01 
+00d9: 07             ; add 
+00da: 02 12 00       ; store 12 
+00dd: 07             ; add 
+00de: 02 10 00       ; store 10 
+00e1: 06             ; drop 
+00e2: 01 12 00       ; fetch 12 
+00e5: 03 32          ; lit1 32 
+00e7: 11             ; lt 
+00e8: 15 d1 00       ; jnz d1 
+00eb: 17 1e 00       ; call 1e 
+00ee: 18             ; ret 

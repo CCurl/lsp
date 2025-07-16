@@ -49,14 +49,13 @@
 
 // Tokens
 enum {
-    DO_TOK, ELSE_TOK, IF_TOK, WHILE_TOK, VOID_TOK, INT_TOK, //  0->5
-    LBRA, RBRA, LPAR, RPAR,                                 //  6->9
-    PLUS, MINUS, STAR, SLASH, LESS, GRT, SEMI, EQUAL,       // 10->17
-    INT, ID, EOI, FUNC_TOK, EQU                             // 18->22
+    DO_TOK, ELSE_TOK, IF_TOK, WHILE_TOK, VOID_TOK, INT_TOK, RET_TOK, //  0->6
+    LBRA, RBRA, LPAR, RPAR, PLUS, MINUS, STAR, SLASH, LESS, GRT, SEMI,
+    EQUAL, INT, ID, EOI, FUNC_TOK, EQU
 };
 
 // NOTE: these have to be in sync with the first <x> entries in the Symbols list above
-char *words[] = { "do", "else", "if", "while", "void", "int", NULL };
+char *words[] = { "do", "else", "if", "while", "void", "int", "return", NULL};
 
 int ch = ' ', tok, int_val;
 char id_name[64];
@@ -125,7 +124,6 @@ void next_token() {
 /* Symbols */
 
 #define SYMBOLS_SZ 500
-typedef struct { char type, *name; int32_t val; } SYM_T;
 SYM_T symbols[SYMBOLS_SZ];
 int numSymbols = 0;
 
@@ -156,8 +154,8 @@ void dumpSymbols(int details, FILE *toFP) {
 /* Parser. */
 
 enum {
-    VAR, CST, ADD, SUB, MUL, DIV, LT, GT, SET, FUNC_CALL,
-    IF1, IF2, WHILE, DO, EMPTY, SEQ, EXPR, PROG
+    VAR, CST, ADD, SUB, MUL, DIV, LT, GT, SET, FUNC_CALL, FUNC_DEF,
+    IF1, IF2, WHILE, DO, EMPTY, SEQ, EXPR, PROG, RET
 };
 
 #define MAX_NODES 1000
@@ -196,7 +194,7 @@ node *term() {
     if (tok == ID) {
         x = new_node(VAR);
         x->sval = genSymbol(id_name, VAR);
-        x->val = id_name[0] - 'a'; // Update this for longer names
+        x->val = x->sval;
         next_token();
     }
     else if (tok == INT) {
@@ -280,9 +278,7 @@ node *statement() {
     else if (tok == FUNC_TOK) { /* <id> "();" */
         x = new_node(FUNC_CALL);
         x->sval = genSymbol(id_name, FUNC_TOK);
-        printf("-call %s()-", id_name);
-        // TODO: call the function
-        x->val = 12345;
+        x->val = symbols[x->sval].val;
         next_token();
         expect_token(SEMI);
     }
@@ -294,15 +290,22 @@ node *statement() {
         x->o2 = paren_expr();
         expect_token(SEMI);
     }
+    else if (tok == RET_TOK) { /* "return" ";"*/
+        x = new_node(RET);
+        next_token();
+        expect_token(SEMI);
+    }
     else if (tok == SEMI) { /* ";" */
         x = new_node(EMPTY);
         next_token();
     }
     else if (tok == LBRA) { /* "{" <statement> "}" */
+        int seqNo = 1;
         x = new_node(EMPTY);
         next_token();
         while (tok != RBRA) {
             x = gen(SEQ, x, 0);
+            x->val = seqNo;
             x->o2 = statement();
         }
         next_token();
@@ -317,49 +320,6 @@ node *statement() {
     return x;
 }
 
-/* <program> ::= <statement> */
-node *defs(node *st) {
-    node *x = st;
-    next_token();
-    while (1) {
-        if (tok == EOI) { break; }
-        if (tok == LBRA) { break; }
-        if (tok == VOID_TOK) {
-            next_token(); expect_token(FUNC_TOK);
-            printf("-def %s()-", id_name);
-            genSymbol(id_name, FUNC_TOK);
-            // TODO: Add the function
-            expect_token(LBRA);
-            x = new_node(EMPTY);
-            while (tok != RBRA) {
-                x = gen(SEQ, x, NULL);
-                x->o2 = statement();
-            }
-            next_token();
-            continue;
-        }
-        if (tok == INT_TOK) {
-            next_token(); expect_token(ID);
-            genSymbol(id_name, VAR);
-            // printf("-VAR %s-", id_name);
-            expect_token(SEMI);
-            continue;
-        }
-        message("-def?-", 0); syntax_error();
-    }
-    return st;
-}
-
-/* <program> ::= <statement> */
-node *program() {
-    node *prog = gen(PROG, NULL, NULL);
-    node *code = defs(prog);
-    if (tok != EOI) {
-        if (code->kind != PROG) { code = gen(SEQ, code, NULL); }
-        code->o1 = statement();
-    }
-    return prog;
-}
 
 /*---------------------------------------------------------------------------*/
 /* Code generator. */
@@ -407,25 +367,70 @@ void c(node *x) {
         case EMPTY: break;
         case SEQ: c(x->o1); c(x->o2); break;
         case EXPR: c(x->o1); g(IDROP); break;
+        case FUNC_CALL: if (x->val == 0) { error("undefined function!"); }
+            g(ICALL); g2(x->val); break;
+        case FUNC_DEF: c(x->o1); break;
         case PROG: c(x->o1); g(HALT);  break;
-        case FUNC_CALL: g(ICALL); g2(x->val); break;
+        case RET: g(IRET); break;
     }
 }
+
+/*---------------------------------------------------------------------------*/
+/* <program> ::= <statement> */
+
+node *defs(node *st) {
+    node *x = st;
+    next_token();
+    while (1) {
+        if (tok == EOI) { break; }
+        if (tok == LBRA) { break; }
+        if (tok == VOID_TOK) {
+            int seqNo = 1;
+            next_token(); expect_token(FUNC_TOK);
+            int sym = genSymbol(id_name, FUNC_TOK);
+            symbols[sym].val = here;
+            x = gen(FUNC_DEF, NULL, NULL);
+            x->sval = sym;
+            if (tok != LBRA) error("'{' expected.");
+            x->o1 = statement();
+            c(x);
+            g(IRET);
+            continue;
+        }
+        if (tok == INT_TOK) {
+            next_token(); expect_token(ID);
+            genSymbol(id_name, VAR);
+            expect_token(SEMI);
+            continue;
+        }
+        message("-def?-", 0); syntax_error();
+    }
+    return st;
+}
+
+int entry_point;
 
 /*---------------------------------------------------------------------------*/
 /* Main program. */
 
 int main(int argc, char *argv[]) {
-    if (argc > 1) { input_fp = fopen(argv[1], "rt"); }
-    else { input_fp = fopen("test.tc", "rt"); }
-    c(program());
-    dis(here);
-    printf("\n(%d nodes, %d code bytes)\n", num_nodes, here);
-
+    char *fn = (argc > 1) ? argv[1] : "test.tc";
+    input_fp = fopen(fn, "rt");
+    if (!input_fp) { error("can't open source file"); }
+    printf("compiling %s ... ", fn);
     initVM();
-    runVM(0);
-    for (int i = 0; i < 26; i++) {
-        if (globals[i] != 0) printf("%c = %ld\n", 'a' + i, globals[i]);
+    here = 1;
+    defs(NULL);
+    printf("%d code bytes (%d nodes)\n\n", here, num_nodes);
+
+    int mainSym = genSymbol("main", FUNC_TOK);
+    int entryPoint = symbols[mainSym].val;
+    if (entryPoint) { runVM(entryPoint); }
+    else { error("no main() function!"); }
+    dis(here);
+    for (int i = 0; i < numSymbols; i++) {
+        SYM_T *s = &symbols[i];
+        printf("%s = %ld\n", s->name, s->val);
     }
     printf("\n");
     return 0;

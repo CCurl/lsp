@@ -9,8 +9,11 @@
 typedef unsigned char byte;
 typedef byte code;
 
+typedef struct { char type, * name; int32_t val; } SYM_T;
+extern SYM_T symbols[];
+
 enum {
-    IFETCH, ISTORE, IP1, IP2, IP4, IDROP, IADD, ISUB, IMUL, IDIV,
+    NOP, IFETCH, ISTORE, IP1, IP2, IP4, IDROP, IADD, ISUB, IMUL, IDIV,
     ILT, IGT, IEQ, JZ, JNZ, JMP, ICALL, IRET, HALT
 };
 
