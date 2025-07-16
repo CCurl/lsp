@@ -24,7 +24,7 @@
     <ProjectGuid>{CB2D435D-69A5-4B1A-8077-15100BA6BA03}</ProjectGuid>
     <RootNamespace>stable</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>lsp</ProjectName>
+    <ProjectName>tc</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -151,9 +151,14 @@
   <ItemGroup>
     <ClCompile Include="heap.c" />
     <ClCompile Include="tc.c" />
+    <ClCompile Include="vm.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="heap.h" />
+    <ClInclude Include="tc.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="list.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

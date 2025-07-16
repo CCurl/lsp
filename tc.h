@@ -7,7 +7,7 @@
 #include "heap.h"
 
 typedef unsigned char byte;
-typedef char code;
+typedef byte code;
 
 enum {
     IFETCH, ISTORE, IP1, IP2, IP4, IDROP, IADD, ISUB, IMUL, IDIV,
@@ -17,8 +17,8 @@ enum {
 extern long globals[];
 extern code vm[];
 extern void initVM();
-extern void runVM(code *pc);
-extern void dis(code *here);
+extern void runVM(int pc);
+extern void dis(int here);
 extern void dumpSymbols(int details, FILE *toFP);
 
 #endif // __TC_H__

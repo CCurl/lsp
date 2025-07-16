@@ -8,7 +8,7 @@ void Abc01_X() {
 
 {
 	Abc01_X();
-	a = 11; b=a+2; z=999999;
+	a = 11; b=a+2; z=667788;
 	if (a < 1) { c=a+b; }
 	else { d = a*(b+1); }
 	if (a > 1) { g=a*a; }

@@ -364,49 +364,51 @@ node *program() {
 /*---------------------------------------------------------------------------*/
 /* Code generator. */
 
-code *here = &vm[0];
+int here = 0;
 
-void g(code c) { *here++ = c; } /* missing overflow check */
-void g4(int n) {
-    g(n & 0xff); n = (n >> 8);
-    g(n & 0xff); n = (n >> 8);
-    g(n & 0xff); n = (n >> 8);
-    g(n & 0xff);
+void g(int c) { vm[here++] = (c & 0xff); }
+void g2(int n) { g(n); g(n>>8); }
+void g4(int n) { g(n); g(n>>8); g(n>>16); g(n>>24); }
+
+int hole(int inst) {
+    g(inst);
+    int h = here;
+    g2(0);
+    return h;
 }
-void g2(int n) {
-    g(n & 0xff); n = (n >> 8);
-    g(n & 0xff);
+
+void fix(int src, int dst) {
+    vm[src+0] = (dst & 0xff); dst = (dst >> 8);
+    vm[src+1] = (dst & 0xff);
 }
-code *hole() { return here++; }
-void fix(code *src, code *dst) { *src = dst - src; } /* missing overflow check */
 
 void c(node *x) {
-    code *p1, *p2;
+    int p1, p2;
     switch (x->kind) {
-    case VAR: g(IFETCH); g2(x->val); break;
-    case CST: if (BTWI(x->val, 0, 127)) { g(IP1); g(x->val); }
-            else if (BTWI(x->val, 128, 32767)) { g(IP2); g2(x->val); }
-            else { g(IP4); g4(x->val); }
-            break;
-    case ADD: c(x->o1);  c(x->o2); g(IADD); break;
-    case MUL: c(x->o1);  c(x->o2); g(IMUL); break;
-    case SUB: c(x->o1);  c(x->o2); g(ISUB); break;
-    case DIV: c(x->o1);  c(x->o2); g(IDIV); break;
-    case LT: c(x->o1);  c(x->o2); g(ILT); break;
-    case GT: c(x->o1);  c(x->o2); g(IGT); break;
-    case EQU: c(x->o1);  c(x->o2); g(IEQ); break;
-    case SET: c(x->o2);  g(ISTORE); g2(x->o1->val); break;
-    case IF1: c(x->o1);  g(JZ); p1 = hole(); c(x->o2); fix(p1, here); break;
-    case IF2: c(x->o1);  g(JZ); p1 = hole(); c(x->o2); g(JMP); p2 = hole();
-        fix(p1, here); c(x->o3); fix(p2, here); break;
-    case WHILE: p1 = here; c(x->o1); g(JZ); p2 = hole(); c(x->o2);
-        g(JMP); fix(hole(), p1); fix(p2, here); break;
-    case DO: p1 = here; c(x->o1); c(x->o2); g(JNZ); fix(hole(), p1); break;
-    case EMPTY: break;
-    case SEQ: c(x->o1); c(x->o2); break;
-    case EXPR: c(x->o1); g(IDROP); break;
-    case PROG: c(x->o1); g(HALT);  break;
-    case FUNC_CALL: g(ICALL); g2(x->val); break;
+        case VAR: g(IFETCH); g2(x->val); break;
+        case CST: if (BTWI(x->val, 0, 127)) { g(IP1); g(x->val); }
+                else if (BTWI(x->val, 128, 32767)) { g(IP2); g2(x->val); }
+                else { g(IP4); g4(x->val); }
+                break;
+        case ADD: c(x->o1); c(x->o2); g(IADD); break;
+        case MUL: c(x->o1); c(x->o2); g(IMUL); break;
+        case SUB: c(x->o1); c(x->o2); g(ISUB); break;
+        case DIV: c(x->o1); c(x->o2); g(IDIV); break;
+        case LT:  c(x->o1); c(x->o2); g(ILT);  break;
+        case GT:  c(x->o1); c(x->o2); g(IGT);  break;
+        case EQU: c(x->o1); c(x->o2); g(IEQ);  break;
+        case SET: c(x->o2); g(ISTORE); g2(x->o1->val); break;
+        case IF1: c(x->o1); p1 = hole(JZ); c(x->o2); fix(p1, here); break;
+        case IF2: c(x->o1); p1 = hole(JZ); c(x->o2); p2 = hole(JMP);
+            fix(p1, here); c(x->o3); fix(p2, here); break;
+        case WHILE: p1 = here; c(x->o1); p2 = hole(JZ); c(x->o2);
+            fix(hole(JMP), p1); fix(p2, here); break;
+        case DO: p1 = here; c(x->o1); c(x->o2); fix(hole(JNZ), p1); break;
+        case EMPTY: break;
+        case SEQ: c(x->o1); c(x->o2); break;
+        case EXPR: c(x->o1); g(IDROP); break;
+        case PROG: c(x->o1); g(HALT);  break;
+        case FUNC_CALL: g(ICALL); g2(x->val); break;
     }
 }
 
@@ -415,18 +417,16 @@ void c(node *x) {
 
 int main(int argc, char *argv[]) {
     if (argc > 1) { input_fp = fopen(argv[1], "rt"); }
-    if (argc > 1) { input_fp = fopen(argv[1], "rt"); }
     else { input_fp = fopen("test.tc", "rt"); }
     c(program());
+    dis(here);
+    printf("\n(%d nodes, %d code bytes)\n", num_nodes, here);
 
-    printf("\n(%d nodes, %d code bytes)\n", num_nodes, (int)(here - &vm[0]));
-    for (int i = 0; i < 26; i++) { globals[i] = 0; }
-    initVM(vm);
-    runVM(vm);
+    initVM();
+    runVM(0);
     for (int i = 0; i < 26; i++) {
         if (globals[i] != 0) printf("%c = %ld\n", 'a' + i, globals[i]);
     }
-    dis(here);
     printf("\n");
     return 0;
 }
