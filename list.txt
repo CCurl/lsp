@@ -1,3 +1,23 @@
+heap - size: 10000/152 bytes, index: 500/17, struct: 8, asg: 8
+
+symbols: 500, 17 used
+  0 - type:  0, val: 0  nXYZ_abc_09
+  1 - type: 21, val: 0  Abc01_X
+  2 - type:  0, val: 0  r
+  3 - type:  0, val: 0  t
+  4 - type:  0, val: 0  q
+  5 - type:  0, val: 0  a
+  6 - type:  0, val: 0  b
+  7 - type:  0, val: 0  z
+  8 - type:  0, val: 0  c
+  9 - type:  0, val: 0  d
+ 10 - type:  0, val: 0  g
+ 11 - type:  0, val: 0  e
+ 12 - type:  0, val: 0  f
+ 13 - type:  0, val: 0  i
+ 14 - type:  0, val: 0  s
+ 15 - type:  0, val: 0  n
+ 16 - type: 21, val: 0  abc999_X
 
 0001: 16 ; call 12345
 0004: 02 ; lit1 11

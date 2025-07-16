@@ -3,10 +3,7 @@
 /* Copyright (C) 2001 by Marc Feeley, All Rights Reserved. */
 /* Modified by Chris Curl */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "heap.h"
+#include "tc.h"
 
 /*
  * This is a compiler for the Tiny-C language.  Tiny-C is a
@@ -50,18 +47,18 @@
 
 #define BTWI(n,l,h) ((l<=n)&&(n<=h))
 
-// Symbols
+// Tokens
 enum {
-    DO_SYM, ELSE_SYM, IF_SYM, WHILE_SYM, VOID_SYM, INT_SYM, //  0->5
+    DO_TOK, ELSE_TOK, IF_TOK, WHILE_TOK, VOID_TOK, INT_TOK, //  0->5
     LBRA, RBRA, LPAR, RPAR,                                 //  6->9
     PLUS, MINUS, STAR, SLASH, LESS, GRT, SEMI, EQUAL,       // 10->17
-    INT, ID, EOI, FUNC_SYM, EQU                             // 18->22
+    INT, ID, EOI, FUNC_TOK, EQU                             // 18->22
 };
 
 // NOTE: these have to be in sync with the first <x> entries in the Symbols list above
 char *words[] = { "do", "else", "if", "while", "void", "int", NULL };
 
-int ch = ' ', sym, int_val;
+int ch = ' ', tok, int_val;
 char id_name[64];
 FILE *input_fp = NULL;
 
@@ -80,47 +77,78 @@ void next_ch() {
     // if (BTWI(ch,32,126)) { printf("%c", ch); } else { printf("(%d)", ch); }
 }
 
-void next_sym() {
+void next_token() {
     while (BTWI(ch,1,32)) { next_ch(); }
     switch (ch) {
-    case EOF: sym = EOI; break;
-    case '{': next_ch(); sym = LBRA;  break;
-    case '}': next_ch(); sym = RBRA;  break;
-    case '(': next_ch(); sym = LPAR;  break;
-    case ')': next_ch(); sym = RPAR;  break;
-    case '+': next_ch(); sym = PLUS;  break;
-    case '-': next_ch(); sym = MINUS; break;
-    case '*': next_ch(); sym = STAR;  break;
-    case '/': next_ch(); sym = SLASH; break;
-    case '<': next_ch(); sym = LESS;  break;
-    case '>': next_ch(); sym = GRT;   break;
-    case ';': next_ch(); sym = SEMI;  break;
-    case '=': sym = EQUAL; next_ch();
-        if (ch == '=') { sym = EQU; next_ch(); }
+    case EOF: tok = EOI; break;
+    case '{': next_ch(); tok = LBRA;  break;
+    case '}': next_ch(); tok = RBRA;  break;
+    case '(': next_ch(); tok = LPAR;  break;
+    case ')': next_ch(); tok = RPAR;  break;
+    case '+': next_ch(); tok = PLUS;  break;
+    case '-': next_ch(); tok = MINUS; break;
+    case '*': next_ch(); tok = STAR;  break;
+    case '/': next_ch(); tok = SLASH; break;
+    case '<': next_ch(); tok = LESS;  break;
+    case '>': next_ch(); tok = GRT;   break;
+    case ';': next_ch(); tok = SEMI;  break;
+    case '=': tok = EQUAL; next_ch();
+        if (ch == '=') { tok = EQU; next_ch(); }
         break;
     default:
         if (isNum(ch)) {
             int_val = 0; /* missing overflow check */
             while (isNum(ch)) { int_val = int_val  *10 + (ch - '0'); next_ch(); }
-            sym = INT;
+            tok = INT;
         }
         else if (isAlpha(ch)) {
             int i = 0; /* missing overflow check */
             while (isAlphaNum(ch)) { id_name[i++] = ch; next_ch(); }
             id_name[i] = '\0';
-            sym = 0;
-            while (words[sym] != NULL && strcmp(words[sym], id_name) != 0) { sym++; }
-            if (words[sym] == NULL) {
-                sym = ID;
+            tok = 0;
+            while (words[tok] != NULL && strcmp(words[tok], id_name) != 0) { tok++; }
+            if (words[tok] == NULL) {
+                tok = ID;
                 if (ch == '(') {
                     next_ch();
-                    if (ch == ')') { sym = FUNC_SYM; next_ch(); }
+                    if (ch == ')') { tok = FUNC_TOK; next_ch(); }
                     else { syntax_error(); }
                 }
             }
         }
         else { message("-ch-", 0); syntax_error(); }
         break;
+    }
+}
+
+/*---------------------------------------------------------------------------*/
+/* Symbols */
+
+#define SYMBOLS_SZ 500
+typedef struct { char type, *name; int32_t val; } SYM_T;
+SYM_T symbols[SYMBOLS_SZ];
+int numSymbols = 0;
+
+int genSymbol(char *name, char type) {
+    for (int i = 0; i < numSymbols; i++) {
+        if (strcmp(symbols[i].name, name) == 0) { return i; }
+    }
+    SYM_T *x = &symbols[numSymbols];
+    x->name = hAlloc(strlen(name) + 1);
+    x->val = 0;
+    x->type = type;
+    strcpy(x->name, name);
+    return numSymbols++;
+}
+
+void dumpSymbols(int details, FILE *toFP) {
+    fprintf(toFP ? toFP : stdout, "symbols: %d, %d used\n", SYMBOLS_SZ, numSymbols);
+    if (details) {
+        for (int i = 0; i < numSymbols; i++) {
+            SYM_T *x = &symbols[i];
+            fprintf(toFP ? toFP : stdout, "%3d - type: %2d, val: %d  %s\n", 
+                i, x->type, x->val, x->name);
+        }
     }
 }
 
@@ -151,66 +179,40 @@ node *gen(int k, node *o1, node *o2) {
     return x;
 }
 
-void expect_sym(int exp) {
-    if (sym != exp) {
-        printf("-expected symbol[%d],not[%d]-", exp, sym);
+void expect_token(int exp) {
+    if (tok != exp) {
+        printf("-expected symbol[%d],not[%d]-", exp, tok);
         syntax_error();
     }
-    next_sym();
+    next_token();
 }
 
 node *paren_expr(); /* forward declaration */
 
-#define SYMBOLS_SZ 500
-typedef struct { char type, *name; int32_t val; } SYM_T;
-SYM_T symbols[SYMBOLS_SZ];
-int numSymbols = 0;
-
-int genSymbol(char* name, char type) {
-    for (int i = 0; i < numSymbols; i++) {
-        if (strcmp(symbols[i].name, name) == 0) { return i; }
-    }
-    SYM_T *x = &symbols[numSymbols];
-    x->name = hAlloc(strlen(name) + 1);
-    x->val = 0;
-    x->type = type;
-    strcpy(x->name, name);
-    return numSymbols++;
-}
-
-void dumpSymbols(int details) {
-    printf("\nsymbols: %d, %d used", SYMBOLS_SZ, numSymbols);
-    if (details) {
-        for (int i = 0; i < numSymbols; i++) {
-            SYM_T *x = &symbols[i];
-            printf("\n%3d - type: %2d, val: %d  %s", i, x->type, x->val, x->name);
-        }
-    }
-}
 
 /* <term> ::= <id> | <int> | <paren_expr> */
 node *term() {
     node *x;
-    if (sym == ID) {
+    if (tok == ID) {
         x = new_node(VAR);
         x->sval = genSymbol(id_name, VAR);
         x->val = id_name[0] - 'a'; // Update this for longer names
-        next_sym();
+        next_token();
     }
-    else if (sym == INT) {
+    else if (tok == INT) {
         x = new_node(CST); // CONSTANT
         x->val = int_val;
-        next_sym();
+        next_token();
     }
     else x = paren_expr();
     return x;
 }
 
 int mathop() {
-    if (sym == PLUS) { return ADD; }
-    else if (sym == MINUS) { return SUB; }
-    else if (sym == STAR) { return MUL; }
-    else if (sym == SLASH) { return DIV; }
+    if (tok == PLUS) { return ADD; }
+    else if (tok == MINUS) { return SUB; }
+    else if (tok == STAR) { return MUL; }
+    else if (tok == SLASH) { return DIV; }
     return 0;
 }
 
@@ -220,7 +222,7 @@ node *sum() {
     node *x = term();
     while (mathop()) {
         x = gen(mathop(), x, 0);
-        next_sym();
+        next_token();
         x->o2 = term();
     }
     return x;
@@ -229,19 +231,19 @@ node *sum() {
 /* <test> ::= <math> | <math> "<" <math> | <math> ">" <math> */
 node *test() {
     node *x = sum();
-    if (sym == LESS) { next_sym(); return gen(LT, x, sum()); }
-    if (sym == GRT) { next_sym(); return gen(GT, x, sum()); }
-    if (sym == EQU) { next_sym(); return gen(EQU, x, sum()); }
+    if (tok == LESS) { next_token(); return gen(LT, x, sum()); }
+    if (tok == GRT) { next_token(); return gen(GT, x, sum()); }
+    if (tok == EQU) { next_token(); return gen(EQU, x, sum()); }
     return x;
 }
 
 /* <expr> ::= <test> | <id> "=" <expr> */
 node *expr() {
     node *x;
-    if (sym != ID) { return test(); }
+    if (tok != ID) { return test(); }
     x = test();
-    if ((x->kind == VAR) && (sym == EQUAL)) {
-        next_sym();
+    if ((x->kind == VAR) && (tok == EQUAL)) {
+        next_token();
         return gen(SET, x, expr());
     }
     return x;
@@ -250,67 +252,67 @@ node *expr() {
 /* <paren_expr> ::= "(" <expr> ")" */
 node *paren_expr() {
     node *x;
-    expect_sym(LPAR);
+    expect_token(LPAR);
     x = expr();
-    expect_sym(RPAR);
+    expect_token(RPAR);
     return x;
 }
 
 node *statement() {
     node *x = NULL;
-    if (sym == IF_SYM) { /* "if" <paren_expr> <statement> */
+    if (tok == IF_TOK) { /* "if" <paren_expr> <statement> */
         x = new_node(IF1);
-        next_sym();
+        next_token();
         x->o1 = paren_expr();
         x->o2 = statement();
-        if (sym == ELSE_SYM) { /* ... "else" <statement> */
+        if (tok == ELSE_TOK) { /* ... "else" <statement> */
             x->kind = IF2;
-            next_sym();
+            next_token();
             x->o3 = statement();
         }
     }
-    else if (sym == WHILE_SYM) { /* "while" <paren_expr> <statement> */
+    else if (tok == WHILE_TOK) { /* "while" <paren_expr> <statement> */
         x = new_node(WHILE);
-        next_sym();
+        next_token();
         x->o1 = paren_expr();
         x->o2 = statement();
     }
-    else if (sym == FUNC_SYM) { /* <id> "();" */
+    else if (tok == FUNC_TOK) { /* <id> "();" */
         x = new_node(FUNC_CALL);
-        x->sval = genSymbol(id_name, FUNC_SYM);
+        x->sval = genSymbol(id_name, FUNC_TOK);
         printf("-call %s()-", id_name);
         // TODO: call the function
         x->val = 12345;
-        next_sym();
-        expect_sym(SEMI);
+        next_token();
+        expect_token(SEMI);
     }
-    else if (sym == DO_SYM) { /* "do" <statement> "while" <paren_expr> ";" */
+    else if (tok == DO_TOK) { /* "do" <statement> "while" <paren_expr> ";" */
         x = new_node(DO);
-        next_sym();
+        next_token();
         x->o1 = statement();
-        expect_sym(WHILE_SYM);
+        expect_token(WHILE_TOK);
         x->o2 = paren_expr();
-        expect_sym(SEMI);
+        expect_token(SEMI);
     }
-    else if (sym == SEMI) { /* ";" */
+    else if (tok == SEMI) { /* ";" */
         x = new_node(EMPTY);
-        next_sym();
+        next_token();
     }
-    else if (sym == LBRA) { /* "{" <statement> "}" */
+    else if (tok == LBRA) { /* "{" <statement> "}" */
         x = new_node(EMPTY);
-        next_sym();
-        while (sym != RBRA) {
+        next_token();
+        while (tok != RBRA) {
             x = gen(SEQ, x, 0);
             x->o2 = statement();
         }
-        next_sym();
+        next_token();
     }
-    else if (sym == EQU) { /* <id> = <expr> ; */
+    else if (tok == EQU) { /* <id> = <expr> ; */
         
     }
     else { /* <expr> ";" */
         x = gen(EXPR, expr(), NULL);
-        expect_sym(SEMI);
+        expect_token(SEMI);
     }
     return x;
 }
@@ -318,29 +320,29 @@ node *statement() {
 /* <program> ::= <statement> */
 node *defs(node *st) {
     node *x = st;
-    next_sym();
+    next_token();
     while (1) {
-        if (sym == EOI) { break; }
-        if (sym == LBRA) { break; }
-        if (sym == VOID_SYM) {
-            next_sym(); expect_sym(FUNC_SYM);
+        if (tok == EOI) { break; }
+        if (tok == LBRA) { break; }
+        if (tok == VOID_TOK) {
+            next_token(); expect_token(FUNC_TOK);
             printf("-def %s()-", id_name);
-            genSymbol(id_name, FUNC_SYM);
+            genSymbol(id_name, FUNC_TOK);
             // TODO: Add the function
-            expect_sym(LBRA);
+            expect_token(LBRA);
             x = new_node(EMPTY);
-            while (sym != RBRA) {
+            while (tok != RBRA) {
                 x = gen(SEQ, x, NULL);
                 x->o2 = statement();
             }
-            next_sym();
+            next_token();
             continue;
         }
-        if (sym == INT_SYM) {
-            next_sym(); expect_sym(ID);
+        if (tok == INT_TOK) {
+            next_token(); expect_token(ID);
             genSymbol(id_name, VAR);
             // printf("-VAR %s-", id_name);
-            expect_sym(SEMI);
+            expect_token(SEMI);
             continue;
         }
         message("-def?-", 0); syntax_error();
@@ -352,7 +354,7 @@ node *defs(node *st) {
 node *program() {
     node *prog = gen(PROG, NULL, NULL);
     node *code = defs(prog);
-    if (sym != EOI) {
+    if (tok != EOI) {
         if (code->kind != PROG) { code = gen(SEQ, code, NULL); }
         code->o1 = statement();
     }
@@ -362,14 +364,7 @@ node *program() {
 /*---------------------------------------------------------------------------*/
 /* Code generator. */
 
-enum {
-    IFETCH, ISTORE, IP1, IP2, IP4, IDROP, IADD, ISUB, IMUL, IDIV,
-    ILT, IGT, IEQ, JZ, JNZ, JMP, ICALL, IRET, HALT
-};
-
-typedef char code;
-typedef unsigned char byte;
-code vm[1000],  *here = vm;
+code *here = &vm[0];
 
 void g(code c) { *here++ = c; } /* missing overflow check */
 void g4(int n) {
@@ -416,92 +411,6 @@ void c(node *x) {
 }
 
 /*---------------------------------------------------------------------------*/
-/* Virtual machine. */
-
-int globals[26], sp, rsp;
-
-#define ACASE    goto again; case
-#define TOS      st[sp]
-#define NOS      st[sp-1]
-
-int f4(byte *a) {
-    int x = *(a + 3);
-    x = (x << 8) | *(a + 2);
-    x = (x << 8) | *(a + 1);
-    x = (x << 8) | *(a + 0);
-    return x;
-}
-
-int f2(byte *a) {
-    int x = *(a + 1);
-    x = (x << 8) | *(a + 0);
-    return x;
-}
-
-void run(code *pc) {
-    long st[1000];
-    code *rst[1000];
-again:
-    switch (*pc++) {
-    case  IFETCH: st[++sp] = globals[f2((byte*)pc)]; pc += 2;
-        ACASE ISTORE : globals[f2((byte*)pc)] = st[sp]; pc += 2;
-        ACASE IP1 : st[++sp] = *(pc++);
-        ACASE IP2 : st[++sp] = f2((byte*)pc); pc += 2;
-        ACASE IP4 : st[++sp] = f4((byte*)pc); pc += 4;
-        ACASE IDROP : --sp;
-        ACASE IADD : NOS += TOS; --sp;
-        ACASE ISUB : NOS -= TOS; --sp;
-        ACASE IMUL : NOS *= TOS; --sp;
-        ACASE IDIV : NOS /= TOS; --sp;
-        ACASE ILT : NOS = (NOS < TOS) ? 1 : 0; --sp;
-        ACASE IGT : NOS = (NOS > TOS) ? 1 : 0; --sp;
-        ACASE IEQ : NOS = (NOS == TOS) ? 1 : 0; --sp;
-        ACASE JMP : pc += *pc;
-        ACASE JZ : if (st[sp--] == 0) pc += *pc; else pc++;
-        ACASE JNZ : if (st[sp--] != 0) pc += *pc; else pc++;
-        ACASE ICALL : /* rst[rsp++] = pc+2; pc=f2((byte*)pc); */
-        printf("-run:call %d-\n", f2((byte*)pc)); pc += 2;
-        ACASE IRET : if (rsp) { pc = rst[--rsp]; }
-        else { error("-return-"); }
-        ACASE HALT : return;
-    }
-}
-
-/*---------------------------------------------------------------------------*/
-/* Disassembly. */
-
-void dis() {
-    code *pc = &vm[0];
-    FILE *fp = fopen("list.txt", "wt");
-again:
-    if (here <= pc) { return; }
-    int p = (int)(pc - &vm[0]) + 1;
-    fprintf(fp, "\n%04d: %02d ; ", p, *pc);
-    switch (*pc++) {
-        case  IFETCH: fprintf(fp, "fetch %d", f2((byte*)pc)); pc += 2;
-        ACASE ISTORE: fprintf(fp, "store %d", f2((byte*)pc)); pc += 2;
-        ACASE IP1:    fprintf(fp, "lit1 %d", *(pc++));
-        ACASE IP2:    fprintf(fp, "lit2 %d", f2((byte*)pc)); pc += 2;
-        ACASE IP4:    fprintf(fp, "lit4 %d", f4((byte*)pc)); pc += 4;
-        ACASE IDROP:  fprintf(fp, "drop");
-        ACASE IADD:   fprintf(fp, "add");
-        ACASE ISUB:   fprintf(fp, "sub");
-        ACASE IMUL:   fprintf(fp, "mul");
-        ACASE IDIV:   fprintf(fp, "div");
-        ACASE ILT:    fprintf(fp, "lt");
-        ACASE IGT:    fprintf(fp, "gt");
-        ACASE JMP:    fprintf(fp, "jmp %d", p + 1 + (*pc++));
-        ACASE JZ:     fprintf(fp, "jz %d", p + 1 + (*pc++));
-        ACASE JNZ:    fprintf(fp, "jnz %d", p + 1 + (*pc++));
-        ACASE ICALL:  fprintf(fp, "call %d", f2((byte*)pc)); pc += 2;
-        ACASE IRET:   fprintf(fp, "ret");
-        ACASE HALT:   fprintf(fp, "halt");
-    }
-    fprintf(fp, "\n");
-    fclose(fp);
-}
-
-/*---------------------------------------------------------------------------*/
 /* Main program. */
 
 int main(int argc, char *argv[]) {
@@ -511,16 +420,13 @@ int main(int argc, char *argv[]) {
     c(program());
 
     printf("\n(%d nodes, %d code bytes)\n", num_nodes, (int)(here - &vm[0]));
-    dis();
-    sp = rsp = 0;
     for (int i = 0; i < 26; i++) { globals[i] = 0; }
-    run(vm);
+    initVM(vm);
+    runVM(vm);
     for (int i = 0; i < 26; i++) {
-        if (globals[i] != 0) printf("%c = %d\n", 'a' + i, globals[i]);
+        if (globals[i] != 0) printf("%c = %ld\n", 'a' + i, globals[i]);
     }
-    if (sp) { error("-stack not empty-"); }
-    hDump(0);
-    dumpSymbols(0);
+    dis(vm, here);
     printf("\n");
     return 0;
 }

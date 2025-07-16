@@ -15,14 +15,16 @@ static HEAP_T index[HEAPINDEX_SZ];
 static char heap[HEAP_SZ];
 static const int hASG = 8; // alloc size granularity
 
-void hDump(int details) {
-	printf("\nheap - size: %u/%u bytes, index: %u/%u, struct: %u, asg: %d"
-		, HEAP_SZ, hHere, HEAPINDEX_SZ, iHere, sizeof(HEAP_T), hASG);
+void hDump(int details, FILE *toFP) {
+	fprintf(toFP ? toFP : stdout, "heap - size: %u/%u bytes, index: %u/%u, struct: %u, asg: %d\n",
+		HEAP_SZ, hHere, HEAPINDEX_SZ, iHere, sizeof(HEAP_T), hASG);
 	if (details) {
 		for (uint i = 0; i < iHere; i++) {
 			PHEAP x = (PHEAP)&index[i];
-			printf("\n%3d, inuse: %u, sz: %2u, off: %u", i, x->inUse, x->sz, x->off);
+			fprintf(toFP ? toFP : stdout, "\n%3d, inuse: %u, sz: %2u, off: %u",
+				i, x->inUse, x->sz, x->off);
 		}
+		fprintf(toFP ? toFP : stdout, "\n");
 	}
 }
 
