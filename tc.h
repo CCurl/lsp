@@ -18,7 +18,7 @@ extern long globals[];
 extern code vm[];
 extern void initVM();
 extern void runVM(code *pc);
-extern void dis(code *pc, code *here);
+extern void dis(code *here);
 extern void dumpSymbols(int details, FILE *toFP);
 
 #endif // __TC_H__

@@ -65,15 +65,17 @@ void runVM(code *pc) {
 /*---------------------------------------------------------------------------*/
 /* Disassembly. */
 
-void dis(code *pc, code *here) {
+void dis(code *here) {
+    code *pc = &vm[0];
     FILE *fp = fopen("list.txt", "wt");
     hDump(0, fp);
     fprintf(fp, "\n");
     dumpSymbols(1, fp);
+
 again:
     if (here <= pc) { return; }
-    int p = (int)(pc - &vm[0]) + 1;
-    fprintf(fp, "\n%04d: %02d ; ", p, *pc);
+    int p = (int)(pc - &vm[0]);
+    fprintf(fp, "\n%04d: %02d ; ", p++, *pc);
     switch (*pc++) {
         case  IFETCH: fprintf(fp, "fetch %d", f2((byte*)pc)); pc += 2;
         ACASE ISTORE: fprintf(fp, "store %d", f2((byte*)pc)); pc += 2;
@@ -87,9 +89,9 @@ again:
         ACASE IDIV:   fprintf(fp, "div");
         ACASE ILT:    fprintf(fp, "lt");
         ACASE IGT:    fprintf(fp, "gt");
-        ACASE JMP:    fprintf(fp, "jmp %d", p + 1 + (*pc++));
-        ACASE JZ:     fprintf(fp, "jz %d", p + 1 + (*pc++));
-        ACASE JNZ:    fprintf(fp, "jnz %d", p + 1 + (*pc++));
+        ACASE JMP:    fprintf(fp, "jmp %d", p + *pc); pc++;
+        ACASE JZ:     fprintf(fp, "jz  %d", p + *pc); pc++;
+        ACASE JNZ:    fprintf(fp, "jnz %d", p + *pc); pc++;
         ACASE ICALL:  fprintf(fp, "call %d", f2((byte*)pc)); pc += 2;
         ACASE IRET:   fprintf(fp, "ret");
         ACASE HALT:   fprintf(fp, "halt");

@@ -426,7 +426,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < 26; i++) {
         if (globals[i] != 0) printf("%c = %ld\n", 'a' + i, globals[i]);
     }
-    dis(vm, here);
+    dis(here);
     printf("\n");
     return 0;
 }
