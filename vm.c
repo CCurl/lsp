@@ -4,6 +4,9 @@
 #include "tc.h"
 
 byte vm[CODE_SZ];
+int here;
+static long stk[0x80], sp;
+static long rstk[1000], rsp;
 
 #define ACASE    goto again; case
 #define BCASE    break; case
@@ -15,22 +18,22 @@ static long f4(int a) {
     return vm[a+0] | (vm[a+1] << 8) | (vm[a+2] << 16) | (vm[a+3] << 24);
 }
 
-static long stk[0x80], sp;
-static int rstk[1000], rsp;
+
 
 static void push(long x) { sp = (sp+1)&0x7f; TOS = x; }
 static void drop() { sp = (sp-1)&0x7f; }
 static long pop() { long x = TOS; drop(); return x; }
 
 void initVM() {
-    sp = rsp = 0;
+    sp = rsp = here = 0;
 }
 
 void runVM(int pc) {
     again:
     // printf("-pc:%d/ir:%d-\n", pc, vm[pc]);
     switch (vm[pc++]) {
-        case  IFETCH: stk[++sp] = symbols[f2(pc)].val; pc += 2;
+        case  NOP:
+        ACASE IFETCH: stk[++sp] = symbols[f2(pc)].val; pc += 2;
         ACASE ISTORE: symbols[f2(pc)].val = stk[sp]; pc += 2;
         ACASE IP1: push(vm[pc++]);
         ACASE IP2: push(f2(pc)); pc += 2;
@@ -83,8 +86,8 @@ static void pN1(int n) { pNX((n & 0xff)); }
 static void pN2(int n) { pN1(n); pN1(n >> 8); }
 static void pN4(int n) { pN2(n); pN2(n >> 16); }
 
-void dis(int here) {
-    int pc = 1;
+void dis() {
+    int pc = 0;
     long t;
     outFp = fopen("list.txt", "wt");
     // hexDump(0, here, outFp);

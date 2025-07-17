@@ -13,7 +13,6 @@
 #define BTWI(n,l,h) ((l<=n)&&(n<=h))
 
 typedef unsigned char byte;
-typedef byte code;
 
 typedef struct { char type, *name; long val; } SYM_T;
 extern SYM_T symbols[SYMBOLS_SZ];
@@ -23,10 +22,11 @@ enum {
     ILT, IGT, IEQ, JZ, JNZ, JMP, ICALL, IRET, HALT
 };
 
-extern code vm[CODE_SZ];
+extern int here;
+extern byte vm[CODE_SZ];
 extern void initVM();
 extern void runVM(int pc);
-extern void dis(int here);
+extern void dis();
 extern int findSymbolVal(char type, long val);
 extern void dumpSymbols(int details, FILE *toFP);
 

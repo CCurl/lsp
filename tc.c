@@ -326,8 +326,6 @@ node *statement() {
 /*---------------------------------------------------------------------------*/
 /* Code generator. */
 
-int here = 0;
-
 void g(int c) { vm[here++] = (c & 0xff); }
 void g2(int n) { g(n); g(n>>8); }
 void g4(int n) { g(n); g(n>>8); g(n>>16); g(n>>24); }
@@ -420,17 +418,17 @@ int main(int argc, char *argv[]) {
     if (!input_fp) { error("can't open source file"); }
     printf("compiling %s ... ", fn);
     initVM();
-    here = 1;
+    g(NOP);
     defs(NULL);
     printf("%d code bytes (%d nodes)\n\n", here, num_nodes);
-    // dis(here);
+    // dis();
     // exit(0);
 
     int mainSym = genSymbol("main", FUNC_TOK);
     int entryPoint = symbols[mainSym].val;
     if (entryPoint) { runVM(entryPoint); }
     else { error("no main() function!"); }
-    dis(here);
+    dis();
     for (int i = 0; i < numSymbols; i++) {
         SYM_T *s = &symbols[i];
         printf("%s = %ld\n", s->name, s->val);
