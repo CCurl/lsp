@@ -5,6 +5,8 @@ void Abc01_X() {
 	t=r*r;
 	q=t*t;
 	if (r == t) { rr=1; }
+	else { dd = 255; }
+	tt = 2345;
 }
 
 void sub() {
@@ -14,7 +16,7 @@ void sub() {
 
 void main() {
 	Abc01_X();
-	a = 11; b=a+2; z=667788;
+	a = 11; b = a+2; z=667788;
 	if (a < 1) { c=a+b; }
 	else { d = a*(b+1); }
 	if (a > 1) { g=a*a; }

@@ -11,29 +11,30 @@
  * pedagogical tool for learning about compilers.
  * The grammar of Tiny-C in EBNF is:
  * 
- * <program> ::= <defs>
- * <defs> ::= <def> | <def> <def>
- * <def> ::= <func_def> | <var-def>
- * <func-def> ::= "void" <id> "(" ")" "{" <statement> "}" |
- * <var-def> ::= "int" <id> ";"
+ * <program>   ::= <defs>
+ * <defs>      ::= <def> | <def> <def>
+ * <def>       ::= <func_def> | <var-def>
+ * <func-def>  ::= "void" <id> "()" "{" <statement> "}" |
+ * <var-def>   ::= "int" <id> ";"
  * <statement> ::= "if" <paren_expr> <statement> |
  *                 "if" <paren_expr> <statement> "else" <statement> |
  *                 "while" <paren_expr> <statement> |
  *                 "do" <statement> "while" <paren_expr> ";" |
- *                 "{" { <statement> } "}" |
+ *                 "{" <statement> "}" |
  *                 <func-call> ";" |
  *                 <expr> ";" |
  *                 <id> "=" <expr> ";" |
  *                 ";"
  * <paren_expr> ::= "(" <expr> ")"
- * <expr> ::= <test> | <math>
- * <test> ::= <math> <test-op> <math>
- * <test-op> ::= "<" | "==" | ">"
- * <math> ::= <term> | <math> <math_op> <term>
- * <math-op> ::= "+" | "-" | "*" | "/"
- * <term> ::= <id> | <paren_expr>
- * <id> ::= <alpha><alpha-numeric>*
- * <func-call> ::= <id> "(" ")"
+ * <expr>       ::= <test> | <math>
+ * <test>       ::= <math> <test-op> <math>
+ * <test-op>    ::= "<" | "==" | ">"
+ * <math>       ::= <term> | <math> <math_op> <term>
+ * <math-op>    ::= "+" | "-" | "*" | "/"
+ * <term>       ::= <id> | <int> | <paren_expr>
+ * <id>         ::= <alpha><alpha-numeric>*
+ * <int>        ::= [0-9]*
+ * <func-call>  ::= <id> "(" ")"
  *
  * The compiler does a minimal amount of error checking to help
  * highlight the structure of the compiler.
@@ -42,13 +43,11 @@
  /*---------------------------------------------------------------------------*/
  /* Lexer. */
 
-#define BTWI(n,l,h) ((l<=n)&&(n<=h))
-
 // Tokens
 enum {
     DO_TOK, ELSE_TOK, IF_TOK, WHILE_TOK, VOID_TOK, INT_TOK, RET_TOK, //  0->6
-    LBRA, RBRA, LPAR, RPAR, PLUS, MINUS, STAR, SLASH, LESS, GRT, SEMI,
-    EQUAL, INT, ID, EOI, FUNC_TOK, EQU
+    LBRA, RBRA, LPAR, RPAR, PLUS, MINUS, STAR, SLASH, LESS, EQU, GRT, SEMI,
+    EQUAL, INT, ID, EOI, FUNC_TOK
 };
 
 // NOTE: these have to be in sync with the first <x> entries in the Symbols list above
@@ -120,7 +119,6 @@ void next_token() {
 /*---------------------------------------------------------------------------*/
 /* Symbols */
 
-#define SYMBOLS_SZ 500
 SYM_T symbols[SYMBOLS_SZ];
 int numSymbols = 0;
 
@@ -149,7 +147,7 @@ void dumpSymbols(int details, FILE *toFP) {
     if (details) {
         for (int i = 0; i < numSymbols; i++) {
             SYM_T *x = &symbols[i];
-            fprintf(toFP ? toFP : stdout, "%3d - type: %2d, val: %ld  %s\n", 
+            fprintf(toFP ? toFP : stdout, "%3d - type: %2d, val: %-10ld - %s\n", 
                 i, x->type, x->val, x->name);
         }
     }
@@ -159,18 +157,17 @@ void dumpSymbols(int details, FILE *toFP) {
 /* Parser. */
 
 enum {
-    VAR, CST, ADD, SUB, MUL, DIV, LT, GT, SET, FUNC_CALL, FUNC_DEF,
+    VAR, CST, ADD, SUB, MUL, DIV, LT, EQ, GT, SET, FUNC_CALL, FUNC_DEF,
     IF1, IF2, WHILE, DO, EMPTY, SEQ, EXPR, PROG, RET
 };
 
-#define MAX_NODES 1000
 struct node_s { int kind; struct node_s *o1,  *o2,  *o3; int val, sval; };
 typedef struct node_s node;
 int num_nodes = 0;
-node nodes[MAX_NODES];
+node nodes[NODES_SZ];
 
 node *new_node(int k) {
-    if (MAX_NODES <= num_nodes) { error("no nodes!"); }
+    if (NODES_SZ <= num_nodes) { error("no nodes!"); }
     node *x = &nodes[num_nodes++];
     x->kind = k;
     return x;
@@ -236,7 +233,7 @@ node *test() {
     node *x = sum();
     if (tok == LESS) { next_token(); return gen(LT, x, sum()); }
     if (tok == GRT) { next_token(); return gen(GT, x, sum()); }
-    if (tok == EQU) { next_token(); return gen(EQU, x, sum()); }
+    if (tok == EQU) { next_token(); return gen(EQ, x, sum()); }
     return x;
 }
 
@@ -361,11 +358,12 @@ void c(node *x) {
         case DIV: c(x->o1); c(x->o2); g(IDIV); break;
         case LT:  c(x->o1); c(x->o2); g(ILT);  break;
         case GT:  c(x->o1); c(x->o2); g(IGT);  break;
-        case EQU: c(x->o1); c(x->o2); g(IEQ);  break;
+        case EQ:  c(x->o1); c(x->o2); g(IEQ);  break;
         case SET: c(x->o2); g(ISTORE); g2(x->o1->val); break;
         case IF1: c(x->o1); p1 = hole(JZ); c(x->o2); fix(p1, here); break;
-        case IF2: c(x->o1); p1 = hole(JZ); c(x->o2); p2 = hole(JMP);
-            fix(p1, here); c(x->o3); fix(p2, here); break;
+        case IF2: c(x->o1); p1 = hole(JZ); c(x->o2);
+            p2 = hole(JMP); fix(p1, here);
+            c(x->o3); fix(p2, here); break;
         case WHILE: p1 = here; c(x->o1); p2 = hole(JZ); c(x->o2);
             fix(hole(JMP), p1); fix(p2, here); break;
         case DO: p1 = here; c(x->o1); c(x->o2); fix(hole(JNZ), p1); break;
@@ -381,7 +379,7 @@ void c(node *x) {
 }
 
 /*---------------------------------------------------------------------------*/
-/* <program> ::= <statement> */
+/* Definitions. */
 
 node *defs(node *st) {
     node *x = st;
@@ -413,8 +411,6 @@ node *defs(node *st) {
     return st;
 }
 
-int entry_point;
-
 /*---------------------------------------------------------------------------*/
 /* Main program. */
 
@@ -427,6 +423,8 @@ int main(int argc, char *argv[]) {
     here = 1;
     defs(NULL);
     printf("%d code bytes (%d nodes)\n\n", here, num_nodes);
+    // dis(here);
+    // exit(0);
 
     int mainSym = genSymbol("main", FUNC_TOK);
     int entryPoint = symbols[mainSym].val;
