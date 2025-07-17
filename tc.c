@@ -8,35 +8,32 @@
 /*
  * This is a compiler for the Tiny-C language.  Tiny-C is a
  * considerably stripped down version of C and it is meant as a
- * pedagogical tool for learning about compilers.  The integer global
- * variables "a" to "z" are predefined and initialized to zero, and it
- * is not possible to declare new variables.  The compiler reads the
- * program from standard input and prints out the value of the
- * variables that are not zero.  The grammar of Tiny-C in EBNF is:
+ * pedagogical tool for learning about compilers.
+ * The grammar of Tiny-C in EBNF is:
  * 
  * <program> ::= <defs>
  * <defs> ::= <def> | <def> <def>
- * <def> ::= <func_def> | <var_def>
- * <func_def> ::= "void" <id> "(" ")" "{" <statement> "}" |
- * <var_def> ::= "int" <id> ";"
+ * <def> ::= <func_def> | <var-def>
+ * <func-def> ::= "void" <id> "(" ")" "{" <statement> "}" |
+ * <var-def> ::= "int" <id> ";"
  * <statement> ::= "if" <paren_expr> <statement> |
  *                 "if" <paren_expr> <statement> "else" <statement> |
  *                 "while" <paren_expr> <statement> |
  *                 "do" <statement> "while" <paren_expr> ";" |
  *                 "{" { <statement> } "}" |
- *                 <func> ";" |
+ *                 <func-call> ";" |
  *                 <expr> ";" |
+ *                 <id> "=" <expr> ";" |
  *                 ";"
  * <paren_expr> ::= "(" <expr> ")"
- * <expr> ::= <test> | <id> "=" <expr>
- * <test> ::= <math> | <math> "<" <math> | <math> ">" <math> | <math> "==" <math>
+ * <expr> ::= <test> | <math>
+ * <test> ::= <math> <test-op> <math>
+ * <test-op> ::= "<" | "==" | ">"
  * <math> ::= <term> | <math> <math_op> <term>
- * <math_op> ::= "+" | "-" | "*" | "/"
- * <term> ::= <id> | <int> | <paren_expr>
- * <id> ::= "a" | "b" | "c" | "d" | ... | "z" -- FOR NOW
- * <id> ::= [A-Z|a-z][A-Z|a-z|0-9|_]* -- NEW
- * <int> ::= <an_unsigned_decimal_integer>
- * <func> ::= <id> "(" ")"
+ * <math-op> ::= "+" | "-" | "*" | "/"
+ * <term> ::= <id> | <paren_expr>
+ * <id> ::= <alpha><alpha-numeric>*
+ * <func-call> ::= <id> "(" ")"
  *
  * The compiler does a minimal amount of error checking to help
  * highlight the structure of the compiler.

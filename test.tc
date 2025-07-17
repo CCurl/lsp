@@ -4,6 +4,7 @@ void Abc01_X() {
 	r=5;
 	t=r*r;
 	q=t*t;
+	if (r == t) { rr=1; }
 }
 
 void sub() {
