@@ -87,7 +87,7 @@ void next_token() {
     case '<': next_ch(); tok = LESS;  break;
     case '>': next_ch(); tok = GRT;   break;
     case ';': next_ch(); tok = SEMI;  break;
-    case '=': tok = EQUAL; next_ch();
+    case '=': next_ch(); tok = EQUAL;
         if (ch == '=') { tok = EQU; next_ch(); }
         break;
     default:
@@ -101,7 +101,7 @@ void next_token() {
             while (isAlphaNum(ch)) { id_name[i++] = ch; next_ch(); }
             id_name[i] = '\0';
             tok = 0;
-            while (words[tok] != NULL && strcmp(words[tok], id_name) != 0) { tok++; }
+            while ((words[tok] != NULL) && (strcmp(words[tok], id_name) != 0)) { tok++; }
             if (words[tok] == NULL) {
                 tok = ID;
                 if (ch == '(') {
