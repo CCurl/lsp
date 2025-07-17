@@ -143,7 +143,8 @@ int genSymbol(char *name, char type) {
 }
 
 void dumpSymbols(int details, FILE *toFP) {
-    fprintf(toFP ? toFP : stdout, "symbols: %d, %d used\n", SYMBOLS_SZ, numSymbols);
+    fprintf(toFP ? toFP : stdout, "symbols: %d entries, %d used\n", SYMBOLS_SZ, numSymbols);
+    fprintf(toFP ? toFP : stdout, "----------------------------------------\n");
     if (details) {
         for (int i = 0; i < numSymbols; i++) {
             SYM_T *x = &symbols[i];

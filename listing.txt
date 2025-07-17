@@ -1,6 +1,11 @@
-heap - size: 10000/184 bytes, index: 500/22, struct: 8, asg: 8
+heap compnent information:
+----------------------------------------
+heap  - size: 10000 bytes, 184 used
+index - size: 500 records, 22 used
+other - index struct sz: 8, granularity, 8 bytes
 
-symbols: 500, 22 used
+symbols: 500 entries, 22 used
+----------------------------------------
   0 - type:  0, val: 0          - nXYZ_abc_09
   1 - type: 23, val: 1          - Abc01_X
   2 - type:  0, val: 5          - r
@@ -24,8 +29,8 @@ symbols: 500, 22 used
  20 - type:  0, val: 1          - s
  21 - type:  0, val: 50         - n
 
-code: 272 bytes (0x110)
-----------------------------
+code: 2500 bytes, 272 (0x110) used.
+-------------------------------------------
 0000: 00             ; nop 
 0001: 03 05          ; lit1 05 
 0003: 02 02 00       ; store 02 - (r)
@@ -48,7 +53,7 @@ code: 272 bytes (0x110)
 0029: 02 05 00       ; store 05 - (rr)
 002c: 06             ; drop 
 002d: 16 37 00       ; jmp 37 
-0030: 04 ff 00       ; lit2 ff 
+0030: 04 FF 00       ; lit2 FF 
 0033: 02 06 00       ; store 06 - (dd)
 0036: 06             ; drop 
 0037: 04 29 09       ; lit2 929 
@@ -61,7 +66,7 @@ code: 272 bytes (0x110)
 0045: 01 09 00       ; fetch 09 - (count)
 0048: 03 64          ; lit1 64 
 004a: 11             ; lt 
-004b: 14 5b 00       ; jz 5b 
+004b: 14 5B 00       ; jz 5B 
 004e: 01 09 00       ; fetch 09 - (count)
 0051: 03 01          ; lit1 01 
 0053: 07             ; add 
@@ -70,44 +75,44 @@ code: 272 bytes (0x110)
 0058: 16 45 00       ; jmp 45 
 005b: 18             ; ret 
 005c: 17 01 00       ; call 01 - (Abc01_X)
-005f: 03 0b          ; lit1 0b 
-0061: 02 0b 00       ; store 0b - (a)
+005f: 03 0B          ; lit1 0B 
+0061: 02 0B 00       ; store 0B - (a)
 0064: 06             ; drop 
-0065: 01 0b 00       ; fetch 0b - (a)
+0065: 01 0B 00       ; fetch 0B - (a)
 0068: 03 02          ; lit1 02 
 006a: 07             ; add 
-006b: 02 0c 00       ; store 0c - (b)
+006b: 02 0C 00       ; store 0C - (b)
 006e: 06             ; drop 
-006f: 05 8c 30 0a 00 ; lit4 a308c 
-0074: 02 0d 00       ; store 0d - (z)
+006f: 05 8C 30 0A 00 ; lit4 A308C 
+0074: 02 0D 00       ; store 0D - (z)
 0077: 06             ; drop 
-0078: 01 0b 00       ; fetch 0b - (a)
+0078: 01 0B 00       ; fetch 0B - (a)
 007b: 03 01          ; lit1 01 
 007d: 11             ; lt 
-007e: 14 8f 00       ; jz 8f 
-0081: 01 0b 00       ; fetch 0b - (a)
-0084: 01 0c 00       ; fetch 0c - (b)
+007e: 14 8F 00       ; jz 8F 
+0081: 01 0B 00       ; fetch 0B - (a)
+0084: 01 0C 00       ; fetch 0C - (b)
 0087: 07             ; add 
-0088: 02 0e 00       ; store 0e - (c)
+0088: 02 0E 00       ; store 0E - (c)
 008b: 06             ; drop 
-008c: 16 9d 00       ; jmp 9d 
-008f: 01 0b 00       ; fetch 0b - (a)
-0092: 01 0c 00       ; fetch 0c - (b)
+008c: 16 9D 00       ; jmp 9D 
+008f: 01 0B 00       ; fetch 0B - (a)
+0092: 01 0C 00       ; fetch 0C - (b)
 0095: 03 01          ; lit1 01 
 0097: 07             ; add 
 0098: 09             ; mul 
-0099: 02 0f 00       ; store 0f - (d)
+0099: 02 0F 00       ; store 0F - (d)
 009c: 06             ; drop 
-009d: 01 0b 00       ; fetch 0b - (a)
+009d: 01 0B 00       ; fetch 0B - (a)
 00a0: 03 01          ; lit1 01 
 00a2: 12             ; gt 
-00a3: 14 b1 00       ; jz b1 
-00a6: 01 0b 00       ; fetch 0b - (a)
-00a9: 01 0b 00       ; fetch 0b - (a)
+00a3: 14 B1 00       ; jz B1 
+00a6: 01 0B 00       ; fetch 0B - (a)
+00a9: 01 0B 00       ; fetch 0B - (a)
 00ac: 09             ; mul 
 00ad: 02 10 00       ; store 10 - (g)
 00b0: 06             ; drop 
-00b1: 01 0c 00       ; fetch 0c - (b)
+00b1: 01 0C 00       ; fetch 0C - (b)
 00b4: 03 07          ; lit1 07 
 00b6: 09             ; mul 
 00b7: 02 11 00       ; store 11 - (e)
@@ -117,8 +122,8 @@ code: 272 bytes (0x110)
 00c0: 10             ; div 
 00c1: 02 12 00       ; store 12 - (f)
 00c4: 06             ; drop 
-00c5: 04 e8 03       ; lit2 3e8 
-00c8: 04 e8 03       ; lit2 3e8 
+00c5: 04 E8 03       ; lit2 3E8 
+00c8: 04 E8 03       ; lit2 3E8 
 00cb: 09             ; mul 
 00cc: 02 13 00       ; store 13 - (i)
 00cf: 06             ; drop 
@@ -126,13 +131,13 @@ code: 272 bytes (0x110)
 00d2: 02 14 00       ; store 14 - (s)
 00d5: 06             ; drop 
 00d6: 01 13 00       ; fetch 13 - (i)
-00d9: 14 e9 00       ; jz e9 
+00d9: 14 E9 00       ; jz E9 
 00dc: 01 13 00       ; fetch 13 - (i)
 00df: 03 01          ; lit1 01 
 00e1: 08             ; sub 
 00e2: 02 13 00       ; store 13 - (i)
 00e5: 06             ; drop 
-00e6: 16 d6 00       ; jmp d6 
+00e6: 16 D6 00       ; jmp D6 
 00e9: 03 00          ; lit1 00 
 00eb: 02 15 00       ; store 15 - (n)
 00ee: 02 13 00       ; store 13 - (i)
@@ -148,6 +153,6 @@ code: 272 bytes (0x110)
 0103: 01 15 00       ; fetch 15 - (n)
 0106: 03 32          ; lit1 32 
 0108: 11             ; lt 
-0109: 15 f2 00       ; jnz f2 
-010c: 17 3f 00       ; call 3f - (sub)
+0109: 15 F2 00       ; jnz F2 
+010c: 17 3F 00       ; call 3F - (sub)
 010f: 18             ; ret 

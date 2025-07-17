@@ -61,7 +61,7 @@ void runVM(int pc) {
 void hexDump(int f, int t, FILE *fp) {
     int tt = 0;
     for (int i=f; i<t; i++) {
-        if (tt==0) { fprintf(fp, "\n%04x: ", i); }
+        if (tt==0) { fprintf(fp, "\n%04X: ", i); }
         byte x = vm[i];
         fprintf(fp, "%02x ", x);
         if (++tt == 16) { tt = 0; }
@@ -81,7 +81,7 @@ static void pSy(int t) {
     }
 }
 static void pSv(int v) { int t=findSymbolVal(0,v); pSy(t); }
-static void pNX(long n) { fprintf(outFp, "%02lx ", n); }
+static void pNX(long n) { fprintf(outFp, "%02lX ", n); }
 static void pN1(int n) { pNX((n & 0xff)); }
 static void pN2(int n) { pN1(n); pN1(n >> 8); }
 static void pN4(int n) { pN2(n); pN2(n >> 16); }
@@ -89,14 +89,15 @@ static void pN4(int n) { pN2(n); pN2(n >> 16); }
 void dis() {
     int pc = 0;
     long t;
-    outFp = fopen("list.txt", "wt");
+    outFp = fopen("listing.txt", "wt");
     // hexDump(0, here, outFp);
     // fprintf(outFp, "\n");
     hDump(0, outFp);
     fprintf(outFp, "\n");
     dumpSymbols(1, outFp);
 
-    fprintf(outFp, "\ncode: %d bytes (0x%x)\n----------------------------", here, here);
+    fprintf(outFp, "\ncode: %d bytes, %d (0x%X) used.", CODE_SZ, here, here);
+    fprintf(outFp, "\n-------------------------------------------");
     while (pc < here) {
         fprintf(outFp, "\n%04x: %02d ", pc, vm[pc]);
         switch (vm[pc++]) {
