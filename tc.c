@@ -127,6 +127,14 @@ void next_token() {
 SYM_T symbols[SYMBOLS_SZ];
 int numSymbols = 0;
 
+int findSymbolVal(char type, long val) {
+    for (int i = 0; i < numSymbols; i++) {
+        if (symbols[i].val == val) { return i; }
+    }
+    warn("cannot find symbol value");
+    return 0;
+}
+
 int genSymbol(char *name, char type) {
     for (int i = 0; i < numSymbols; i++) {
         if (strcmp(symbols[i].name, name) == 0) { return i; }
@@ -144,7 +152,7 @@ void dumpSymbols(int details, FILE *toFP) {
     if (details) {
         for (int i = 0; i < numSymbols; i++) {
             SYM_T *x = &symbols[i];
-            fprintf(toFP ? toFP : stdout, "%3d - type: %2d, val: %d  %s\n", 
+            fprintf(toFP ? toFP : stdout, "%3d - type: %2d, val: %ld  %s\n", 
                 i, x->type, x->val, x->name);
         }
     }

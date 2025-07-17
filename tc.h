@@ -9,7 +9,7 @@
 typedef unsigned char byte;
 typedef byte code;
 
-typedef struct { char type, * name; int32_t val; } SYM_T;
+typedef struct { char type, *name; long val; } SYM_T;
 extern SYM_T symbols[];
 
 enum {
@@ -22,6 +22,7 @@ extern code vm[];
 extern void initVM();
 extern void runVM(int pc);
 extern void dis(int here);
+extern int findSymbolVal(char type, long val);
 extern void dumpSymbols(int details, FILE *toFP);
 
 #endif // __TC_H__

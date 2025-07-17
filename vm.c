@@ -57,48 +57,53 @@ void runVM(int pc) {
 /*---------------------------------------------------------------------------*/
 /* Disassembly. */
 
-static pB(FILE* fp, int n) { for (int i=0; i<n; i++) fprintf(fp, " "); }
-static pS(FILE *fp, char *s) { fprintf(fp, "; %s ", s); }
-static pNX(FILE* fp, long n) { fprintf(fp, "%02lx ", n); }
-static pN1(FILE* fp, int n) { pNX(fp, (n & 0xff)); }
-static pN2(FILE* fp, int n) { pN1(fp, n); pN1(fp, n >> 8); }
-static pN4(FILE *fp, int n) { pN2(fp, n); pN2(fp, n >> 16); }
+static FILE *outFp;
+static void pB (int n) { for (int i=0; i<n; i++) fprintf(outFp, " "); }
+static void pS(char *s) { fprintf(outFp, "; %s ", s); }
+static void pSy(int t) { fprintf(outFp, "- (%s)", symbols[t].name); }
+static void pSv(int v) { int t=findSymbolVal(0,v); pSy(t); }
+static void pNX(long n) { fprintf(outFp, "%02lx ", n); }
+static void pN1(int n) { pNX((n & 0xff)); }
+static void pN2(int n) { pN1(n); pN1(n >> 8); }
+static void pN4(int n) { pN2(n); pN2(n >> 16); }
 
 void dis(int here) {
     code pc = 1;
-    FILE *fp = fopen("list.txt", "wt");
-    hDump(0, fp);
-    fprintf(fp, "\n");
-    dumpSymbols(1, fp);
+    long t;
+    outFp = fopen("list.txt", "wt");
+    hDump(0, outFp);
+    fprintf(outFp, "\n");
+    dumpSymbols(1, outFp);
 
-    fprintf(fp, "\ncode: %d bytes (0x%x)\n----------------------------", here, here);
+    fprintf(outFp, "\ncode: %d bytes (0x%x)\n----------------------------", here, here);
     while (pc < here) {
-        fprintf(fp, "\n%04x: %02d ", pc, vm[pc]);
+        fprintf(outFp, "\n%04x: %02d ", pc, vm[pc]);
         switch (vm[pc++]) {
-            case  NOP:    pB(fp,12); pS(fp, "nop");
-            BCASE IFETCH: pN2(fp, x2(pc)); pB(fp,6); pS(fp, "fetch"); pNX(fp, x2(pc)); pc += 2;
-            BCASE ISTORE: pN2(fp, x2(pc)); pB(fp,6); pS(fp, "store"); pNX(fp, x2(pc)); pc += 2;
-            BCASE IP1:    pN1(fp, x2(pc)); pB(fp,9); pS(fp, "lit1");  pNX(fp, vm[pc++]);
-            BCASE IP2:    pN2(fp, x2(pc)); pB(fp,6); pS(fp, "lit2");  pNX(fp, x2(pc)); pc += 2;
-            BCASE IP4:    pN4(fp, x4(pc)); pS(fp, "lit4");  pNX(fp, x4(pc)); pc += 4;
-            BCASE IDROP:  pB(fp,12); pS(fp, "drop");
-            BCASE IADD:   pB(fp,12); pS(fp, "add");
-            BCASE ISUB:   pB(fp,12); pS(fp, "sub");
-            BCASE IMUL:   pB(fp,12); pS(fp, "mul");
-            BCASE IDIV:   pB(fp,12); pS(fp, "div");
-            BCASE ILT:    pB(fp,12); pS(fp, "lt");
-            BCASE IGT:    pB(fp,12); pS(fp, "gt");
-            BCASE JMP:    pN2(fp, x2(pc)); pB(fp,6); pS(fp, "jmp");  pNX(fp, x2(pc)); pc += 2;
-            BCASE JZ:     pN2(fp, x2(pc)); pB(fp,6); pS(fp, "jz");   pNX(fp, x2(pc)); pc += 2;
-            BCASE JNZ:    pN2(fp, x2(pc)); pB(fp,6); pS(fp, "jnz");  pNX(fp, x2(pc)); pc += 2;
-            BCASE ICALL:  pN2(fp, x2(pc)); pB(fp,6); pS(fp, "call"); pNX(fp, x2(pc)); pc += 2;
-            BCASE IRET:   pB(fp,12); pS(fp, "ret");
-            BCASE HALT:   pB(fp,12); pS(fp, "halt"); break;
-            default:      pB(fp, 12); pS(fp, "<invalid>");
+            case  NOP:    pB(12); pS("nop");
+            BCASE IFETCH: pN2(x2(pc)); pB(6); pS("fetch"); t = x2(pc); pNX(t); pSy(t); pc += 2;
+            BCASE ISTORE: pN2(x2(pc)); pB(6); pS("store"); t = x2(pc); pNX(t); pSy(t); pc += 2;
+            BCASE IP1:    pN1(x2(pc)); pB(9); pS("lit1");  pNX(vm[pc++]);
+            BCASE IP2:    pN2(x2(pc)); pB(6); pS("lit2");  pNX(x2(pc)); pc += 2;
+            BCASE IP4:    pN4(x4(pc)); pS("lit4");  pNX(x4(pc)); pc += 4;
+            BCASE IDROP:  pB(12); pS("drop");
+            BCASE IADD:   pB(12); pS("add");
+            BCASE ISUB:   pB(12); pS("sub");
+            BCASE IMUL:   pB(12); pS("mul");
+            BCASE IDIV:   pB(12); pS("div");
+            BCASE ILT:    pB(12); pS("lt");
+            BCASE IGT:    pB(12); pS("gt");
+            BCASE JMP:    pN2(x2(pc)); pB(6); pS("jmp");  pNX(x2(pc)); pc += 2;
+            BCASE JZ:     pN2(x2(pc)); pB(6); pS("jz");   pNX(x2(pc)); pc += 2;
+            BCASE JNZ:    pN2(x2(pc)); pB(6); pS("jnz");  pNX(x2(pc)); pc += 2;
+            BCASE ICALL:  pN2(x2(pc)); pB(6); pS("call"); t = x2(pc); pNX(t); pSv(t); pc += 2;
+            BCASE IRET:   pB(12); pS("ret");
+            BCASE HALT:   pB(12); pS("halt"); break;
+            default:      pB(12); pS("<invalid>");
         }
     }
-    fprintf(fp, "\n");
-    fclose(fp);
+    fprintf(outFp, "\n");
+    fclose(outFp);
+    outFp = NULL;
 }
 
 #ifdef _MAIN
