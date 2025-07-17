@@ -18,8 +18,6 @@ static long f4(int a) {
     return vm[a+0] | (vm[a+1] << 8) | (vm[a+2] << 16) | (vm[a+3] << 24);
 }
 
-
-
 static void push(long x) { sp = (sp+1)&0x7f; TOS = x; }
 static void drop() { sp = (sp-1)&0x7f; }
 static long pop() { long x = TOS; drop(); return x; }
@@ -58,13 +56,23 @@ void runVM(int pc) {
 
 /*---------------------------------------------------------------------------*/
 /* HEX dump. */
-void hexDump(int f, int t, FILE *fp) {
+void hexDump(char *start, int count, FILE *fpOut) {
     int tt = 0;
-    for (int i=f; i<t; i++) {
+    FILE *fp = fpOut ? fpOut : stdout;
+    fprintf(fp, "\nHEX dump");
+    fprintf(fp, "\n------------------------------------------------------");
+    for (int i=0; i<count; i++) {
         if (tt==0) { fprintf(fp, "\n%04X: ", i); }
-        byte x = vm[i];
-        fprintf(fp, "%02x ", x);
-        if (++tt == 16) { tt = 0; }
+        byte x = start[i];
+        fprintf(fp, "%02X ", x);
+        if (++tt == 16) {
+            tt = 0;
+            fprintf(fp, "  ; ");
+            for (int j=i-15; j<i; j++) {
+                x = start[j];
+                fprintf(fp, "%c", BTWI(x,32,126) ? x : '.');
+            }
+        }
     }
     fprintf(fp, "\n");
 }
@@ -90,16 +98,17 @@ void dis() {
     int pc = 0;
     long t;
     outFp = fopen("listing.txt", "wt");
-    // hexDump(0, here, outFp);
-    // fprintf(outFp, "\n");
     hDump(0, outFp);
     fprintf(outFp, "\n");
     dumpSymbols(1, outFp);
 
+    hexDump(&vm[0], here, outFp);
+    fprintf(outFp, "\n");
+
     fprintf(outFp, "\ncode: %d bytes, %d (0x%X) used.", CODE_SZ, here, here);
     fprintf(outFp, "\n-------------------------------------------");
     while (pc < here) {
-        fprintf(outFp, "\n%04x: %02d ", pc, vm[pc]);
+        fprintf(outFp, "\n%04X: %02X ", pc, vm[pc]);
         switch (vm[pc++]) {
             case  NOP:    pB(12); pS("nop");
             BCASE IFETCH: pN2(f2(pc)); pB(6); pS("fetch"); t = f2(pc); pNX(t); pSy(t); pc += 2;
