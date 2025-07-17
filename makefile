@@ -1,9 +1,10 @@
-app := lsp
+app := tc
 
+ARCH ?= 32
 CXX := clang
-CFLAGS := -m32 -O3 -D IS_LINUX
+CFLAGS := -m$(ARCH) -O3 -D IS_LINUX
 
-srcfiles := $(shell find . -name "*.cpp")
+srcfiles := $(shell find . -name "*.c")
 incfiles := $(shell find . -name "*.h")
 LDLIBS   := -lm
 
@@ -17,7 +18,7 @@ clean:
 	rm -f $(app) $(app32)
 
 test: $(app)
-	./$(app) test.lsp
+	./$(app) test.tc
 
 run: $(app)
 	./$(app)
