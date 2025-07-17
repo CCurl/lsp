@@ -16,7 +16,7 @@ static char heap[HEAP_SZ];
 static const int hASG = 8; // alloc size granularity
 
 void hDump(int details, FILE *toFP) {
-	fprintf(toFP ? toFP : stdout, "heap compnent information:\n");
+	fprintf(toFP ? toFP : stdout, "heap component information:\n");
 	fprintf(toFP ? toFP : stdout, "----------------------------------------\n");
 	fprintf(toFP ? toFP : stdout, "heap  - size: %u bytes, %u used\n", HEAP_SZ, hHere);
 	fprintf(toFP ? toFP : stdout, "index - size: %u records, %u used\n", HEAPINDEX_SZ, iHere);
