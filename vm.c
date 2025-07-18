@@ -13,14 +13,11 @@ static long rstk[1000], rsp;
 #define TOS      stk[sp]
 #define NOS      stk[sp-1]
 
-static int  f2(int a) { return vm[a] | (vm[a + 1] << 8); }
-static long f4(int a) {
-    return vm[a+0] | (vm[a+1] << 8) | (vm[a+2] << 16) | (vm[a+3] << 24);
-}
-
 static void push(long x) { sp = (sp+1)&0x7f; TOS = x; }
 static void drop() { sp = (sp-1)&0x7f; }
 static long pop() { long x = TOS; drop(); return x; }
+static int  f2(int a) { return vm[a] | (vm[a + 1] << 8); }
+static long f4(int a) { return f2(a) | (f2(a + 2) << 16); }
 
 void initVM() {
     sp = rsp = here = 0;
@@ -56,7 +53,7 @@ void runVM(int pc) {
 
 /*---------------------------------------------------------------------------*/
 /* HEX dump. */
-void hexDump(char *start, int count, FILE *fpOut) {
+void hexDump(byte *start, int count, FILE *fpOut) {
     int tt = 0;
     FILE *fp = fpOut ? fpOut : stdout;
     fprintf(fp, "\nHEX dump");

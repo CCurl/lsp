@@ -421,13 +421,12 @@ int main(int argc, char *argv[]) {
     initVM();
     g(NOP);
     defs(NULL);
+    fclose(input_fp);
+    input_fp = NULL;
     printf("%d code bytes (%d nodes)\n\n", here, num_nodes);
-    // dis();
-    // exit(0);
 
-    int mainSym = genSymbol("main", FUNC_TOK);
-    int entryPoint = symbols[mainSym].val;
-    if (entryPoint) { runVM(entryPoint); }
+    int entryPoint = symbols[genSymbol("main", FUNC_TOK)].val;
+    if (0 < entryPoint) { runVM(entryPoint); }
     else { error("no main() function!"); }
     dis();
     for (int i = 0; i < numSymbols; i++) {
