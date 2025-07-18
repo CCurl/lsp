@@ -85,7 +85,7 @@ static void pSy(int t) {
         fprintf(outFp, "- (%s)", symbols[t].name);
     }
 }
-static void pSv(int v) { int t=findSymbolVal(0,v); pSy(t); }
+static void pSv(int v) { int t=findSymbolVal(FUNC_TOK,v); pSy(t); }
 static void pNX(long n) { fprintf(outFp, "%02lX ", n); }
 static void pN1(int n) { pNX((n & 0xff)); }
 static void pN2(int n) { pN1(n); pN1(n >> 8); }
