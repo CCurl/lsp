@@ -8,7 +8,7 @@ void Abc01_X() {
 	if (r == t) { rr=1; }
 	else { dd = 255; }
 	tt = 2345;
-	// nXYZ[r]=q;
+	// nXYZ[r] = q;
 }
 
 void sub() { // This def is ignored/replaced by the next
@@ -18,7 +18,7 @@ void sub() { // This def is ignored/replaced by the next
 
 void sub() {
 	cc = 1; c = 0;
-	while (cc < 1025) { c=c+1; cc = cc * 2; }
+	while (cc < 1025) { c=c+1; cc=cc*2; }
 }
 
 void main() {
@@ -30,7 +30,7 @@ void main() {
 	e = b*7;
 	f = e/3;
 	i = 50*1000*1000;
-    s=1;
+	s=1;
 	while (i) { i=i-1; }
 	i=n=0;
 	do { i=i+(n=n+1); } while (n<50);

@@ -16,19 +16,43 @@ char *words[] = { "do", "else", "if"
 int ch = ' ', tok, int_val;
 char id_name[64];
 FILE *input_fp = NULL;
+char cur_line[256] = {0};
+int cur_off = 0, cur_lnum = 0, is_eof = 0;
 
-void msg(char *s, int cr) { fprintf(stderr, "%s%s", s, cr ? "\n" : " "); }
-void warn(char *s)  { msg("WARN:",0); msg(s, 1); }
-void error(char *err) { msg("ERROR:",0); msg(err,0); exit(1); }
-void err2(char *s, char *e) { msg("ERROR: ",0); msg(s,0); msg(e,1); exit(1); }
+void msg(char *s, int cr, int ln) {
+    if (ln) {
+        printf("\nat line/off %d/%d - %s", cur_lnum, cur_off, s);
+        printf("\n%s", cur_line);
+        for (int i=2; i<cur_off; i++) { fprintf(stdout, " "); }
+        printf("^\n");
+        return;
+    }
+    printf("%s%s", s, cr ? "\n" : " ");
+}
+void warn(char *s)  { msg(s,1,1); }
+void error(char *err) { msg(err,1,1); exit(1); }
 void syntax_error() { error("syntax error"); }
 
 int isAlpha(int ch) { return BTWI(ch, 'A', 'Z') || BTWI(ch, 'a', 'z') || (ch == '_'); }
 int isNum(int ch) { return BTWI(ch, '0', '9'); }
 int isAlphaNum(int ch) { return isAlpha(ch) || isNum(ch); }
 
+void next_line() {
+    cur_off = 0;
+    cur_lnum++;
+    if (fgets(cur_line, 256, input_fp) != cur_line) {
+        is_eof = 1;
+    }
+}
+
 void next_ch() {
-    ch = (input_fp) ? fgetc(input_fp) : EOF;
+    if (is_eof) { ch = EOF; return; }
+    if (cur_line[cur_off] == 0) {
+        next_line();
+        if (is_eof) { ch = EOF; return; }
+    }
+    ch = cur_line[cur_off++];
+    if (ch == 9) { ch = cur_line[cur_off-1] = 32; }
 }
 
 void next_token() {
@@ -78,14 +102,14 @@ void next_token() {
                 }
             }
         }
-        else { msg("-ch-", 0); syntax_error(); }
+        else { syntax_error(); }
         break;
     }
 }
 
 void expect_token(int exp) {
     if (tok != exp) {
-        printf("-expected token [%d], not[%d]-", exp, tok);
+        // printf("-expected token [%d], not[%d]-", exp, tok);
         syntax_error();
     }
     next_token();
@@ -112,7 +136,7 @@ int genSymbol(char *name, char type) {
         x = &symbols[i];
         if (strcmp(x->name, name) == 0) {
             if (x->type == type) { return i; }
-            err2(name, "already defined.");
+            error("name already defined with different type.");
         }
     }
     x = &symbols[numSymbols];
@@ -394,7 +418,7 @@ node *defs(node *st) {
             defSize(BYTE_TOK, sym);
             continue;
         }
-        msg("-def?-", 0); syntax_error();
+        syntax_error();
     }
     return st;
 }
