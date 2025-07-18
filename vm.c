@@ -4,33 +4,31 @@
 #include "tc.h"
 
 byte vm[CODE_SZ];
+int here;
+static long stk[0x80], sp;
+static long rstk[1000], rsp;
 
 #define ACASE    goto again; case
 #define BCASE    break; case
 #define TOS      stk[sp]
 #define NOS      stk[sp-1]
 
-static int  f2(int a) { return vm[a] | (vm[a + 1] << 8); }
-static long f4(int a) {
-    return vm[a+0] | (vm[a+1] << 8) | (vm[a+2] << 16) | (vm[a+3] << 24);
-}
-
-static long stk[0x80], sp;
-static int rstk[1000], rsp;
-
 static void push(long x) { sp = (sp+1)&0x7f; TOS = x; }
 static void drop() { sp = (sp-1)&0x7f; }
 static long pop() { long x = TOS; drop(); return x; }
+static int  f2(int a) { return vm[a] | (vm[a + 1] << 8); }
+static long f4(int a) { return f2(a) | (f2(a + 2) << 16); }
 
 void initVM() {
-    sp = rsp = 0;
+    sp = rsp = here = 0;
 }
 
 void runVM(int pc) {
     again:
     // printf("-pc:%d/ir:%d-\n", pc, vm[pc]);
     switch (vm[pc++]) {
-        case  IFETCH: stk[++sp] = symbols[f2(pc)].val; pc += 2;
+        case  NOP:
+        ACASE IFETCH: stk[++sp] = symbols[f2(pc)].val; pc += 2;
         ACASE ISTORE: symbols[f2(pc)].val = stk[sp]; pc += 2;
         ACASE IP1: push(vm[pc++]);
         ACASE IP2: push(f2(pc)); pc += 2;
@@ -55,13 +53,23 @@ void runVM(int pc) {
 
 /*---------------------------------------------------------------------------*/
 /* HEX dump. */
-void hexDump(int f, int t, FILE *fp) {
+void hexDump(byte *start, int count, FILE *fpOut) {
     int tt = 0;
-    for (int i=f; i<t; i++) {
-        if (tt==0) { fprintf(fp, "\n%04x: ", i); }
-        byte x = vm[i];
-        fprintf(fp, "%02x ", x);
-        if (++tt == 16) { tt = 0; }
+    FILE *fp = fpOut ? fpOut : stdout;
+    fprintf(fp, "\nHEX dump");
+    fprintf(fp, "\n------------------------------------------------------");
+    for (int i=0; i<count; i++) {
+        if (tt==0) { fprintf(fp, "\n%04X: ", i); }
+        byte x = start[i];
+        fprintf(fp, "%02X ", x);
+        if (++tt == 16) {
+            tt = 0;
+            fprintf(fp, "  ; ");
+            for (int j=i-15; j<i; j++) {
+                x = start[j];
+                fprintf(fp, "%c", BTWI(x,32,126) ? x : '.');
+            }
+        }
     }
     fprintf(fp, "\n");
 }
@@ -77,25 +85,27 @@ static void pSy(int t) {
         fprintf(outFp, "- (%s)", symbols[t].name);
     }
 }
-static void pSv(int v) { int t=findSymbolVal(0,v); pSy(t); }
-static void pNX(long n) { fprintf(outFp, "%02lx ", n); }
+static void pSv(int v) { int t=findSymbolVal(FUNC_TOK,v); pSy(t); }
+static void pNX(long n) { fprintf(outFp, "%02lX ", n); }
 static void pN1(int n) { pNX((n & 0xff)); }
 static void pN2(int n) { pN1(n); pN1(n >> 8); }
 static void pN4(int n) { pN2(n); pN2(n >> 16); }
 
-void dis(int here) {
-    int pc = 1;
+void dis() {
+    int pc = 0;
     long t;
-    outFp = fopen("list.txt", "wt");
-    // hexDump(0, here, outFp);
-    // fprintf(outFp, "\n");
+    outFp = fopen("listing.txt", "wt");
     hDump(0, outFp);
     fprintf(outFp, "\n");
     dumpSymbols(1, outFp);
 
-    fprintf(outFp, "\ncode: %d bytes (0x%x)\n----------------------------", here, here);
+    hexDump(&vm[0], here, outFp);
+    fprintf(outFp, "\n");
+
+    fprintf(outFp, "\ncode: %d bytes, %d (0x%X) used.", CODE_SZ, here, here);
+    fprintf(outFp, "\n-------------------------------------------");
     while (pc < here) {
-        fprintf(outFp, "\n%04x: %02d ", pc, vm[pc]);
+        fprintf(outFp, "\n%04X: %02X ", pc, vm[pc]);
         switch (vm[pc++]) {
             case  NOP:    pB(12); pS("nop");
             BCASE IFETCH: pN2(f2(pc)); pB(6); pS("fetch"); t = f2(pc); pNX(t); pSy(t); pc += 2;

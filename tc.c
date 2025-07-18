@@ -1,65 +1,26 @@
-/* file: "tc.c" */
-/* originally from http://www.iro.umontreal.ca/~felipe/IFT2030-Automne2002/Complements/tinyc.c */
-/* Copyright (C) 2001 by Marc Feeley, All Rights Reserved. */
-/* Modified by Chris Curl */
+/* Chris Curl, MIT license. */
+/* Based on work by Marc Feeley (2001), MIT license. */
+/* Please see the README.md for details. */
 
 #include "tc.h"
-
-/*
- * This is a compiler for the Tiny-C language.  Tiny-C is a
- * considerably stripped down version of C and it is meant as a
- * pedagogical tool for learning about compilers.
- * The grammar of Tiny-C in EBNF is:
- * 
- * <program>   ::= <defs>
- * <defs>      ::= <def> | <def> <def>
- * <def>       ::= <func_def> | <var-def>
- * <func-def>  ::= "void" <id> "()" "{" <statement> "}" |
- * <var-def>   ::= "int" <id> ";"
- * <statement> ::= "if" <paren_expr> <statement> |
- *                 "if" <paren_expr> <statement> "else" <statement> |
- *                 "while" <paren_expr> <statement> |
- *                 "do" <statement> "while" <paren_expr> ";" |
- *                 "{" <statement> "}" |
- *                 <func-call> ";" |
- *                 <expr> ";" |
- *                 <id> "=" <expr> ";" |
- *                 ";"
- * <paren_expr> ::= "(" <expr> ")"
- * <expr>       ::= <test> | <math>
- * <test>       ::= <math> <test-op> <math>
- * <test-op>    ::= "<" | "==" | ">"
- * <math>       ::= <term> | <math> <math_op> <term>
- * <math-op>    ::= "+" | "-" | "*" | "/"
- * <term>       ::= <id> | <int> | <paren_expr>
- * <id>         ::= <alpha><alpha-numeric>*
- * <int>        ::= [0-9]*
- * <func-call>  ::= <id> "(" ")"
- *
- * The compiler does a minimal amount of error checking to help
- * highlight the structure of the compiler.
- */
 
  /*---------------------------------------------------------------------------*/
  /* Lexer. */
 
-// Tokens
-enum {
-    DO_TOK, ELSE_TOK, IF_TOK, WHILE_TOK, VOID_TOK, INT_TOK, RET_TOK, //  0->6
-    LBRA, RBRA, LPAR, RPAR, PLUS, MINUS, STAR, SLASH, LESS, EQU, GRT, SEMI,
-    EQUAL, INT, ID, EOI, FUNC_TOK
-};
-
-// NOTE: these have to be in sync with the first <x> entries in the Symbols list above
-char *words[] = { "do", "else", "if", "while", "void", "int", "return", NULL};
+// NOTE: these have to be in sync with the first <x> entries in the 
+// list of tokens defined in tc.h
+char *words[] = { "do", "else", "if"
+    , "while", "void", "int", "byte"
+    , "return", NULL};
 
 int ch = ' ', tok, int_val;
 char id_name[64];
 FILE *input_fp = NULL;
 
-void message(char *msg, int cr) { fprintf(stdout, "%s%s", msg, cr ? "\n" : " "); }
-void warn(char *msg)  { message("WARN:",0); message(msg, 1); }
-void error(char *err) { message("ERROR:",0); message(err, 1); exit(1); }
+void msg(char *s, int cr) { fprintf(stderr, "%s%s", s, cr ? "\n" : " "); }
+void warn(char *s)  { msg("WARN:",0); msg(s, 1); }
+void error(char *err) { msg("ERROR:",0); msg(err,0); exit(1); }
+void err2(char *s, char *e) { msg("ERROR: ",0); msg(s,0); msg(e,1); exit(1); }
 void syntax_error() { error("syntax error"); }
 
 int isAlpha(int ch) { return BTWI(ch, 'A', 'Z') || BTWI(ch, 'a', 'z') || (ch == '_'); }
@@ -67,12 +28,11 @@ int isNum(int ch) { return BTWI(ch, '0', '9'); }
 int isAlphaNum(int ch) { return isAlpha(ch) || isNum(ch); }
 
 void next_ch() {
-    if (input_fp) { ch = fgetc(input_fp); }
-    else { ch = getchar(); }
-    // if (BTWI(ch,32,126)) { printf("%c", ch); } else { printf("(%d)", ch); }
+    ch = (input_fp) ? fgetc(input_fp) : EOF;
 }
 
 void next_token() {
+    again:
     while (BTWI(ch,1,32)) { next_ch(); }
     switch (ch) {
     case EOF: tok = EOI; break;
@@ -80,14 +40,21 @@ void next_token() {
     case '}': next_ch(); tok = RBRA;  break;
     case '(': next_ch(); tok = LPAR;  break;
     case ')': next_ch(); tok = RPAR;  break;
+    case '[': next_ch(); tok = LARR;  break;
+    case ']': next_ch(); tok = RARR;  break;
     case '+': next_ch(); tok = PLUS;  break;
     case '-': next_ch(); tok = MINUS; break;
     case '*': next_ch(); tok = STAR;  break;
-    case '/': next_ch(); tok = SLASH; break;
+    case '/': next_ch(); tok = SLASH;
+        if (ch == '/') { // Line comment?
+            while ((ch != 10) && (ch != EOF)) { next_ch(); }
+            goto again;
+        }
+        break;
     case '<': next_ch(); tok = LESS;  break;
     case '>': next_ch(); tok = GRT;   break;
     case ';': next_ch(); tok = SEMI;  break;
-    case '=': tok = EQUAL; next_ch();
+    case '=': next_ch(); tok = EQUAL;
         if (ch == '=') { tok = EQU; next_ch(); }
         break;
     default:
@@ -101,7 +68,7 @@ void next_token() {
             while (isAlphaNum(ch)) { id_name[i++] = ch; next_ch(); }
             id_name[i] = '\0';
             tok = 0;
-            while (words[tok] != NULL && strcmp(words[tok], id_name) != 0) { tok++; }
+            while ((words[tok] != NULL) && (strcmp(words[tok], id_name) != 0)) { tok++; }
             if (words[tok] == NULL) {
                 tok = ID;
                 if (ch == '(') {
@@ -111,9 +78,17 @@ void next_token() {
                 }
             }
         }
-        else { message("-ch-", 0); syntax_error(); }
+        else { msg("-ch-", 0); syntax_error(); }
         break;
     }
+}
+
+void expect_token(int exp) {
+    if (tok != exp) {
+        printf("-expected token [%d], not[%d]-", exp, tok);
+        syntax_error();
+    }
+    next_token();
 }
 
 /*---------------------------------------------------------------------------*/
@@ -124,42 +99,47 @@ int numSymbols = 0;
 
 int findSymbolVal(char type, long val) {
     for (int i = 0; i < numSymbols; i++) {
-        if (symbols[i].val == val) { return i; }
+        SYM_T *x = &symbols[i];
+        if ((x->type == type) && (x->val == val)) { return i; }
     }
-    warn("cannot find symbol value");
+    error("symbol not defined");
     return 0;
 }
 
 int genSymbol(char *name, char type) {
+    SYM_T *x;
     for (int i = 0; i < numSymbols; i++) {
-        if (strcmp(symbols[i].name, name) == 0) { return i; }
+        x = &symbols[i];
+        if (strcmp(x->name, name) == 0) {
+            if (x->type == type) { return i; }
+            err2(name, "already defined.");
+        }
     }
-    SYM_T *x = &symbols[numSymbols];
+    x = &symbols[numSymbols];
     x->name = hAlloc(strlen(name) + 1);
     x->val = 0;
     x->type = type;
+    x->sz = 4;
     strcpy(x->name, name);
     return numSymbols++;
 }
 
 void dumpSymbols(int details, FILE *toFP) {
-    fprintf(toFP ? toFP : stdout, "symbols: %d, %d used\n", SYMBOLS_SZ, numSymbols);
+    FILE *fp = toFP ? toFP : stdout;
+    fprintf(fp, "symbols: %d entries, %d used\n", SYMBOLS_SZ, numSymbols);
+    fprintf(fp, "num type size val      name\n");
+    fprintf(fp, "----------------------------------------\n");
     if (details) {
         for (int i = 0; i < numSymbols; i++) {
             SYM_T *x = &symbols[i];
-            fprintf(toFP ? toFP : stdout, "%3d - type: %2d, val: %-10ld - %s\n", 
-                i, x->type, x->val, x->name);
+            fprintf(fp, "%-3d %-4d %-4d %-8ld %s\n", 
+                i, x->type, x->sz, x->val, x->name);
         }
     }
 }
 
 /*---------------------------------------------------------------------------*/
 /* Parser. */
-
-enum {
-    VAR, CST, ADD, SUB, MUL, DIV, LT, EQ, GT, SET, FUNC_CALL, FUNC_DEF,
-    IF1, IF2, WHILE, DO, EMPTY, SEQ, EXPR, PROG, RET
-};
 
 struct node_s { int kind; struct node_s *o1,  *o2,  *o3; int val, sval; };
 typedef struct node_s node;
@@ -177,14 +157,6 @@ node *gen(int k, node *o1, node *o2) {
     node *x = new_node(k);
     x->o1 = o1; x->o2 = o2;
     return x;
-}
-
-void expect_token(int exp) {
-    if (tok != exp) {
-        printf("-expected symbol[%d],not[%d]-", exp, tok);
-        syntax_error();
-    }
-    next_token();
 }
 
 node *paren_expr(); /* forward declaration */
@@ -326,8 +298,6 @@ node *statement() {
 /*---------------------------------------------------------------------------*/
 /* Code generator. */
 
-int here = 0;
-
 void g(int c) { vm[here++] = (c & 0xff); }
 void g2(int n) { g(n); g(n>>8); }
 void g4(int n) { g(n); g(n>>8); g(n>>16); g(n>>24); }
@@ -381,6 +351,18 @@ void c(node *x) {
 /*---------------------------------------------------------------------------*/
 /* Definitions. */
 
+void defSize(int type, int sym) {
+    // check for ";" or "[" <int> "];"
+    symbols[sym].sz = (type == INT_TOK) ? 4 : 1;
+    if (tok == SEMI) { next_token(); return; }
+    expect_token(LARR);
+    symbols[sym].sz = int_val;
+    if (type == INT_TOK) { symbols[sym].sz *= 4; }
+    expect_token(INT);
+    expect_token(RARR);
+    expect_token(SEMI);
+}
+
 node *defs(node *st) {
     node *x = st;
     next_token();
@@ -402,11 +384,17 @@ node *defs(node *st) {
         }
         if (tok == INT_TOK) {
             next_token(); expect_token(ID);
-            genSymbol(id_name, VAR);
-            expect_token(SEMI);
+            int sym = genSymbol(id_name, VAR);
+            defSize(INT_TOK, sym);
             continue;
         }
-        message("-def?-", 0); syntax_error();
+        if (tok == BYTE_TOK) {
+            next_token(); expect_token(ID);
+            int sym = genSymbol(id_name, VAR);
+            defSize(BYTE_TOK, sym);
+            continue;
+        }
+        msg("-def?-", 0); syntax_error();
     }
     return st;
 }
@@ -420,17 +408,16 @@ int main(int argc, char *argv[]) {
     if (!input_fp) { error("can't open source file"); }
     printf("compiling %s ... ", fn);
     initVM();
-    here = 1;
+    g(NOP);
     defs(NULL);
+    fclose(input_fp);
+    input_fp = NULL;
     printf("%d code bytes (%d nodes)\n\n", here, num_nodes);
-    // dis(here);
-    // exit(0);
 
-    int mainSym = genSymbol("main", FUNC_TOK);
-    int entryPoint = symbols[mainSym].val;
-    if (entryPoint) { runVM(entryPoint); }
+    int entryPoint = symbols[genSymbol("main", FUNC_TOK)].val;
+    if (0 < entryPoint) { runVM(entryPoint); }
     else { error("no main() function!"); }
-    dis(here);
+    dis();
     for (int i = 0; i < numSymbols; i++) {
         SYM_T *s = &symbols[i];
         printf("%s = %ld\n", s->name, s->val);

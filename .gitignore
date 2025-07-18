@@ -1,6 +1,7 @@
-lsp
-/Debug/lsp.exe
 /Debug
-/lsp.vcxproj.user
-tc
+/Release
+/x64
 /tc.vcxproj.user
+/.vs
+/lsp
+tc

@@ -158,7 +158,7 @@
     <ClInclude Include="tc.h" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="list.txt" />
+    <Text Include="listing.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
