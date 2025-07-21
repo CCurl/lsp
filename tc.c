@@ -21,9 +21,9 @@ int cur_off = 0, cur_lnum = 0, is_eof = 0;
 
 void msg(char *s, int cr, int ln) {
     if (ln) {
-        printf("\nat line/off %d/%d - %s", cur_lnum, cur_off, s);
+        printf("\nat (%d,%d): %s", cur_lnum, cur_off, s);
         printf("\n%s", cur_line);
-        for (int i=2; i<cur_off; i++) { fprintf(stdout, " "); }
+        for (int i=1; i<cur_off; i++) { fprintf(stdout, " "); }
         printf("^\n");
         return;
     }
