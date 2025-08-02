@@ -1,5 +1,6 @@
 /*---------------------------------------------------------------------------*/
 /* A simple heap allocator */
+/* Chris Curl - MIT License */
 
 #include "heap.h"
 
@@ -10,22 +11,32 @@ typedef struct {
 	uint inUse: 1, sz: 31, off;
 } HEAP_T, *PHEAP;
 
-static uint32_t hHere = 0, iHere = 0;
+static uint hHere = 0, iHere = 0;
 static HEAP_T index[HEAPINDEX_SZ];
 static char heap[HEAP_SZ];
-static const int hASG = 8; // alloc size granularity
+static int hASG = sizeof(char *); // alloc size granularity
 
-void hDump(int details, FILE *toFP) {
-	fprintf(toFP ? toFP : stdout, "heap component information:\n");
-	fprintf(toFP ? toFP : stdout, "----------------------------------------\n");
-	fprintf(toFP ? toFP : stdout, "heap  - size: %u bytes, %u used\n", HEAP_SZ, hHere);
-	fprintf(toFP ? toFP : stdout, "index - size: %u records, %u used\n", HEAPINDEX_SZ, iHere);
-	fprintf(toFP ? toFP : stdout, "other - index struct sz: %u, granularity, %d bytes\n", sizeof(HEAP_T), hASG);
-	if (details) {
+void hInit(int gran) {
+	hHere = iHere = 0;
+	if (0 < gran) { hASG = gran; }
+	for (uint i = 0; i < HEAPINDEX_SZ; i++) {
+		PHEAP x = (PHEAP)&index[i];
+		x->inUse = x->off = x->sz = 0;
+	}
+}
+
+void hDump(int includeIndex, FILE *toFP) {
+	FILE *fp = toFP ? toFP : stdout;
+	fprintf(fp, "heap component information:\n");
+	fprintf(fp, "----------------------------------------\n");
+	fprintf(fp, "heap  - size: %u bytes, %u used\n", HEAP_SZ, hHere);
+	fprintf(fp, "index - size: %u records, %u used\n", HEAPINDEX_SZ, iHere);
+	fprintf(fp, "other - index struct sz: %u, granularity: %d bytes\n", (uint)sizeof(HEAP_T), hASG);
+	if (includeIndex) {
 		for (uint i = 0; i < iHere; i++) {
 			PHEAP x = (PHEAP)&index[i];
-			fprintf(toFP ? toFP : stdout, "%3d, inuse: %u, sz: %2u, off: %u\n",
-				i, x->inUse, x->sz, x->off);
+			fprintf(fp, "%3d, inuse: %u, sz: %2u, off: %u, ptr: 0x%p\n",
+				i, x->inUse, x->sz, x->off, &heap[x->off]);
 		}
 	}
 }
@@ -52,8 +63,8 @@ char *hAlloc(int sz) {
 		return &heap[index[hi].off];
 	}
 
-	if (HEAP_SZ <= (hHere + sz)) { return NULL; }
-	if (HEAPINDEX_SZ <= iHere) { return NULL; }
+	if (HEAP_SZ <= (hHere + sz)) { printf("-heap full-"); return NULL; }
+	if (HEAPINDEX_SZ <= iHere) { printf("-index full-"); return NULL; }
 
 	PHEAP x = &index[iHere++];
 	x->sz = sz;
@@ -64,8 +75,9 @@ char *hAlloc(int sz) {
 }
 
 static int hFindIndex(char *data) {
-	int32_t off = data - &heap[0];
-	if (!BTWI(off, 0, HEAP_SZ - 1)) { return -1; }
+	if (data < &heap[0]) { return -1; }
+	uint off = (uint)(data - &heap[0]);
+	if (hHere <= off) { return -1; }
 	for (uint i = 0; i < iHere; i++) {
 		if (index[i].off == off) { return i; }
 	}
@@ -84,4 +96,17 @@ void hFree(char *data) {
 		x->off = x->sz = 0;
 		iHere--;
 	}
+}
+
+char *hRealloc(char *data, int newSz) {
+	int hi = hFindIndex(data);
+	if (hi == -1) { return data; }
+	PHEAP x = &index[hi];
+	uint dataSize = x->sz;
+	hFree(data);
+	char *y = hAlloc(newSz);
+	if ((y) && (y != data)) {
+		for (uint i = 0; i < dataSize; i++) { y[i] = data[i]; }
+	}
+	return y;
 }

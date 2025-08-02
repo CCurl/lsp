@@ -75,9 +75,9 @@ void next_token() {
             goto again;
         }
         break;
+    case ';': next_ch(); tok = SEMI;  break;
     case '<': next_ch(); tok = LESS;  break;
     case '>': next_ch(); tok = GRT;   break;
-    case ';': next_ch(); tok = SEMI;  break;
     case '=': next_ch(); tok = EQUAL;
         if (ch == '=') { tok = EQU; next_ch(); }
         break;
@@ -151,13 +151,13 @@ int genSymbol(char *name, char type) {
 void dumpSymbols(int details, FILE *toFP) {
     FILE *fp = toFP ? toFP : stdout;
     fprintf(fp, "symbols: %d entries, %d used\n", SYMBOLS_SZ, numSymbols);
-    fprintf(fp, "num type size val      name\n");
-    fprintf(fp, "----------------------------------------\n");
+    fprintf(fp, "num type size val        name\n");
+    fprintf(fp, "--- ---- ---- ---------- -----------------\n");
     if (details) {
         for (int i = 0; i < numSymbols; i++) {
             SYM_T *x = &symbols[i];
-            fprintf(fp, "%-3d %-4d %-4d %-8ld %s\n", 
-                i, x->type, x->sz, x->val, x->name);
+            fprintf(fp, "%-3d %-4d %-4d %-10ld %s (0x%lx)\n", 
+                i, x->type, x->sz, x->val, x->name, x->val);
         }
     }
 }

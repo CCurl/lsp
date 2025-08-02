@@ -1,6 +1,7 @@
 /*---------------------------------------------------------------------------*/
 /* Virtual machine. */
 
+#include <stdint.h>
 #include "tc.h"
 
 byte vm[CODE_SZ];
@@ -16,8 +17,8 @@ static long rstk[1000], rsp;
 static void push(long x) { sp = (sp+1)&0x7f; TOS = x; }
 static void drop() { sp = (sp-1)&0x7f; }
 static long pop() { long x = TOS; drop(); return x; }
-static int  f2(int a) { return vm[a] | (vm[a + 1] << 8); }
-static long f4(int a) { return f2(a) | (f2(a + 2) << 16); }
+static int  f2(int a) { return *(int16_t*)(&vm[a]); }
+static int  f4(int a) { return *(int32_t*)(&vm[a]); }
 
 void initVM() {
     sp = rsp = here = 0;
@@ -30,9 +31,9 @@ void runVM(int pc) {
         case  NOP:
         ACASE IFETCH: stk[++sp] = symbols[f2(pc)].val; pc += 2;
         ACASE ISTORE: symbols[f2(pc)].val = stk[sp]; pc += 2;
-        ACASE IP1: push(vm[pc++]);
-        ACASE IP2: push(f2(pc)); pc += 2;
-        ACASE IP4: push(f4(pc)); pc += 4;
+        ACASE IP1: stk[++sp] = vm[pc++];
+        ACASE IP2: stk[++sp] = f2(pc); pc += 2;
+        ACASE IP4: stk[++sp] = f4(pc); pc += 4;
         ACASE IDROP: drop();
         ACASE IADD: NOS += TOS; drop();
         ACASE ISUB: NOS -= TOS; drop();
