@@ -55,11 +55,11 @@ tc: the compiler (tc.c).
 - That output is written to file 'tc.out'.
 - It also generates file 'tc.sym', a listing of the symbols defined.
 
-vm-stk: an emulator (vm-stk).
+vm-stk: an emulator (vm-stk.c).
 - This is an emulator that can run the output from tc.
 - It generates file 'vm-stk.sym', a listing of the symbols defined.
 
-vm-lin: TODO
+vm-lin: TODO (vm-lin.c)
 - This will be an emulator for a severely stripped down subset of a Linux x86 system.
 - This is a stepping stone to the real goal of generating executable files.
 
