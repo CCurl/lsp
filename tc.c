@@ -243,6 +243,7 @@ node *term() {
     return x;
 }
 
+/* <math_op> ::= "+" | "-" | "*" | "/" */
 int mathop() {
     if (tok == PLUS) { return ADD; }
     else if (tok == MINUS) { return SUB; }
@@ -252,8 +253,7 @@ int mathop() {
 }
 
 /* <math> ::= <term> | <math> <math_op> <term> */
-/* <math_op> ::= "+" | "-" | "*" | "/" */
-node *sum() {
+node *math() {
     node *x = term();
     while (mathop()) {
         x = gen(mathop(), x, 0);
@@ -263,24 +263,12 @@ node *sum() {
     return x;
 }
 
-/* <test> ::= <math> | <math> "<" <math> | <math> ">" <math> */
-node *test() {
-    node *x = sum();
-    if (tok == LESS) { next_token(); return gen(LT, x, sum()); }
-    if (tok == GRT) { next_token(); return gen(GT, x, sum()); }
-    if (tok == EQU) { next_token(); return gen(EQ, x, sum()); }
-    return x;
-}
-
-/* <expr> ::= <test> | <id> "=" <expr> */
+/* <expr> ::= <math> | <math> <test-op> <math> */
 node *expr() {
-    node *x;
-    // if (tok != ID) { return test(); }
-    x = test();
-    // if ((x->kind == VAR) && (tok == EQUAL)) {
-    //     next_token();
-    //     return gen(SET, x, expr());
-    // }
+    node *x = math();
+    if (tok == LESS) { next_token(); return gen(LT, x, math()); }
+    if (tok == GRT) { next_token(); return gen(GT, x, math()); }
+    if (tok == EQU) { next_token(); return gen(EQ, x, math()); }
     return x;
 }
 
@@ -356,10 +344,7 @@ node *statement() {
         }
         next_token();
     }
-    else { /* <expr> ";" */
-        x = gen(EXPR, expr(), NULL);
-        expect_token(SEMI);
-    }
+    else { syntax_error(); }
     return x;
 }
 
@@ -477,8 +462,7 @@ int main(int argc, char *argv[]) {
     if (!input_fp) { printf("can't open source file"); }
     printf("compiling %s ... ", fn);
     here = 0;
-    g(JMP);
-    g2(0);
+    hole(JMP);
     defs(NULL);
     fclose(input_fp);
     input_fp = NULL;

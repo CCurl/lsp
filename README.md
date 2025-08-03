@@ -31,8 +31,7 @@ The grammar of language in EBNF is:
                   "//" |
                   ";"
   <paren_expr> ::= "(" <expr> ")"
-  <expr>       ::= <test> | <math>
-  <test>       ::= <math> <test-op> <math>
+  <expr>       ::= <math> | <math> <test-op> <math>
   <test-op>    ::= "<" | "==" | ">"
   <math>       ::= <term> | <math> <math_op> <term>
   <math-op>    ::= "+" | "-" | "*" | "/"
