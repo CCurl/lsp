@@ -40,3 +40,25 @@ The grammar of language in EBNF is:
   <int>        ::= [0-9]*
   <func-call>  ::= <id> "(" ")"
  ```
+
+Running:
+```
+make tc
+make vm
+make test
+make bm
+ ```
+It is broken into 2 parts:
+
+tc: the compiler.
+- This generates an representation of the program in a stack machine format.
+- That output is written to file 'tc.out'.
+- It also generates file 'tc.sym', a listing of the symbols defined.
+
+vm-stk: an emulator that can run the output from tc.
+- It generates file 'vm-stk.sym', a listing of the symbols defined.
+
+TODO:
+- [ ] Create a simple emulator that can run a subset of x86 machine code.
+- [ ] Generate x86 machine code for the above emulator.
+- [ ] Generate x86 an executable program.
