@@ -1,6 +1,10 @@
+int num;
+int x;
+
 void main() {
-	b = 500000000;
-	while (b) {
-        b = b - 1;
+	num = 500000000;
+	x = num;
+	while (x) {
+        x = x - 1;
     }
 }

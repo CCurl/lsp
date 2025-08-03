@@ -7,3 +7,6 @@
 tc
 vm
 pgm.vm
+tc.out
+tc.sym
+vm-stk.lst

@@ -66,7 +66,7 @@ void runVM(int pc) {
 void hexDump(byte *start, int count, FILE *fpOut) {
     int tt = 0;
     FILE *fp = fpOut ? fpOut : stdout;
-    fprintf(fp, "\nHEX dump");
+    fprintf(fp, "HEX dump");
     fprintf(fp, "\n------------------------------------------------------");
     for (int i=0; i<count; i++) {
         if (tt==0) { fprintf(fp, "\n%04X: ", i); }
@@ -95,13 +95,10 @@ static void pN1(int n) { pNX((n & 0xff)); }
 static void pN2(int n) { pN1(n); pN1(n >> 8); }
 static void pN4(int n) { pN2(n); pN2(n >> 16); }
 
-void dis() {
+void dis(FILE *toFp) {
     int pc = 0;
     long t;
-    outFp = fopen("listing.txt", "wt");
-    //hDump(0, outFp);
-    //fprintf(outFp, "\n");
-    //dumpSymbols(1, outFp);
+    outFp = toFp ? toFp : stdout;
 
     hexDump(&vm[0], here, outFp);
     fprintf(outFp, "\n");
@@ -135,8 +132,6 @@ void dis() {
         }
     }
     fprintf(outFp, "\n");
-    fclose(outFp);
-    outFp = NULL;
 }
 
 #define _MAIN
@@ -145,14 +140,16 @@ void dis() {
 /* Main program. */
 
 int main(int argc, char *argv[]) {
-    char *fn = (argc > 1) ? argv[1] : "pgm.vm";
+    char *fn = (argc > 1) ? argv[1] : "tc.out";
     FILE *fp = fopen(fn, "rb");
     initVM();
     if (!fp) { printf("can't open program"); }
     else {
         here = (int)fread(vm, 1, VM_SZ, fp);
         fclose(fp);
-        dis();
+        fp = fopen("vm-stk.lst", "wt");
+        dis(fp);
+        fclose(fp);
         runVM(0);
         for (int i=0; i<1000; i++) {
             if (vals[i] != 0) { printf("%d: %ld\n", i, vals[i]); }

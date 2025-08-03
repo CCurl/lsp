@@ -47,7 +47,7 @@ extern void dumpSymbols(int details, FILE *toFP);
  /* Lexer. */
 
 // NOTE: these have to be in sync with the first <x> entries in the 
-// list of tokens defined in tc.h
+// list of tokens
 char *words[] = { "do", "else", "if"
     , "while", "void", "int", "byte"
     , "return", NULL};
@@ -160,43 +160,42 @@ void expect_token(int exp) {
 SYM_T symbols[SYMBOLS_SZ];
 int numSymbols = 0;
 
-int findSymbolVal(char type, long val) {
-    for (int i = 0; i < numSymbols; i++) {
+int findSymbol(char *name, char type) {
+    int i = 0;
+    while (i < numSymbols) {
         SYM_T *x = &symbols[i];
-        if ((x->type == type) && (x->val == val)) { return i; }
-    }
-    error("symbol not defined");
-    return 0;
-}
-
-int genSymbol(char *name, char type) {
-    SYM_T *x;
-    for (int i = 0; i < numSymbols; i++) {
-        x = &symbols[i];
         if (strcmp(x->name, name) == 0) {
             if (x->type == type) { return i; }
             error("name already defined with different type.");
         }
+        i=i+1;
     }
-    x = &symbols[numSymbols];
+    return -1;
+}
+
+int genSymbol(char *name, char type) {
+    int i = findSymbol(name, type);
+    if (0 <= i) { return i; }
+    i = numSymbols++;
+    SYM_T *x = &symbols[i];
     // x->name = hAlloc(strlen(name) + 1);
     x->val = 0;
     x->type = type;
     x->sz = 4;
     strcpy(x->name, name);
-    return numSymbols++;
+    return i;
 }
 
 void dumpSymbols(int details, FILE *toFP) {
     FILE *fp = toFP ? toFP : stdout;
     fprintf(fp, "symbols: %d entries, %d used\n", SYMBOLS_SZ, numSymbols);
-    fprintf(fp, "num type size val        name\n");
-    fprintf(fp, "--- ---- ---- ---------- -----------------\n");
+    fprintf(fp, "num type size val       name\n");
+    fprintf(fp, "--- ---- ---- --------- -----------------\n");
     if (details) {
         for (int i = 0; i < numSymbols; i++) {
             SYM_T *x = &symbols[i];
-            fprintf(fp, "%-3d %-4d %-4d %-10ld %s (0x%lx)\n", 
-                i, x->type, x->sz, x->val, x->name, x->val);
+            fprintf(fp, "%-3d %-4d %-4d $%-8lX %s\n", 
+                i, x->type, x->sz, x->val, x->name);
         }
     }
 }
@@ -422,7 +421,6 @@ node *defs(node *st) {
     next_token();
     while (1) {
         if (tok == EOI) { break; }
-        if (tok == LBRA) { break; }
         if (tok == VOID_TOK) {
             int seqNo = 1;
             next_token(); expect_token(FUNC_TOK);
@@ -466,16 +464,18 @@ int main(int argc, char *argv[]) {
     defs(NULL);
     fclose(input_fp);
     input_fp = NULL;
+    printf("%d code bytes (%d nodes)\n\n", here, num_nodes);
 
-    int entryPoint = symbols[genSymbol("main", FUNC_TOK)].val;
-    if (0 < entryPoint) {
-        fix(1, entryPoint);
-        FILE *fp = fopen("pgm.vm", "wb");
-        fwrite(vm, 1, here, fp);
-        fclose(fp);
-        printf("%d code bytes (%d nodes)\n\n", here, num_nodes);
-    }
-    else { error("no main() function!"); }
+    int mainSym = findSymbol("main", FUNC_TOK);
+    if (mainSym < 0) { error("no main() function!"); }
+    fix(1, symbols[mainSym].val);
+    FILE *fp = fopen("tc.out", "wb");
+    fwrite(vm, 1, here, fp);
+    fclose(fp);
+
+    fp = fopen("tc.sym", "wt");
+    dumpSymbols(1, fp);
+    fclose(fp);
 
     return 0;
 }

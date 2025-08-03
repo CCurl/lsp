@@ -14,8 +14,8 @@ tc: tc.c
 	$(CXX) $(CFLAGS) $(LDFLAGS) -o tc tc.c $(LDLIBS)
 	ls -l tc
 
-vm: vm.c
-	$(CXX) $(CFLAGS) $(LDFLAGS) -o vm vm.c $(LDLIBS)
+vm: vm-stk.c
+	$(CXX) $(CFLAGS) $(LDFLAGS) -o vm vm-stk.c $(LDLIBS)
 	ls -l vm
 
 clean:
