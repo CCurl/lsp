@@ -50,13 +50,18 @@ make bm
  ```
 It is broken into 2 parts:
 
-tc: the compiler.
+tc: the compiler (tc.c).
 - This generates an representation of the program in a stack machine format.
 - That output is written to file 'tc.out'.
 - It also generates file 'tc.sym', a listing of the symbols defined.
 
-vm-stk: an emulator that can run the output from tc.
+vm-stk: an emulator (vm-stk).
+- This is an emulator that can run the output from tc.
 - It generates file 'vm-stk.sym', a listing of the symbols defined.
+
+vm-lin: TODO
+- This will be an emulator for a severely stripped down subset of a Linux x86 system.
+- This is a stepping stone to the real goal of generating executable files.
 
 TODO:
 - [ ] Create a simple emulator that can run a subset of x86 machine code.
