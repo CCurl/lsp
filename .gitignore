@@ -5,8 +5,8 @@
 /.vs
 /lsp
 tc
-vm
 pgm.vm
 tc.out
 tc.sym
 vm-stk.lst
+vm-stk
