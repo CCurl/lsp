@@ -2,8 +2,8 @@ int  nXYZ[10];
 byte bABC[20];
 
 void Abc01_X() {
-	r=5;
-	t=r*r;
+	r = 5;
+	t = r*r;
 	q = (t * t);
 	if (r == t) { rr=1; }
 	else { dd = 255; }
@@ -32,7 +32,7 @@ void main() {
 	i = 50*1000*1000;
 	s=1;
 	while (i) { i=i-1; }
-	i=n=0;
-	do { i=i+(n=n+1); } while (n<50);
+	i=0; n=0;
+	do { n=n+1; i=i+n; } while (n<50);
 	sub();
 }

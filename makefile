@@ -8,20 +8,27 @@ srcfiles := $(shell find . -name "*.c")
 incfiles := $(shell find . -name "*.h")
 LDLIBS   := -lm
 
-all: $(app) $(app32)
+all: tc vm
 
-$(app): $(srcfiles) $(incfiles)
-	$(CXX) $(CFLAGS) $(LDFLAGS) -o $(app) $(srcfiles) $(LDLIBS)
-	ls -l $(app)
+tc: tc.c
+	$(CXX) $(CFLAGS) $(LDFLAGS) -o tc tc.c $(LDLIBS)
+	ls -l tc
+
+vm: vm.c
+	$(CXX) $(CFLAGS) $(LDFLAGS) -o vm vm.c $(LDLIBS)
+	ls -l vm
 
 clean:
-	rm -f $(app) $(app32)
+	rm -f tc vm
 
-test: $(app)
-	./$(app) test.tc
+test: all
+	./tc test.tc
+	./vm
 
-run: $(app)
-	./$(app)
+bm: all
+	./tc bm.tc
+	./vm
 
 bin: $(app)
-	cp -u -p $(app) ~/bin/
+	cp -u -p tc ~/bin/
+	cp -u -p vm ~/bin/

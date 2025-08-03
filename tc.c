@@ -2,7 +2,46 @@
 /* Based on work by Marc Feeley (2001), MIT license. */
 /* Please see the README.md for details. */
 
-#include "tc.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define SYMBOLS_SZ   500
+#define CODE_SZ     2500
+#define NODES_SZ    1000
+
+#define BTWI(n,l,h) ((l<=n)&&(n<=h))
+
+typedef unsigned char byte;
+
+typedef struct { char type, name[32]; int sz; long val; } SYM_T;
+extern SYM_T symbols[SYMBOLS_SZ];
+
+// Tokens - NOTE: the first 8 must match the words list in tc.c
+enum {
+    DO_TOK, ELSE_TOK, IF_TOK, WHILE_TOK
+    , VOID_TOK, INT_TOK, BYTE_TOK, RET_TOK
+    , LBRA, RBRA, LPAR, RPAR, LARR, RARR
+    , PLUS, MINUS, STAR, SLASH, LESS, EQU, GRT, SEMI
+    , EQUAL, INT, ID, EOI, FUNC_TOK
+};
+
+// Syntax tree node types
+enum {
+    VAR, CST, ADD, SUB, MUL, DIV, LT, EQ, GT, SET, FUNC_CALL, FUNC_DEF,
+    IF1, IF2, WHILE, DO, EMPTY, SEQ, EXPR, PROG, RET
+};
+
+// VM opcodes
+enum {
+    NOP, IFETCH, ISTORE, IP1, IP2, IP4, IDROP, IADD, ISUB, IMUL, IDIV,
+    ILT, IGT, IEQ, JZ, JNZ, JMP, ICALL, IRET, HALT
+};
+
+int here;
+byte vm[CODE_SZ];
+extern int findSymbolVal(char type, long val);
+extern void dumpSymbols(int details, FILE *toFP);
 
  /*---------------------------------------------------------------------------*/
  /* Lexer. */
@@ -23,7 +62,7 @@ void msg(char *s, int cr, int ln) {
     if (ln) {
         printf("\nat (%d,%d): %s", cur_lnum, cur_off, s);
         printf("\n%s", cur_line);
-        for (int i=1; i<cur_off; i++) { fprintf(stdout, " "); }
+        for (int i=2; i<cur_off; i++) { fprintf(stdout, " "); }
         printf("^\n");
         return;
     }
@@ -109,7 +148,7 @@ void next_token() {
 
 void expect_token(int exp) {
     if (tok != exp) {
-        // printf("-expected token [%d], not[%d]-", exp, tok);
+        printf("-expected token [%d], not[%d]-", exp, tok);
         syntax_error();
     }
     next_token();
@@ -140,7 +179,7 @@ int genSymbol(char *name, char type) {
         }
     }
     x = &symbols[numSymbols];
-    x->name = hAlloc(strlen(name) + 1);
+    // x->name = hAlloc(strlen(name) + 1);
     x->val = 0;
     x->type = type;
     x->sz = 4;
@@ -179,12 +218,12 @@ node *new_node(int k) {
 
 node *gen(int k, node *o1, node *o2) {
     node *x = new_node(k);
-    x->o1 = o1; x->o2 = o2;
+    x->o1 = o1;
+    x->o2 = o2;
     return x;
 }
 
 node *paren_expr(); /* forward declaration */
-
 
 /* <term> ::= <id> | <int> | <paren_expr> */
 node *term() {
@@ -236,12 +275,12 @@ node *test() {
 /* <expr> ::= <test> | <id> "=" <expr> */
 node *expr() {
     node *x;
-    if (tok != ID) { return test(); }
+    // if (tok != ID) { return test(); }
     x = test();
-    if ((x->kind == VAR) && (tok == EQUAL)) {
-        next_token();
-        return gen(SET, x, expr());
-    }
+    // if ((x->kind == VAR) && (tok == EQUAL)) {
+    //     next_token();
+    //     return gen(SET, x, expr());
+    // }
     return x;
 }
 
@@ -280,6 +319,15 @@ node *statement() {
         next_token();
         expect_token(SEMI);
     }
+    else if (tok == ID) { /* <id> "=" <expr> ";" */
+        x = new_node(VAR);
+        x->sval = genSymbol(id_name, VAR);
+        x->val = x->sval;
+        next_token();
+        expect_token(EQUAL);
+        x = gen(SET, x, expr());
+        expect_token(SEMI);
+    }
     else if (tok == DO_TOK) { /* "do" <statement> "while" <paren_expr> ";" */
         x = new_node(DO);
         next_token();
@@ -307,9 +355,6 @@ node *statement() {
             x->o2 = statement();
         }
         next_token();
-    }
-    else if (tok == EQU) { /* <id> = <expr> ; */
-        
     }
     else { /* <expr> ";" */
         x = gen(EXPR, expr(), NULL);
@@ -429,23 +474,24 @@ node *defs(node *st) {
 int main(int argc, char *argv[]) {
     char *fn = (argc > 1) ? argv[1] : "test.tc";
     input_fp = fopen(fn, "rt");
-    if (!input_fp) { error("can't open source file"); }
+    if (!input_fp) { printf("can't open source file"); }
     printf("compiling %s ... ", fn);
-    initVM();
-    g(NOP);
+    here = 0;
+    g(JMP);
+    g2(0);
     defs(NULL);
     fclose(input_fp);
     input_fp = NULL;
-    printf("%d code bytes (%d nodes)\n\n", here, num_nodes);
 
     int entryPoint = symbols[genSymbol("main", FUNC_TOK)].val;
-    if (0 < entryPoint) { runVM(entryPoint); }
-    else { error("no main() function!"); }
-    dis();
-    for (int i = 0; i < numSymbols; i++) {
-        SYM_T *s = &symbols[i];
-        printf("%s = %ld\n", s->name, s->val);
+    if (0 < entryPoint) {
+        fix(1, entryPoint);
+        FILE *fp = fopen("pgm.vm", "wb");
+        fwrite(vm, 1, here, fp);
+        fclose(fp);
+        printf("%d code bytes (%d nodes)\n\n", here, num_nodes);
     }
-    printf("\n");
+    else { error("no main() function!"); }
+
     return 0;
 }
