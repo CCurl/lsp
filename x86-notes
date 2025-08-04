@@ -1,11 +1,11 @@
 linux - x86 system calls
+- https://rbmj.github.io/iwg/exploit/x86_table.html
+- https://www.chromium.org/chromium-os/developer-library/reference/linux-constants/syscalls/#x86-32-bit
 
-https://rbmj.github.io/iwg/exploit/x86_table.html
-
-linux execution start address: 0x08048000
+linux - execution start address: 0x08048000
 
 sys_brk (syscall #45)
-- Put the requested new end into EBX
+- Put the requested new end address into EBX
 - Returns the new end address in EAX
 - When EBX=0, it returns the current end
 
