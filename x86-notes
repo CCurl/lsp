@@ -1,0 +1,34 @@
+linux - x86 system calls
+
+https://rbmj.github.io/iwg/exploit/x86_table.html
+
+
+Machine code
+-------------
+
+b8 11 22 33 44 - mov eax, 0x44332211
+bb 55 66 77 88 - mov ebx, 0x88776655
+b9 55 66 77 88 - mov ecx, 0x88776655
+ba 55 66 77 88 - mov edx, 0x88776655
+
+50 - push eax
+53 - push ebx
+51 - push ecx
+52 - push edx
+
+58 - pop eax
+5b - pop ebx
+59 - pop ecx
+5a - pop edx
+
+31 c0 - xor eax, eax
+31 db - xor ebx, ebx
+31 c9 - xor ecx, ecx
+31 d2 - xor edx, edx
+
+cd 80 -  int 0x80
+
+39 c3 - cmp eax, ebx
+
+c3 - ret
+
