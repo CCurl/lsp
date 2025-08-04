@@ -455,8 +455,8 @@ node *defs(node *st) {
 /* Main program. */
 
 int main(int argc, char *argv[]) {
-    char *fn = (argc > 1) ? argv[1] : "test.tc";
-    input_fp = fopen(fn, "rt");
+    char *fn = (argc > 1) ? argv[1] : NULL;
+    if (fn) { input_fp = fopen(fn, "rt"); }
     if (!input_fp) { input_fp = stdin; }
     here = 0;
     hole(JMP);
@@ -468,8 +468,7 @@ int main(int argc, char *argv[]) {
     if (mainSym < 0) { printf("no main() function!"); }
     fix(1, symbols[mainSym].val);
     FILE *fp = fopen("tc.out", "wb");
-    fwrite(vm, 1, here, fp);
-    fclose(fp);
+    if (fp) { fwrite(vm, 1, here, fp); fclose(fp); }
 
     fp = fopen("tc.sym", "wt");
     dumpSymbols(1, fp);

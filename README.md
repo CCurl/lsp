@@ -60,7 +60,7 @@ tc: the tiny-c compiler (tc.c).
 hex-dump: A little program to dump a file's contents in hex.
 
 vm-stk: an emulator (vm-stk.c).
-- This is an stack machine VM emulator that can run the output from tc.
+- This is a stack machine VM emulator that can run the output from tc.
 - It generates file 'vm-stk.lst', a disassembly listing of the program.
 
 vm-lin: TODO (vm-lin.c)
