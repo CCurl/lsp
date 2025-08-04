@@ -62,29 +62,6 @@ void runVM(int pc) {
 }
 
 /*---------------------------------------------------------------------------*/
-/* HEX dump. */
-void hexDump(byte *start, int count, FILE *fpOut) {
-    int tt = 0;
-    FILE *fp = fpOut ? fpOut : stdout;
-    fprintf(fp, "HEX dump");
-    fprintf(fp, "\n------------------------------------------------------");
-    for (int i=0; i<count; i++) {
-        if (tt==0) { fprintf(fp, "\n%04X: ", i); }
-        byte x = start[i];
-        fprintf(fp, "%02X ", x);
-        if (++tt == 16) {
-            tt = 0;
-            fprintf(fp, "  ; ");
-            for (int j=i-15; j<i; j++) {
-                x = start[j];
-                fprintf(fp, "%c", BTWI(x,32,126) ? x : '.');
-            }
-        }
-    }
-    fprintf(fp, "\n");
-}
-
-/*---------------------------------------------------------------------------*/
 /* Disassembly. */
 
 static FILE *outFp;
@@ -100,10 +77,7 @@ void dis(FILE *toFp) {
     long t;
     outFp = toFp ? toFp : stdout;
 
-    hexDump(&vm[0], here, outFp);
-    fprintf(outFp, "\n");
-
-    fprintf(outFp, "\ncode: %d bytes, %d (0x%X) used.", VM_SZ, here, here);
+    fprintf(outFp, "\nVM: %d bytes, %d used, 0x0000:0x%04X.", VM_SZ, here, here-1);
     fprintf(outFp, "\n-------------------------------------------");
     while (pc < here) {
         fprintf(outFp, "\n%04X: %02X ", pc, vm[pc]);
@@ -134,8 +108,6 @@ void dis(FILE *toFp) {
     fprintf(outFp, "\n");
 }
 
-#define _MAIN
-#ifdef _MAIN
 /*---------------------------------------------------------------------------*/
 /* Main program. */
 
@@ -157,4 +129,3 @@ int main(int argc, char *argv[]) {
     }
     return 0;
 }
-#endif // _MAIN

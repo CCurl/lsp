@@ -48,16 +48,20 @@ make vm
 make test
 make bm
  ```
-It is broken into 2 parts:
+It is broken into multiple parts:
 
-tc: the compiler (tc.c).
-- This generates an representation of the program in a stack machine format.
-- That output is written to file 'tc.out'.
+tc: the tiny-c compiler (tc.c).
+- This takes a .tc file as the only argument.
+- If no argument is given, it reads the source from stdin.
+- The output is written to file 'tc.out'.
+- tc.out is a representation of the program in a stack machine format.
 - It also generates file 'tc.sym', a listing of the symbols defined.
 
+hex-dump: A little program to dump a file's contents in hex.
+
 vm-stk: an emulator (vm-stk.c).
-- This is an emulator that can run the output from tc.
-- It generates file 'vm-stk.sym', a listing of the symbols defined.
+- This is an stack machine VM emulator that can run the output from tc.
+- It generates file 'vm-stk.lst', a disassembly listing of the program.
 
 vm-lin: TODO (vm-lin.c)
 - This will be an emulator for a severely stripped down subset of a Linux x86 system.

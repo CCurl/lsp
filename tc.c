@@ -457,17 +457,15 @@ node *defs(node *st) {
 int main(int argc, char *argv[]) {
     char *fn = (argc > 1) ? argv[1] : "test.tc";
     input_fp = fopen(fn, "rt");
-    if (!input_fp) { printf("can't open source file"); }
-    printf("compiling %s ... ", fn);
+    if (!input_fp) { input_fp = stdin; }
     here = 0;
     hole(JMP);
     defs(NULL);
-    fclose(input_fp);
-    input_fp = NULL;
-    printf("%d code bytes (%d nodes)\n\n", here, num_nodes);
+    if (input_fp != stdin) { fclose(input_fp); }
+    printf("%d code bytes (%d nodes)\n", here, num_nodes);
 
     int mainSym = findSymbol("main", FUNC_TOK);
-    if (mainSym < 0) { error("no main() function!"); }
+    if (mainSym < 0) { printf("no main() function!"); }
     fix(1, symbols[mainSym].val);
     FILE *fp = fopen("tc.out", "wb");
     fwrite(vm, 1, here, fp);

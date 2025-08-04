@@ -10,3 +10,4 @@ tc.out
 tc.sym
 vm-stk.lst
 vm-stk
+hex-dump
