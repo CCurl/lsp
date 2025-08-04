@@ -2,6 +2,7 @@ linux - x86 system calls
 
 https://rbmj.github.io/iwg/exploit/x86_table.html
 
+linux execution start address: 0x08048000
 
 Machine code
 -------------
