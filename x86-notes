@@ -9,7 +9,7 @@ sys_brk (syscall #45)
 - Returns the new end address in EAX
 - When EBX=0, it returns the current end
 
-To get more 256 bytes memory:
+To allocate 256 bytes memory:
     ; Get the current program break
     mov eax, 45         ; syscall number for sys_brk
     xor ebx, ebx        ; pass NULL to get current break
