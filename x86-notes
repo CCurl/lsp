@@ -4,6 +4,25 @@ https://rbmj.github.io/iwg/exploit/x86_table.html
 
 linux execution start address: 0x08048000
 
+sys_brk (syscall #45)
+- Put the requested new end into EBX
+- Returns the new end address in EAX
+- When EBX=0, it returns the current end
+
+To get more 256 bytes memory:
+    ; Get the current program break
+    mov eax, 45         ; syscall number for sys_brk
+    xor ebx, ebx        ; pass NULL to get current break
+    int 0x80            ; call kernel
+
+    ; Store the current break in ebx
+    mov ebx, eax        ; ebx now holds the current program break
+
+    ; Set the new program break
+    mov eax, 45         ; syscall number for sys_brk
+    add ebx, 256        ; set the new break address
+    int 0x80            ; call kernel
+
 Machine code
 -------------
 
