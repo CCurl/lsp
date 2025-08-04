@@ -9,21 +9,19 @@ typedef unsigned char byte;
 /*---------------------------------------------------------------------------*/
 /* HEX dump. */
 void hexDump(byte *start, int count, FILE *fpOut) {
-    int tt = 0;
+    int n = 0;
     FILE *fp = fpOut ? fpOut : stdout;
     fprintf(fp, "\nHEX dump - %d bytes", count);
-    fprintf(fp, "\n------------------------------------------------------");
-    for (int i=0; i<count; i++) {
-        if (tt==0) { fprintf(fp, "\n%04X: ", i); }
-        byte x = start[i];
-        fprintf(fp, "%02X ", x);
-        if (++tt == 16) {
-            tt = 0;
-            fprintf(fp, "  ; ");
-            for (int j=i-15; j<i; j++) {
-                x = start[j];
-                fprintf(fp, "%c", BTWI(x,32,126) ? x : '.');
-            }
+    fprintf(fp, "\n-------------------------------------------------------");
+    for (int i=0; i<count; i=i+16) {
+        fprintf(fp, "\n%04X: ", i);
+        for (int j=0; j<8; j++) { fprintf(fp, "%02X ", start[i+j]); }
+        fprintf(fp, " ");
+        for (int j=8; j<16; j++) { fprintf(fp, "%02X ", start[i+j]); }
+        fprintf(fp, "  ; ");
+        for (int j=0; j<16; j++) {
+            byte x = start[i+j];
+            fprintf(fp, "%c", BTWI(x,32,126) ? x : '.');
         }
     }
     fprintf(fp, "\n");

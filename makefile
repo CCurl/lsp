@@ -35,7 +35,7 @@ bm: all
 	./vm-stk
 	./hex-dump tc.out >> vm-stk.lst
 
-bin: $(app)
+bin: all
 	cp -u -p tc ~/bin/
 	cp -u -p vm-stk ~/bin/
 	cp -u -p hex-dump ~/bin/

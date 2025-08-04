@@ -2,7 +2,7 @@
 
 format ELF executable
 
-segment readable executable
+segment readable writable executable
 
 ; -------------------------------------------------------------------------------------
 ; -------------------------------------------------------------------------------------
@@ -10,17 +10,17 @@ segment readable executable
 entry _start
 
 _start:
-    mov eax,0x41414141
+    mov eax,0x2d2d2d2d
 
     mov eax, 1      ; syscall number for exit
     mov ebx, 22     ; exit code 22
     int 0x80        ; call kernel
 
-    mov eax,0x42424242
+    mov eax,0x79797979
     lea ecx, [xmsg]
-    mov eax,0x5A5A5A5A
+    mov eax,0x7a7a7a7a
 
-segment readable writable
-xaaa: db "aaaaaaaa",0
+; segment readable writable
+xaaa: db "-DATA-"
 xmsg: db "hi there",0
-xzzz: db "zzzzzzzz",0
+xzzz: db "-DATAEND-"

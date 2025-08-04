@@ -28,6 +28,9 @@ ba 55 66 77 88 - mov edx, 0x88776655
 
 cd 80 -  int 0x80
 
+8d 04 xx xx xx xx - lea eax, <addr>
+8d 0d xx xx xx xx - lea ecx, <addr>
+
 39 c3 - cmp eax, ebx
 
 c3 - ret
