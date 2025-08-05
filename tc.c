@@ -349,8 +349,7 @@ node *statement() {
 
 /*---------------------------------------------------------------------------*/
 /* Code generator. */
-int here, oHere;
-int addrSz = 2;
+int org, here, oHere, addrSz;
 
 void s1(int a, int v) { vm[a] = (v & 255); }
 void s2(int a, int v) { s1(a,v); s1(a+1,v>>8); }
@@ -389,13 +388,13 @@ void c(node *x) {
         case GT:  c(x->o1); c(x->o2); g(IGT);  break;
         case EQ:  c(x->o1); c(x->o2); g(IEQ);  break;
         case SET: c(x->o2); g(ISTORE); g2(x->o1->val); break;
-        case IF1: c(x->o1); p1 = hole(JZ); c(x->o2); fix(p1, here); break;
+        case IF1: c(x->o1); p1 = hole(JZ); c(x->o2); fix(p1, oHere); break;
         case IF2: c(x->o1); p1 = hole(JZ); c(x->o2);
-            p2 = hole(JMP); fix(p1, here);
-            c(x->o3); fix(p2, here); break;
-        case WHILE: p1 = here; c(x->o1); p2 = hole(JZ); c(x->o2);
-            fix(hole(JMP), p1); fix(p2, here); break;
-        case DO: p1 = here; c(x->o1); c(x->o2); fix(hole(JNZ), p1); break;
+            p2 = hole(JMP); fix(p1, oHere);
+            c(x->o3); fix(p2, oHere); break;
+        case WHILE: p1 = oHere; c(x->o1); p2 = hole(JZ); c(x->o2);
+            fix(hole(JMP), p1); fix(p2, oHere); break;
+        case DO: p1 = oHere; c(x->o1); c(x->o2); fix(hole(JNZ), p1); break;
         case EMPTY: break;
         case SEQ: c(x->o1); c(x->o2); break;
         case EXPR: c(x->o1); g(IDROP); break;
@@ -431,7 +430,7 @@ node *defs(node *st) {
             int seqNo = 1;
             next_token(); expect_token(FUNC_TOK);
             int sym = genSymbol(id_name, FUNC_TOK);
-            symbols[sym].val = here;
+            symbols[sym].val = oHere;
             x = gen(FUNC_DEF, NULL, NULL);
             x->sval = sym;
             if (tok != LBRA) error("'{' expected.");
@@ -465,6 +464,8 @@ int main(int argc, char *argv[]) {
     if (fn) { input_fp = fopen(fn, "rt"); }
     if (!input_fp) { input_fp = stdin; }
     here = 0;
+    org = 0; // 0x08048000; // Linux 23-bit code start (134512640)
+    addrSz = 2;
     hole(JMP);
     defs(NULL);
     if (input_fp != stdin) { fclose(input_fp); }
