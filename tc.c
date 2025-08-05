@@ -38,7 +38,6 @@ enum {
     ILT, IGT, IEQ, JZ, JNZ, JMP, ICALL, IRET, HALT
 };
 
-int here;
 byte vm[CODE_SZ];
 extern int findSymbolVal(char type, long val);
 extern void dumpSymbols(int details, FILE *toFP);
@@ -350,21 +349,28 @@ node *statement() {
 
 /*---------------------------------------------------------------------------*/
 /* Code generator. */
+int here, oHere;
+int addrSz = 2;
 
-void g(int c) { vm[here++] = (c & 0xff); }
+void s1(int a, int v) { vm[a] = (v & 255); }
+void s2(int a, int v) { s1(a,v); s1(a+1,v>>8); }
+void s4(int a, int v) { s2(a,v); s1(a+2,v>>16); }
+
+void g(int c) { s1(here, c); here=here+1; oHere=oHere+1; }
 void g2(int n) { g(n); g(n>>8); }
-void g4(int n) { g(n); g(n>>8); g(n>>16); g(n>>24); }
+void g4(int n) { g2(n); g2(n>>16); }
 
 int hole(int inst) {
     g(inst);
     int h = here;
-    g2(0);
+    if (addrSz == 2) { g2(0); }
+    else { g4(0); }
     return h;
 }
 
-void fix(int src, int dst) {
-    vm[src+0] = (dst & 0xff); dst = (dst >> 8);
-    vm[src+1] = (dst & 0xff);
+void fix(int addr, int dst) {
+    if (addrSz == 2) { s2(addr, dst); }
+    else { s4(addr, dst); }
 }
 
 void c(node *x) {
