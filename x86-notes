@@ -1,6 +1,7 @@
 linux - x86 system calls
 - https://rbmj.github.io/iwg/exploit/x86_table.html
 - https://www.chromium.org/chromium-os/developer-library/reference/linux-constants/syscalls/#x86-32-bit
+- http://ref.x86asm.net/coder32-abc.html#modrm_byte_32
 
 linux - execution start address: 0x08048000
 
