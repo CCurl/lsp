@@ -10,6 +10,9 @@ Seeing the copyright, I emailed Mark and asked him if I could use it, and he sai
 that it was under a MIT license and I could do what I wanted with it.<br/>
 This work is based on Marc's tinyc.c effort.<br/>
 <br/>
+The idea is to build on tiny-c to generate runnable, program in byte-code.<br/>
+That program (tc.out) can be input into gen-lin to create a native executable for Linux.<br/>
+<br/>
 The grammar of language in EBNF is:
 
 ```
@@ -41,31 +44,38 @@ The grammar of language in EBNF is:
   <func-call>  ::= <id> "(" ")"
  ```
 
-Running:
-```
-make tc
-make vm
-make test
-make bm
- ```
-It is broken into multiple parts:
+It is broken into multiple parts
+- each part is implemented in a single file.
 
-tc: the tiny-c compiler (tc.c).
+tc.c: the tiny-c compiler
 - This takes a .tc file as the only argument.
 - If no argument is given, it reads the source from stdin.
 - The output is written to file 'tc.out'.
 - tc.out is a representation of the program in a stack machine format.
 - It also generates file 'tc.sym', a listing of the symbols defined.
 
-hex-dump: A little program to dump a file's contents in hex.
+hex-dump.c: A little program to dump a file's contents in hex.
 
-vm-stk: an emulator (vm-stk.c).
+vm-stk.c: an emulator
 - This is a stack machine VM emulator that can run the output from tc.
 - It generates file 'vm-stk.lst', a disassembly listing of the program.
 
-vm-lin: TODO (vm-lin.c)
-- This will be an emulator for a severely stripped down subset of a Linux x86 system.
-- This is a stepping stone to the real goal of generating executable files.
+gen-lin.c: generates a native Linux executable from tc.out
+- currently working on it
+- input comes from stdin
+- output goes to stdout
+- messages are written to stderr
+
+Running:
+```
+make tc
+make vm-stk
+make gen-lin
+make test
+make lin-test
+make bm
+make lin-bm
+ ```
 
 TODO:
 - [ ] Create a simple emulator that can run a subset of x86 machine code.

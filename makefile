@@ -8,6 +8,10 @@ srcfiles := $(shell find . -name "*.c")
 incfiles := $(shell find . -name "*.h")
 LDLIBS   := -lm
 
+# -------------------------------------------------------------------
+# Targets
+# -------------------------------------------------------------------
+
 all: tc vm-stk hex-dump gen-lin
 
 tc: tc.c
@@ -26,8 +30,18 @@ hex-dump: hex-dump.c
 	$(CXX) $(CFLAGS) $(LDFLAGS) -o hex-dump hex-dump.c $(LDLIBS)
 	ls -l hex-dump
 
+bin: all
+	cp -u -p tc ~/bin/
+	cp -u -p vm-stk ~/bin/
+	cp -u -p hex-dump ~/bin/
+
+# -------------------------------------------------------------------
+# Scripts
+# -------------------------------------------------------------------
+
 clean:
-	rm -f tc vm-stk
+	rm -f tc vm-stk gen-lin hex-dump a.out
+	rm -f tc.out tc.sym vm-stk.lst
 
 test: all
 	./tc test.tc
@@ -45,8 +59,3 @@ bm: all
 	./tc bm.tc
 	./vm-stk
 	./hex-dump tc.out >> vm-stk.lst
-
-bin: all
-	cp -u -p tc ~/bin/
-	cp -u -p vm-stk ~/bin/
-	cp -u -p hex-dump ~/bin/
