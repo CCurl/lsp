@@ -12,7 +12,7 @@ LDLIBS   := -lm
 # Targets
 # -------------------------------------------------------------------
 
-all: tc vm-stk hex-dump gen-lin
+all: tc vm-stk hex-dump gen-lin vm-lin
 
 tc: tc.c
 	$(CXX) $(CFLAGS) $(LDFLAGS) -o tc tc.c $(LDLIBS)
@@ -21,6 +21,10 @@ tc: tc.c
 vm-stk: vm-stk.c
 	$(CXX) $(CFLAGS) $(LDFLAGS) -o vm-stk vm-stk.c $(LDLIBS)
 	ls -l vm-stk
+
+vm-lin: vm-lin.c
+	$(CXX) $(CFLAGS) $(LDFLAGS) -o vm-lin vm-lin.c $(LDLIBS)
+	ls -l vm-lin
 
 gen-lin: gen-lin.c
 	$(CXX) $(CFLAGS) $(LDFLAGS) -o gen-lin gen-lin.c $(LDLIBS)

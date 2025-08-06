@@ -58,4 +58,3 @@ cd 80 -  int 0x80
 39 c3 - cmp eax, ebx
 
 c3 - ret
-
