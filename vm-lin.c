@@ -25,6 +25,7 @@ int here;
 #define BCASE    break; case
 
 static void    s4(int32_t a, int32_t v) { *(int32_t*)(&vm[a]) = v; }
+static int32_t f1(int32_t a) { return vm[a]; }
 static int32_t f4(int32_t a) { return *(int32_t*)(&vm[a]); }
 
 void initVM() {
@@ -46,6 +47,7 @@ void runVM(int st) {
         ACASE 0x5b: ecx = f4(esp); esp += 4;  // pop ecx
         ACASE 0x59: edx = f4(esp); esp += 4;  // pop edx
         ACASE 0x5a: ebx = f4(esp); esp += 4;  // pop ebx
+        ACASE 0x83: ebp = ebp+f1(eip); eip++; // add ebp,4 - 83 c5 04
         ACASE 0x9a: eip = f4(eip);            // call absolute
         ACASE 0xc3: eip = f4(esp); esp += 4;  // ret
         ACASE 0xb8: eax = f4(eip); eip += 4;  // mov eax, <imm>
