@@ -8,7 +8,7 @@
 typedef unsigned char byte;
 
 int32_t reg[8];
-int32_t EAX, EBX, ECX, EDX;
+int32_t ir;
 int32_t eip, esp, ebp, esi, edi;
 int zf;
 
@@ -49,8 +49,9 @@ void ModRM(int op, int modrm) {
 void runVM(int st) {
     eip = st;
     again:
+    ir = (vm[eip]<<8) + vm[eip+1];
     // printf("-pc:%04x/ir:%d-\n", pc, vm[pc]);
-    switch (C2) {
+    switch (ir) {
         case  0x83c5: ebp = ebp+f1(eip+2); eip += 3; // add ebp,<b>
         ACASE 0x83ed: ebp = ebp-f1(eip+2); eip += 3; // sub ebp,<b>
         ACASE 0x89d8: EAX=EBX;  eip += 2; // sub ebp,<b>
@@ -59,7 +60,8 @@ void runVM(int st) {
         ACASE 0x01c3: EBX+=EAX; eip += 2; // add EBX, EAX
         goto again;
     }
-    switch (vm[eip]) {
+    ir = vm[eip++];
+    switch (ir) {
         case  0x90: //                        // nop
         ACASE 0x50: esp -= 4; s4(esp, EAX);   // push EAX
         ACASE 0x51: esp -= 4; s4(esp, ECX);   // push ECX
