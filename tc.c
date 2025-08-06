@@ -29,12 +29,12 @@ enum {
 // Syntax tree node types
 enum {
     VAR, CST, ADD, SUB, MUL, DIV, LT, EQ, GT, SET, FUNC_CALL, FUNC_DEF,
-    IF1, IF2, WHILE, DO, EMPTY, SEQ, EXPR, PROG, RET
+    IF1, IF2, WHILE, DO, EMPTY, SEQ, PROG, RET
 };
 
 // VM opcodes
 enum {
-    NOP, IFETCH, ISTORE, IP1, IP2, IP4, IDROP, IADD, ISUB, IMUL, IDIV,
+    NOP, IFETCH, ISTORE, ILIT, IDROP, IADD, ISUB, IMUL, IDIV,
     ILT, IGT, IEQ, JZ, JNZ, JMP, ICALL, IRET, HALT
 };
 
@@ -358,51 +358,59 @@ void s4(int a, int v) { s2(a,v); s1(a+2,v>>16); }
 void g(int c) { s1(here, c); here=here+1; oHere=oHere+1; }
 void g2(int n) { g(n); g(n>>8); }
 void g4(int n) { g2(n); g2(n>>16); }
+void gAddr(int a) { g2(a); if (addrSz==4) { g2(a>>16); } }
 
-int hole(int inst) {
-    g(inst);
-    int h = here;
-    if (addrSz == 2) { g2(0); }
-    else { g4(0); }
-    return h;
-}
+int hole() { gAddr(0); return here-addrSz; }
+void fix(int a, int v) {  s2(a, v); if (addrSz==4) { s2(a+2, v>>16); } }
 
-void fix(int addr, int dst) {
-    if (addrSz == 2) { s2(addr, dst); }
-    else { s4(addr, dst); }
-}
+// ----------------------------------------------------------
+// change these to generate code for a different architecture
+int gAddrSz() { return 2; }
+void gFetch(int v) { g(IFETCH); gAddr(v); }
+void gStore(int v) { g(ISTORE); gAddr(v); }
+void gLit(int v) { g(ILIT); g4(v); }
+void gCall(int v) { g(ICALL); gAddr(v); }
+void gReturn() { g(IRET); }
+void gAdd() { g(IADD); }
+void gMul() { g(IMUL); }
+void gSub() { g(ISUB); }
+void gDiv() { g(IDIV); }
+void gLT() { g(ILT); }
+void gGT() { g(IGT); }
+void gEQ() { g(IEQ); }
+void gJmp()   { g(JMP); }
+void gJmpZ()  { g(JZ); }
+void gJmpNZ() { g(JNZ); }
+void gBye() { g(HALT); }
+// ----------------------------------------------------------
 
 void c(node *x) {
     int p1, p2;
     switch (x->kind) {
-        case VAR: g(IFETCH); g2(x->val); break;
-        case CST: if (BTWI(x->val, 0, 127)) { g(IP1); g(x->val); }
-                else if (BTWI(x->val, 128, 32767)) { g(IP2); g2(x->val); }
-                else { g(IP4); g4(x->val); }
-                break;
-        case ADD: c(x->o1); c(x->o2); g(IADD); break;
-        case MUL: c(x->o1); c(x->o2); g(IMUL); break;
-        case SUB: c(x->o1); c(x->o2); g(ISUB); break;
-        case DIV: c(x->o1); c(x->o2); g(IDIV); break;
-        case LT:  c(x->o1); c(x->o2); g(ILT);  break;
-        case GT:  c(x->o1); c(x->o2); g(IGT);  break;
-        case EQ:  c(x->o1); c(x->o2); g(IEQ);  break;
-        case SET: c(x->o2); g(ISTORE); g2(x->o1->val); break;
-        case IF1: c(x->o1); p1 = hole(JZ); c(x->o2); fix(p1, oHere); break;
-        case IF2: c(x->o1); p1 = hole(JZ); c(x->o2);
-            p2 = hole(JMP); fix(p1, oHere);
+        case VAR: gFetch(x->val); break;
+        case CST: gLit(x->val); break;
+        case ADD: c(x->o1); c(x->o2); gAdd(); break;
+        case MUL: c(x->o1); c(x->o2); gMul(); break;
+        case SUB: c(x->o1); c(x->o2); gSub(); break;
+        case DIV: c(x->o1); c(x->o2); gDiv(); break;
+        case LT:  c(x->o1); c(x->o2); gLT();  break;
+        case GT:  c(x->o1); c(x->o2); gGT();  break;
+        case EQ:  c(x->o1); c(x->o2); gEQ();  break;
+        case SET: c(x->o2); gStore(x->o1->val); break;
+        case IF1: c(x->o1); gJmpZ(); p1 = hole(); c(x->o2); fix(p1, oHere); break;
+        case IF2: c(x->o1); gJmpZ(); p1 = hole(); c(x->o2);
+            gJmp(); p2 = hole(); fix(p1, oHere);
             c(x->o3); fix(p2, oHere); break;
-        case WHILE: p1 = oHere; c(x->o1); p2 = hole(JZ); c(x->o2);
-            fix(hole(JMP), p1); fix(p2, oHere); break;
-        case DO: p1 = oHere; c(x->o1); c(x->o2); fix(hole(JNZ), p1); break;
+        case WHILE: p1 = oHere; c(x->o1); gJmpZ(); p2 = hole(); c(x->o2);
+            gJmp(); gAddr(p1); fix(p2, oHere); break;
+        case DO: p1 = oHere; c(x->o1); c(x->o2); gJmpNZ(); gAddr(p1); break;
         case EMPTY: break;
         case SEQ: c(x->o1); c(x->o2); break;
-        case EXPR: c(x->o1); g(IDROP); break;
         case FUNC_CALL: if (x->val == 0) { error("undefined function!"); }
-            g(ICALL); g2(x->val); break;
+            gCall(x->val); break;
         case FUNC_DEF: c(x->o1); break;
-        case PROG: c(x->o1); g(HALT);  break;
-        case RET: g(IRET); break;
+        case PROG: c(x->o1); gBye();  break;
+        case RET: gReturn(); break;
     }
 }
 
@@ -436,7 +444,7 @@ node *defs(node *st) {
             if (tok != LBRA) error("'{' expected.");
             x->o1 = statement();
             c(x);
-            g(IRET);
+            gReturn();
             continue;
         }
         if (tok == INT_TOK) {
@@ -465,8 +473,9 @@ int main(int argc, char *argv[]) {
     if (!input_fp) { input_fp = stdin; }
     here = 0;
     org = 0; // 0x08048000; // Linux 23-bit code start (134512640)
-    addrSz = 2;
-    hole(JMP);
+    addrSz = gAddrSz();
+    gJmp();
+    gAddr(0);
     defs(NULL);
     if (input_fp != stdin) { fclose(input_fp); }
     printf("%d code bytes (%d nodes)\n", here, num_nodes);

@@ -9,7 +9,7 @@ typedef unsigned char byte;
 
 // VM opcodes
 enum {
-    NOP, IFETCH, ISTORE, IP1, IP2, IP4, IDROP, IADD, ISUB, IMUL, IDIV,
+    NOP, IFETCH, ISTORE, ILIT, IDROP, IADD, ISUB, IMUL, IDIV,
     ILT, IGT, IEQ, JZ, JNZ, JMP, ICALL, IRET, HALT
 };
 
@@ -35,14 +35,12 @@ void initVM() {
 
 void runVM(int pc) {
     again:
-    // printf("-pc:%d/ir:%d-\n", pc, vm[pc]);
+    // printf("-pc:%04x/ir:%d-\n", pc, vm[pc]);
     switch (vm[pc++]) {
         case  NOP:
         ACASE IFETCH: stk[++sp] = vals[f2(pc)]; pc += 2;
         ACASE ISTORE: vals[f2(pc)] = stk[sp--]; pc += 2;
-        ACASE IP1: stk[++sp] = vm[pc++];
-        ACASE IP2: stk[++sp] = f2(pc); pc += 2;
-        ACASE IP4: stk[++sp] = f4(pc); pc += 4;
+        ACASE ILIT: stk[++sp] = f4(pc); pc += 4;
         ACASE IDROP: --sp;
         ACASE IADD: NOS += TOS; --sp;
         ACASE ISUB: NOS -= TOS; --sp;
@@ -85,9 +83,7 @@ void dis(FILE *toFp) {
             case  NOP:    pB(12); pS("nop");
             BCASE IFETCH: pN2(f2(pc)); pB(6); pS("fetch"); t = f2(pc); pNX(t); pc += 2;
             BCASE ISTORE: pN2(f2(pc)); pB(6); pS("store"); t = f2(pc); pNX(t); pc += 2;
-            BCASE IP1:    pN1(f2(pc)); pB(9); pS("lit1");  pNX(vm[pc++]);
-            BCASE IP2:    pN2(f2(pc)); pB(6); pS("lit2");  pNX(f2(pc)); pc += 2;
-            BCASE IP4:    pN4(f4(pc)); pS("lit4");  pNX(f4(pc)); pc += 4;
+            BCASE ILIT:    pN4(f4(pc)); pS("lit4");  pNX(f4(pc)); pc += 4;
             BCASE IDROP:  pB(12); pS("drop");
             BCASE IADD:   pB(12); pS("add");
             BCASE ISUB:   pB(12); pS("sub");
