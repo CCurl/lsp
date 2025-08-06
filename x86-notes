@@ -1,0 +1,61 @@
+Linux - x86 system calls
+- https://rbmj.github.io/iwg/exploit/x86_table.html
+- https://www.chromium.org/chromium-os/developer-library/reference/linux-constants/syscalls/#x86-32-bit
+- http://ref.x86asm.net/coder32-abc.html#modrm_byte_32
+
+Online Assembler -
+- https://yozan233.github.io/Online-Assembler-Disassembler/
+
+linux - execution start address: 0x08048000
+
+sys_brk (syscall #45)
+- Put the requested new end address into EBX
+- Returns the new end address in EAX
+- When EBX=0, it returns the current end
+
+To allocate 256 bytes memory:
+    ; Get the current program break
+    mov eax, 45         ; syscall number for sys_brk
+    xor ebx, ebx        ; pass NULL to get current break
+    int 0x80            ; call kernel
+
+    ; Store the current break in ebx
+    mov ebx, eax        ; ebx now holds the current program break
+
+    ; Set the new program break
+    mov eax, 45         ; syscall number for sys_brk
+    add ebx, 256        ; set the new break address
+    int 0x80            ; call kernel
+
+Machine code
+-------------
+
+b8 11 22 33 44 - mov eax, 0x44332211
+bb 55 66 77 88 - mov ebx, 0x88776655
+b9 55 66 77 88 - mov ecx, 0x88776655
+ba 55 66 77 88 - mov edx, 0x88776655
+
+50 - push eax
+53 - push ebx
+51 - push ecx
+52 - push edx
+
+58 - pop eax
+5b - pop ebx
+59 - pop ecx
+5a - pop edx
+
+31 c0 - xor eax, eax
+31 db - xor ebx, ebx
+31 c9 - xor ecx, ecx
+31 d2 - xor edx, edx
+
+cd 80 -  int 0x80
+
+8d 04 xx xx xx xx - lea eax, <addr>
+8d 0d xx xx xx xx - lea ecx, <addr>
+
+39 c3 - cmp eax, ebx
+
+c3 - ret
+

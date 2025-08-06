@@ -2,13 +2,51 @@
 /* Based on work by Marc Feeley (2001), MIT license. */
 /* Please see the README.md for details. */
 
-#include "tc.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define SYMBOLS_SZ   500
+#define CODE_SZ     2500
+#define NODES_SZ    1000
+
+#define BTWI(n,l,h) ((l<=n)&&(n<=h))
+
+typedef unsigned char byte;
+
+typedef struct { char type, name[32]; int sz; long val; } SYM_T;
+extern SYM_T symbols[SYMBOLS_SZ];
+
+// Tokens - NOTE: the first 8 must match the words list in tc.c
+enum {
+    DO_TOK, ELSE_TOK, IF_TOK, WHILE_TOK
+    , VOID_TOK, INT_TOK, BYTE_TOK, RET_TOK
+    , LBRA, RBRA, LPAR, RPAR, LARR, RARR
+    , PLUS, MINUS, STAR, SLASH, LESS, EQU, GRT, SEMI
+    , EQUAL, INT, ID, EOI, FUNC_TOK
+};
+
+// Syntax tree node types
+enum {
+    VAR, CST, ADD, SUB, MUL, DIV, LT, EQ, GT, SET, FUNC_CALL, FUNC_DEF,
+    IF1, IF2, WHILE, DO, EMPTY, SEQ, PROG, RET
+};
+
+// VM opcodes
+enum {
+    NOP, IFETCH, ISTORE, ILIT, IDROP, IADD, ISUB, IMUL, IDIV,
+    ILT, IGT, IEQ, JZ, JNZ, JMP, ICALL, IRET, HALT
+};
+
+byte vm[CODE_SZ];
+extern int findSymbolVal(char type, long val);
+extern void dumpSymbols(int details, FILE *toFP);
 
  /*---------------------------------------------------------------------------*/
  /* Lexer. */
 
 // NOTE: these have to be in sync with the first <x> entries in the 
-// list of tokens defined in tc.h
+// list of tokens
 char *words[] = { "do", "else", "if"
     , "while", "void", "int", "byte"
     , "return", NULL};
@@ -23,7 +61,7 @@ void msg(char *s, int cr, int ln) {
     if (ln) {
         printf("\nat (%d,%d): %s", cur_lnum, cur_off, s);
         printf("\n%s", cur_line);
-        for (int i=1; i<cur_off; i++) { fprintf(stdout, " "); }
+        for (int i=2; i<cur_off; i++) { fprintf(stdout, " "); }
         printf("^\n");
         return;
     }
@@ -109,7 +147,7 @@ void next_token() {
 
 void expect_token(int exp) {
     if (tok != exp) {
-        // printf("-expected token [%d], not[%d]-", exp, tok);
+        printf("-expected token [%d], not[%d]-", exp, tok);
         syntax_error();
     }
     next_token();
@@ -121,43 +159,42 @@ void expect_token(int exp) {
 SYM_T symbols[SYMBOLS_SZ];
 int numSymbols = 0;
 
-int findSymbolVal(char type, long val) {
-    for (int i = 0; i < numSymbols; i++) {
+int findSymbol(char *name, char type) {
+    int i = 0;
+    while (i < numSymbols) {
         SYM_T *x = &symbols[i];
-        if ((x->type == type) && (x->val == val)) { return i; }
-    }
-    error("symbol not defined");
-    return 0;
-}
-
-int genSymbol(char *name, char type) {
-    SYM_T *x;
-    for (int i = 0; i < numSymbols; i++) {
-        x = &symbols[i];
         if (strcmp(x->name, name) == 0) {
             if (x->type == type) { return i; }
             error("name already defined with different type.");
         }
+        i=i+1;
     }
-    x = &symbols[numSymbols];
-    x->name = hAlloc(strlen(name) + 1);
+    return -1;
+}
+
+int genSymbol(char *name, char type) {
+    int i = findSymbol(name, type);
+    if (0 <= i) { return i; }
+    i = numSymbols++;
+    SYM_T *x = &symbols[i];
+    // x->name = hAlloc(strlen(name) + 1);
     x->val = 0;
     x->type = type;
     x->sz = 4;
     strcpy(x->name, name);
-    return numSymbols++;
+    return i;
 }
 
 void dumpSymbols(int details, FILE *toFP) {
     FILE *fp = toFP ? toFP : stdout;
     fprintf(fp, "symbols: %d entries, %d used\n", SYMBOLS_SZ, numSymbols);
-    fprintf(fp, "num type size val        name\n");
-    fprintf(fp, "--- ---- ---- ---------- -----------------\n");
+    fprintf(fp, "num type size val       name\n");
+    fprintf(fp, "--- ---- ---- --------- -----------------\n");
     if (details) {
         for (int i = 0; i < numSymbols; i++) {
             SYM_T *x = &symbols[i];
-            fprintf(fp, "%-3d %-4d %-4d %-10ld %s (0x%lx)\n", 
-                i, x->type, x->sz, x->val, x->name, x->val);
+            fprintf(fp, "%-3d %-4d %-4d $%-8lX %s\n", 
+                i, x->type, x->sz, x->val, x->name);
         }
     }
 }
@@ -179,12 +216,12 @@ node *new_node(int k) {
 
 node *gen(int k, node *o1, node *o2) {
     node *x = new_node(k);
-    x->o1 = o1; x->o2 = o2;
+    x->o1 = o1;
+    x->o2 = o2;
     return x;
 }
 
 node *paren_expr(); /* forward declaration */
-
 
 /* <term> ::= <id> | <int> | <paren_expr> */
 node *term() {
@@ -204,6 +241,7 @@ node *term() {
     return x;
 }
 
+/* <math_op> ::= "+" | "-" | "*" | "/" */
 int mathop() {
     if (tok == PLUS) { return ADD; }
     else if (tok == MINUS) { return SUB; }
@@ -213,8 +251,7 @@ int mathop() {
 }
 
 /* <math> ::= <term> | <math> <math_op> <term> */
-/* <math_op> ::= "+" | "-" | "*" | "/" */
-node *sum() {
+node *math() {
     node *x = term();
     while (mathop()) {
         x = gen(mathop(), x, 0);
@@ -224,24 +261,12 @@ node *sum() {
     return x;
 }
 
-/* <test> ::= <math> | <math> "<" <math> | <math> ">" <math> */
-node *test() {
-    node *x = sum();
-    if (tok == LESS) { next_token(); return gen(LT, x, sum()); }
-    if (tok == GRT) { next_token(); return gen(GT, x, sum()); }
-    if (tok == EQU) { next_token(); return gen(EQ, x, sum()); }
-    return x;
-}
-
-/* <expr> ::= <test> | <id> "=" <expr> */
+/* <expr> ::= <math> | <math> <test-op> <math> */
 node *expr() {
-    node *x;
-    if (tok != ID) { return test(); }
-    x = test();
-    if ((x->kind == VAR) && (tok == EQUAL)) {
-        next_token();
-        return gen(SET, x, expr());
-    }
+    node *x = math();
+    if (tok == LESS) { next_token(); return gen(LT, x, math()); }
+    if (tok == GRT) { next_token(); return gen(GT, x, math()); }
+    if (tok == EQU) { next_token(); return gen(EQ, x, math()); }
     return x;
 }
 
@@ -280,6 +305,15 @@ node *statement() {
         next_token();
         expect_token(SEMI);
     }
+    else if (tok == ID) { /* <id> "=" <expr> ";" */
+        x = new_node(VAR);
+        x->sval = genSymbol(id_name, VAR);
+        x->val = x->sval;
+        next_token();
+        expect_token(EQUAL);
+        x = gen(SET, x, expr());
+        expect_token(SEMI);
+    }
     else if (tok == DO_TOK) { /* "do" <statement> "while" <paren_expr> ";" */
         x = new_node(DO);
         next_token();
@@ -308,67 +342,75 @@ node *statement() {
         }
         next_token();
     }
-    else if (tok == EQU) { /* <id> = <expr> ; */
-        
-    }
-    else { /* <expr> ";" */
-        x = gen(EXPR, expr(), NULL);
-        expect_token(SEMI);
-    }
+    else { syntax_error(); }
     return x;
 }
 
 
 /*---------------------------------------------------------------------------*/
 /* Code generator. */
+int org, here, oHere, addrSz;
 
-void g(int c) { vm[here++] = (c & 0xff); }
+void s1(int a, int v) { vm[a] = (v & 255); }
+void s2(int a, int v) { s1(a,v); s1(a+1,v>>8); }
+void s4(int a, int v) { s2(a,v); s1(a+2,v>>16); }
+
+void g(int c) { s1(here, c); here=here+1; oHere=oHere+1; }
 void g2(int n) { g(n); g(n>>8); }
-void g4(int n) { g(n); g(n>>8); g(n>>16); g(n>>24); }
+void g4(int n) { g2(n); g2(n>>16); }
+void gAddr(int a) { g2(a); if (addrSz==4) { g2(a>>16); } }
 
-int hole(int inst) {
-    g(inst);
-    int h = here;
-    g2(0);
-    return h;
-}
+int hole() { gAddr(0); return here-addrSz; }
+void fix(int a, int v) {  s2(a, v); if (addrSz==4) { s2(a+2, v>>16); } }
 
-void fix(int src, int dst) {
-    vm[src+0] = (dst & 0xff); dst = (dst >> 8);
-    vm[src+1] = (dst & 0xff);
-}
+// ----------------------------------------------------------
+// change these to generate code for a different architecture
+int gAddrSz() { return 2; }
+void gFetch(int v) { g(IFETCH); gAddr(v); }
+void gStore(int v) { g(ISTORE); gAddr(v); }
+void gLit(int v) { g(ILIT); g4(v); }
+void gCall(int v) { g(ICALL); gAddr(v); }
+void gReturn() { g(IRET); }
+void gAdd() { g(IADD); }
+void gMul() { g(IMUL); }
+void gSub() { g(ISUB); }
+void gDiv() { g(IDIV); }
+void gLT() { g(ILT); }
+void gGT() { g(IGT); }
+void gEQ() { g(IEQ); }
+void gJmp()   { g(JMP); }
+void gJmpZ()  { g(JZ); }
+void gJmpNZ() { g(JNZ); }
+void gBye() { g(HALT); }
+// ----------------------------------------------------------
 
 void c(node *x) {
     int p1, p2;
     switch (x->kind) {
-        case VAR: g(IFETCH); g2(x->val); break;
-        case CST: if (BTWI(x->val, 0, 127)) { g(IP1); g(x->val); }
-                else if (BTWI(x->val, 128, 32767)) { g(IP2); g2(x->val); }
-                else { g(IP4); g4(x->val); }
-                break;
-        case ADD: c(x->o1); c(x->o2); g(IADD); break;
-        case MUL: c(x->o1); c(x->o2); g(IMUL); break;
-        case SUB: c(x->o1); c(x->o2); g(ISUB); break;
-        case DIV: c(x->o1); c(x->o2); g(IDIV); break;
-        case LT:  c(x->o1); c(x->o2); g(ILT);  break;
-        case GT:  c(x->o1); c(x->o2); g(IGT);  break;
-        case EQ:  c(x->o1); c(x->o2); g(IEQ);  break;
-        case SET: c(x->o2); g(ISTORE); g2(x->o1->val); break;
-        case IF1: c(x->o1); p1 = hole(JZ); c(x->o2); fix(p1, here); break;
-        case IF2: c(x->o1); p1 = hole(JZ); c(x->o2);
-            p2 = hole(JMP); fix(p1, here);
-            c(x->o3); fix(p2, here); break;
-        case WHILE: p1 = here; c(x->o1); p2 = hole(JZ); c(x->o2);
-            fix(hole(JMP), p1); fix(p2, here); break;
-        case DO: p1 = here; c(x->o1); c(x->o2); fix(hole(JNZ), p1); break;
+        case VAR: gFetch(x->val); break;
+        case CST: gLit(x->val); break;
+        case ADD: c(x->o1); c(x->o2); gAdd(); break;
+        case MUL: c(x->o1); c(x->o2); gMul(); break;
+        case SUB: c(x->o1); c(x->o2); gSub(); break;
+        case DIV: c(x->o1); c(x->o2); gDiv(); break;
+        case LT:  c(x->o1); c(x->o2); gLT();  break;
+        case GT:  c(x->o1); c(x->o2); gGT();  break;
+        case EQ:  c(x->o1); c(x->o2); gEQ();  break;
+        case SET: c(x->o2); gStore(x->o1->val); break;
+        case IF1: c(x->o1); gJmpZ(); p1 = hole(); c(x->o2); fix(p1, oHere); break;
+        case IF2: c(x->o1); gJmpZ(); p1 = hole(); c(x->o2);
+            gJmp(); p2 = hole(); fix(p1, oHere);
+            c(x->o3); fix(p2, oHere); break;
+        case WHILE: p1 = oHere; c(x->o1); gJmpZ(); p2 = hole(); c(x->o2);
+            gJmp(); gAddr(p1); fix(p2, oHere); break;
+        case DO: p1 = oHere; c(x->o1); c(x->o2); gJmpNZ(); gAddr(p1); break;
         case EMPTY: break;
         case SEQ: c(x->o1); c(x->o2); break;
-        case EXPR: c(x->o1); g(IDROP); break;
         case FUNC_CALL: if (x->val == 0) { error("undefined function!"); }
-            g(ICALL); g2(x->val); break;
+            gCall(x->val); break;
         case FUNC_DEF: c(x->o1); break;
-        case PROG: c(x->o1); g(HALT);  break;
-        case RET: g(IRET); break;
+        case PROG: c(x->o1); gBye();  break;
+        case RET: gReturn(); break;
     }
 }
 
@@ -392,18 +434,17 @@ node *defs(node *st) {
     next_token();
     while (1) {
         if (tok == EOI) { break; }
-        if (tok == LBRA) { break; }
         if (tok == VOID_TOK) {
             int seqNo = 1;
             next_token(); expect_token(FUNC_TOK);
             int sym = genSymbol(id_name, FUNC_TOK);
-            symbols[sym].val = here;
+            symbols[sym].val = oHere;
             x = gen(FUNC_DEF, NULL, NULL);
             x->sval = sym;
             if (tok != LBRA) error("'{' expected.");
             x->o1 = statement();
             c(x);
-            g(IRET);
+            gReturn();
             continue;
         }
         if (tok == INT_TOK) {
@@ -427,25 +468,27 @@ node *defs(node *st) {
 /* Main program. */
 
 int main(int argc, char *argv[]) {
-    char *fn = (argc > 1) ? argv[1] : "test.tc";
-    input_fp = fopen(fn, "rt");
-    if (!input_fp) { error("can't open source file"); }
-    printf("compiling %s ... ", fn);
-    initVM();
-    g(NOP);
+    char *fn = (argc > 1) ? argv[1] : NULL;
+    if (fn) { input_fp = fopen(fn, "rt"); }
+    if (!input_fp) { input_fp = stdin; }
+    here = 0;
+    org = 0; // 0x08048000; // Linux 23-bit code start (134512640)
+    addrSz = gAddrSz();
+    gJmp();
+    gAddr(0);
     defs(NULL);
-    fclose(input_fp);
-    input_fp = NULL;
-    printf("%d code bytes (%d nodes)\n\n", here, num_nodes);
+    if (input_fp != stdin) { fclose(input_fp); }
+    printf("%d code bytes (%d nodes)\n", here, num_nodes);
 
-    int entryPoint = symbols[genSymbol("main", FUNC_TOK)].val;
-    if (0 < entryPoint) { runVM(entryPoint); }
-    else { error("no main() function!"); }
-    dis();
-    for (int i = 0; i < numSymbols; i++) {
-        SYM_T *s = &symbols[i];
-        printf("%s = %ld\n", s->name, s->val);
-    }
-    printf("\n");
+    int mainSym = findSymbol("main", FUNC_TOK);
+    if (mainSym < 0) { printf("no main() function!"); }
+    fix(1, symbols[mainSym].val);
+    FILE *fp = fopen("tc.out", "wb");
+    if (fp) { fwrite(vm, 1, here, fp); fclose(fp); }
+
+    fp = fopen("tc.sym", "wt");
+    dumpSymbols(1, fp);
+    fclose(fp);
+
     return 0;
 }
