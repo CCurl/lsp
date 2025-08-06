@@ -42,7 +42,7 @@ void initVM() {
 
 #define C2 (vm[eip]<<8) + vm[eip+1]
 
-void doModRM() {
+void ModRM(int op, int modrm) {
 
 }
 
@@ -53,8 +53,10 @@ void runVM(int st) {
     switch (C2) {
         case  0x83c5: ebp = ebp+f1(eip+2); eip += 3; // add ebp,<b>
         ACASE 0x83ed: ebp = ebp-f1(eip+2); eip += 3; // sub ebp,<b>
-        ACASE 0x89d8: EAX=EBX; eip += 2; // sub ebp,<b>
-        ACASE 0x89c3: EBX=EAX; eip += 2; // sub ebp,<b>
+        ACASE 0x89d8: EAX=EBX;  eip += 2; // sub ebp,<b>
+        ACASE 0x89c3: EBX=EAX;  eip += 2; // sub ebp,<b>
+        ACASE 0x01d8: EAX+=EBX; eip += 2; // add EAX, EBX
+        ACASE 0x01c3: EBX+=EAX; eip += 2; // add EBX, EAX
         goto again;
     }
     switch (vm[eip]) {
