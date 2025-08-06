@@ -7,9 +7,16 @@
 #define BTWI(n,l,h) ((l<=n)&&(n<=h))
 typedef unsigned char byte;
 
-int32_t eax, ebx, ecx, edx;
+int32_t reg[8];
+int32_t EAX, EBX, ECX, EDX;
 int32_t eip, esp, ebp, esi, edi;
 int zf;
+
+#define EAX reg[0]
+#define ECX reg[1]
+#define EDX reg[2]
+#define EBX reg[3]
+
 
 // VM opcodes
 enum {
@@ -33,27 +40,39 @@ void initVM() {
     here = 0;
 }
 
+#define C2 (vm[eip]<<8) + vm[eip+1]
+
+void doModRM() {
+
+}
+
 void runVM(int st) {
     eip = st;
     again:
     // printf("-pc:%04x/ir:%d-\n", pc, vm[pc]);
+    switch (C2) {
+        case  0x83c5: ebp = ebp+f1(eip+2); eip += 3; // add ebp,<b>
+        ACASE 0x83ed: ebp = ebp-f1(eip+2); eip += 3; // sub ebp,<b>
+        ACASE 0x89d8: EAX=EBX; eip += 2; // sub ebp,<b>
+        ACASE 0x89c3: EBX=EAX; eip += 2; // sub ebp,<b>
+        goto again;
+    }
     switch (vm[eip]) {
         case  0x90: //                        // nop
-        ACASE 0x50: esp -= 4; s4(esp, eax);   // push eax
-        ACASE 0x51: esp -= 4; s4(esp, ecx);   // push ecx
-        ACASE 0x52: esp -= 4; s4(esp, edx);   // push edx
-        ACASE 0x53: esp -= 4; s4(esp, ebx);   // push ebx
-        ACASE 0x58: eax = f4(esp); esp += 4;  // pop eax
-        ACASE 0x5b: ecx = f4(esp); esp += 4;  // pop ecx
-        ACASE 0x59: edx = f4(esp); esp += 4;  // pop edx
-        ACASE 0x5a: ebx = f4(esp); esp += 4;  // pop ebx
-        ACASE 0x83: ebp = ebp+f1(eip); eip++; // add ebp,4 - 83 c5 04
+        ACASE 0x50: esp -= 4; s4(esp, EAX);   // push EAX
+        ACASE 0x51: esp -= 4; s4(esp, ECX);   // push ECX
+        ACASE 0x52: esp -= 4; s4(esp, EDX);   // push EDX
+        ACASE 0x53: esp -= 4; s4(esp, EBX);   // push EBX
+        ACASE 0x58: EAX = f4(esp); esp += 4;  // pop EAX
+        ACASE 0x5b: ECX = f4(esp); esp += 4;  // pop ECX
+        ACASE 0x59: EDX = f4(esp); esp += 4;  // pop EDX
+        ACASE 0x5a: EBX = f4(esp); esp += 4;  // pop EBX
         ACASE 0x9a: eip = f4(eip);            // call absolute
         ACASE 0xc3: eip = f4(esp); esp += 4;  // ret
-        ACASE 0xb8: eax = f4(eip); eip += 4;  // mov eax, <imm>
-        ACASE 0xbb: ecx = f4(eip); eip += 4;  // mov ecx, <imm>
-        ACASE 0xb9: edx = f4(eip); eip += 4;  // mov edx, <imm>
-        ACASE 0xba: ebx = f4(eip); eip += 4;  // mov ebx, <imm>
+        ACASE 0xb8: EAX = f4(eip); eip += 4;  // mov EAX, <imm>
+        ACASE 0xbb: ECX = f4(eip); eip += 4;  // mov ECX, <imm>
+        ACASE 0xb9: EDX = f4(eip); eip += 4;  // mov EDX, <imm>
+        ACASE 0xba: EBX = f4(eip); eip += 4;  // mov EBX, <imm>
         default: printf("Invalid IR: %d\n", vm[eip-1]);  return;
     }
 }
@@ -80,7 +99,7 @@ void dis(FILE *toFp) {
         fprintf(outFp, "\n%04X: %02X ", pc, vm[pc]);
         switch (vm[pc++]) {
             case  0x90:   pB(12); pS("nop");
-            BCASE 0xb8:   pN4(f4(pc)); pB(6); pS("mov eax, %d"); t = f4(pc); pNX(t); pc += 2;
+            BCASE 0xb8:   pN4(f4(pc)); pB(6); pS("mov EAX, %d"); t = f4(pc); pNX(t); pc += 2;
             BCASE 0xc3:   pB(12); pS("ret");
             // BCASE ISTORE: pN2(f2(pc)); pB(6); pS("store"); t = f2(pc); pNX(t); pc += 2;
             // BCASE ILIT:    pN4(f4(pc)); pS("lit4");  pNX(f4(pc)); pc += 4;
