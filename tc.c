@@ -349,13 +349,13 @@ node *statement() {
 
 /*---------------------------------------------------------------------------*/
 /* Code generator. */
-int org, here, oHere, addrSz;
+int memBase, here, vmHere, addrSz;
 
 void s1(int a, int v) { vm[a] = (v & 255); }
 void s2(int a, int v) { s1(a,v); s1(a+1,v>>8); }
 void s4(int a, int v) { s2(a,v); s1(a+2,v>>16); }
 
-void g(int c) { s1(here, c); here=here+1; oHere=oHere+1; }
+void g(int c) { s1(here, c); here=here+1; vmHere=vmHere+1; }
 void g2(int n) { g(n); g(n>>8); }
 void g4(int n) { g2(n); g2(n>>16); }
 void gAddr(int a) { g2(a); if (addrSz==4) { g2(a>>16); } }
@@ -365,7 +365,11 @@ void fix(int a, int v) {  s2(a, v); if (addrSz==4) { s2(a+2, v>>16); } }
 
 // ----------------------------------------------------------
 // change these to generate code for a different architecture
-int gAddrSz() { return 2; }
+void gInit() {
+    here = 0;
+    memBase = 0; // 0x08048000; // Linux 23-bit code start (134512640)
+    addrSz = 2;
+}
 void gFetch(int v) { g(IFETCH); gAddr(v); }
 void gStore(int v) { g(ISTORE); gAddr(v); }
 void gLit(int v) { g(ILIT); g4(v); }
@@ -397,13 +401,13 @@ void c(node *x) {
         case GT:  c(x->o1); c(x->o2); gGT();  break;
         case EQ:  c(x->o1); c(x->o2); gEQ();  break;
         case SET: c(x->o2); gStore(x->o1->val); break;
-        case IF1: c(x->o1); gJmpZ(); p1 = hole(); c(x->o2); fix(p1, oHere); break;
+        case IF1: c(x->o1); gJmpZ(); p1 = hole(); c(x->o2); fix(p1, vmHere); break;
         case IF2: c(x->o1); gJmpZ(); p1 = hole(); c(x->o2);
-            gJmp(); p2 = hole(); fix(p1, oHere);
-            c(x->o3); fix(p2, oHere); break;
-        case WHILE: p1 = oHere; c(x->o1); gJmpZ(); p2 = hole(); c(x->o2);
-            gJmp(); gAddr(p1); fix(p2, oHere); break;
-        case DO: p1 = oHere; c(x->o1); c(x->o2); gJmpNZ(); gAddr(p1); break;
+            gJmp(); p2 = hole(); fix(p1, vmHere);
+            c(x->o3); fix(p2, vmHere); break;
+        case WHILE: p1 = vmHere; c(x->o1); gJmpZ(); p2 = hole(); c(x->o2);
+            gJmp(); gAddr(p1); fix(p2, vmHere); break;
+        case DO: p1 = vmHere; c(x->o1); c(x->o2); gJmpNZ(); gAddr(p1); break;
         case EMPTY: break;
         case SEQ: c(x->o1); c(x->o2); break;
         case FUNC_CALL: if (x->val == 0) { error("undefined function!"); }
@@ -438,7 +442,7 @@ node *defs(node *st) {
             int seqNo = 1;
             next_token(); expect_token(FUNC_TOK);
             int sym = genSymbol(id_name, FUNC_TOK);
-            symbols[sym].val = oHere;
+            symbols[sym].val = vmHere;
             x = gen(FUNC_DEF, NULL, NULL);
             x->sval = sym;
             if (tok != LBRA) error("'{' expected.");
@@ -471,9 +475,7 @@ int main(int argc, char *argv[]) {
     char *fn = (argc > 1) ? argv[1] : NULL;
     if (fn) { input_fp = fopen(fn, "rt"); }
     if (!input_fp) { input_fp = stdin; }
-    here = 0;
-    org = 0; // 0x08048000; // Linux 23-bit code start (134512640)
-    addrSz = gAddrSz();
+    gInit();
     gJmp();
     gAddr(0);
     defs(NULL);

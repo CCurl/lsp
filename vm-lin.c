@@ -1,14 +1,29 @@
-/*---------------------------------------------------------------------------*/
-/* Virtual machine. */
+// An extremely simple x86 emulator to test my compiler.
+// It only implement the small subset of x86 opcodes,
+// those that the code generator uses.
 
 #include <stdio.h>
 #include <stdint.h>
 
-#define BTWI(n,l,h) ((l<=n)&&(n<=h))
-typedef unsigned char byte;
-typedef void (*voidfn_t)();
+#define VM_SZ     10000
+#define DSTK_SZ     128
 
-int32_t reg[8], ip, ir. zf;
+#define BTWI(n,l,h) ((l<=n)&&(n<=h))
+typedef uint8_t byte;
+typedef void (*voidfn_t)();
+typedef struct { byte val, mod, r, m; } MODRM_T;
+
+// #define _DEBUG_ 1
+
+#ifdef _DEBUG_
+    #define DBG(str) printf("-%s-", str)
+    #define DBG1(str, num) printf("-%s%d-", str, num)
+    int dbg = 1;
+#else 
+    #define DBG(str)
+    #define DBG1(str, num)
+    int dbg = 0;
+#endif
 
 #define EAX reg[0]
 #define ECX reg[1]
@@ -19,470 +34,468 @@ int32_t reg[8], ip, ir. zf;
 #define ESI reg[6]
 #define EDI reg[7]
 
-#define VM_SZ 100000
 byte vm[VM_SZ];
-int here;
+byte vm[VM_SZ];
+int32_t reg[8], disp, arg1, memBase, EBPbase;
+uint32_t ip, here, *src, *tgt;
+byte ir, flags[8], stkDepth;
+MODRM_T modrm;
 
 #define ACASE    goto again; case
 #define BCASE    break; case
 #define RCASE    return; case
 
-static void    s1(int32_t a, int32_t v) { vm[a] = (v&0xff); }
-static void    s4(int32_t a, int32_t v) { *(int32_t*)(&vm[a]) = v; }
-static int32_t f1(int32_t a) { return vm[a]; }
-static int32_t f4(int32_t a) { return *(int32_t*)(&vm[a]); }
-
 void initVM() {
-    ESP = VM_SZ;
-    eip = 0;
-    here = 0;
+    memBase = 0x08048000; // Default Linux code start address
+    ESP = memBase + VM_SZ;
+    EBPbase = ESP-(DSTK_SZ*4);
+    EBP = EBPbase - 4;
+    ip = 0;
+    here = memBase;
 }
 
-/*    /r     */
-void SlashR(int mod, int r, int m) {
-    int d = 0;                    // Displacement
-    int32_t *src = NULL, *tgt = NULL, disp = 0;
-    switch (op) {
-        case 0x01: *tgt += *src;  return;  // ADD
-        case 0x89: *tgt  = *src;  return;  // MOV
-    }
+static void    s1(int32_t a, int32_t v) { vm[a-memBase] = (v&0xff); }
+static void    s2(int32_t a, int32_t v) { *(int16_t*)(&vm[a-memBase]) = (v&0xffff); }
+static void    s4(int32_t a, int32_t v) { *(int32_t*)(&vm[a-memBase]) = v; }
+static int32_t f1(int32_t a) { return vm[a-memBase]; }
+static int32_t f2(int32_t a) { return *(int16_t*)(&vm[a-memBase]); }
+static int32_t f4(int32_t a) { return *(int32_t*)(&vm[a-memBase]); }
+static int32_t ip4() { int32_t x = f4(ip); ip += 4; return x; }
+
+// mod/rm
+void toModRM() {
+    byte v = f1(ip++);
+    modrm.val = v;
+    modrm.mod = (v >> 6) & 0x03;  // bits 6-7 - mode
+    modrm.r =   (v >> 3) & 0x07;  // bits 3-5 - reg
+    modrm.m =   (v >> 0) & 0x07;  // bits 0-2 - reg/mem
+#ifdef _DEBUG_
+    printf(" ModRM: (%02x) mod=%d r=%d m=%d", v, modrm.mod, modrm.r, modrm.m);
+#endif // _DEBUG_
 }
 
-/*     ModR/M    */
-void ModRM(int op, int modrm) {
-    int modrm = f1(ip++);
-    int mod = (modrm >> 6) & 0x03;  // ModRM: bits 6-7 - mode
-    int r   = (modrm >> 3) & 0x07;  // ModRM: bits 3-5 - reg
-    int m   = (modrm >> 0) & 0x07;  // ModRM: bits 0-2 - reg/mem
-    int d   = 0;                    // Displacement
 
-    // printf("ModRM: mod=%d r=%d m=%d disp=%d\n", mod, r, m, d);
+void push(uint32_t v) { ESP -= 4; s4(ESP, v); }
+uint32_t pop() { ESP += 4; return f4(ESP-4); }
 
-    int32_t *src = NULL, *tgt = NULL, disp = 0;
-
-    switch (mod) {
-        case 0: /* TODO */ // memory, no displacement
-            break;
-        case 1: /* TODO */ // 8-bit displacement
-            break;
-        case 2: /* TODO */ // 32-bit displacement
-            break;
-        case 3: src = &reg[r], tgt = &reg[m];  // register to register
-            break;
-    }
-
-    switch (op) {
-        case 0x01: *tgt += *src;  return;  // ADD
-        case 0x89: *tgt  = *src;  return;  // MOV
-    }
+void uOP() { printf("\n-opcode:%02X/%d?-", ir, ir); }
+void op00() { uOP(); }
+void op01() { toModRM(); // ADD
+    if (modrm.val == 0xd8) { DBG("ADD EBX"); EAX += EBX; }
 }
-
-void runVM(int st) {
-    ip = st;
-    again:
-    ir = (f1(ip)<<8) + fi(ip+1);
-    // printf("-pc:%04x/ir:%d-\n", pc, vm[pc]);
-    switch (ir) {
-        case  0x83c5: EBP = EBP+f1(ip+2); ip += 3; // add EBP,<b>
-        ACASE 0x83ed: EBP = EBP-f1(ip+2); ip += 3; // sub EBP,<b>
-        ACASE 0x89d8: EAX=EBX;  ip += 2;  // sub EBP,<b>
-        ACASE 0x89c3: EBX=EAX;  ip += 2;  // sub EBP,<b>
-        ACASE 0x01d8: EAX+=EBX; ip += 2;  // add EAX, EBX
-        ACASE 0x01c3: EBX+=EAX; ip += 2;  // add EBX, EAX
-        goto again;
-    }
-    ir = vm[ip++];
-    switch (ir) {
-        case  0x90: //                        // nop
-        ACASE 0x50: ESP -= 4; s4(ESP, EAX);   // push EAX
-        ACASE 0x51: ESP -= 4; s4(ESP, ECX);   // push ECX
-        ACASE 0x52: ESP -= 4; s4(ESP, EDX);   // push EDX
-        ACASE 0x53: ESP -= 4; s4(ESP, EBX);   // push EBX
-        ACASE 0x58: EAX = f4(ESP); ESP += 4;  // pop EAX
-        ACASE 0x5b: ECX = f4(ESP); ESP += 4;  // pop ECX
-        ACASE 0x59: EDX = f4(ESP); ESP += 4;  // pop EDX
-        ACASE 0x5a: EBX = f4(ESP); ESP += 4;  // pop EBX
-        ACASE 0x9a: ip = f4(ip);            // call absolute
-        ACASE 0xc3: ip = f4(ESP); ESP += 4;  // ret
-        ACASE 0xb8: EAX = f4(ip); ip += 4;  // mov EAX, <imm>
-        ACASE 0xbb: ECX = f4(ip); ip += 4;  // mov ECX, <imm>
-        ACASE 0xb9: EDX = f4(ip); ip += 4;  // mov EDX, <imm>
-        ACASE 0xba: EBX = f4(ip); ip += 4;  // mov EBX, <imm>
-        default: printf("Invalid IR: %d\n", vm[ip-1]);  return;
-    }
+void op02() { uOP(); }
+void op03() { uOP(); }
+void op04() { uOP(); }
+void op05() { uOP(); }
+void op06() { uOP(); }
+void op07() { uOP(); }
+void op08() { uOP(); }
+void op09() { toModRM(); // OR
+    if (modrm.val == 0xd8) { DBG("AND EBX"); EAX |= EBX; }
 }
-
-/*---------------------------------------------------------------------------*/
-/* Disassembly. */
-
-static FILE *outFp;
-static void pB(int n) { for (int i=0; i<n; i++) fprintf(outFp, " "); }
-static void pS(char *s) { fprintf(outFp, "; %s ", s); }
-static void pNX(long n) { fprintf(outFp, "%02lX ", n); }
-static void pN1(int n) { pNX((n & 0xff)); }
-static void pN2(int n) { pN1(n); pN1(n >> 8); }
-static void pN4(int n) { pN2(n); pN2(n >> 16); }
-
-void dis(FILE *toFp) {
-    int pc = 0;
-    long t;
-    outFp = toFp ? toFp : stdout;
-
-    fprintf(outFp, "\nVM: %d bytes, %d used, 0x0000:0x%04X.", VM_SZ, here, here-1);
-    fprintf(outFp, "\n-------------------------------------------");
-    while (pc < here) {
-        fprintf(outFp, "\n%04X: %02X ", pc, vm[pc]);
-        switch (vm[pc++]) {
-            case  0x90:   pB(12); pS("nop");
-            BCASE 0xb8:   pN4(f4(pc)); pB(6); pS("mov EAX, %d"); t = f4(pc); pNX(t); pc += 2;
-            BCASE 0xc3:   pB(12); pS("ret");
-            // BCASE ISTORE: pN2(f2(pc)); pB(6); pS("store"); t = f2(pc); pNX(t); pc += 2;
-            // BCASE ILIT:    pN4(f4(pc)); pS("lit4");  pNX(f4(pc)); pc += 4;
-            // BCASE IDROP:  pB(12); pS("drop");
-            // BCASE IADD:   pB(12); pS("add");
-            // BCASE ISUB:   pB(12); pS("sub");
-            // BCASE IMUL:   pB(12); pS("mul");
-            // BCASE IDIV:   pB(12); pS("div");
-            // BCASE ILT:    pB(12); pS("lt");
-            // BCASE IGT:    pB(12); pS("gt");
-            // BCASE IEQ:    pB(12); pS("eq");
-            // BCASE JZ:     pN2(f2(pc)); pB(6); pS("jz");   pNX(f2(pc)); pc += 2;
-            // BCASE JNZ:    pN2(f2(pc)); pB(6); pS("jnz");  pNX(f2(pc)); pc += 2;
-            // BCASE JMP:    pN2(f2(pc)); pB(6); pS("jmp");  pNX(f2(pc)); pc += 2;
-            // BCASE ICALL:  pN2(f2(pc)); pB(6); pS("call"); t = f2(pc); pNX(t); pc += 2;
-            // BCASE IRET:   pB(12); pS("ret");
-            // BCASE HALT:   pB(12); pS("halt"); break;
-            default:      pB(12); pS("<invalid>");
-        }
-    }
-    fprintf(outFp, "\n");
+void op0A() { uOP(); }
+void op0B() { uOP(); }
+void op0C() { uOP(); }
+void op0D() { uOP(); }
+void op0E() { uOP(); }
+void op0F() { uOP(); }
+void op10() { uOP(); }
+void op11() { uOP(); }
+void op12() { uOP(); }
+void op13() { uOP(); }
+void op14() { uOP(); }
+void op15() { uOP(); }
+void op16() { uOP(); }
+void op17() { uOP(); }
+void op18() { uOP(); }
+void op19() { uOP(); }
+void op1A() { uOP(); }
+void op1B() { uOP(); }
+void op1C() { uOP(); }
+void op1D() { uOP(); }
+void op1E() { uOP(); }
+void op1F() { uOP(); }
+void op20() { uOP(); }
+void op21() { toModRM(); // AND
+    if (modrm.val == 0xd8) { DBG("AND EBX"); EAX &= EBX; }
 }
-
-void undefinedOp() { printf("Undefined opcode: %d\n", ir); }
-
-void op0() { undefinedOp(); }
-void op1() { undefinedOp(); }
-void op2() { undefinedOp(); }
-void op3() { undefinedOp(); }
-void op4() { undefinedOp(); }
-void op5() { undefinedOp(); }
-void op6() { undefinedOp(); }
-void op7() { undefinedOp(); }
-void op8() { undefinedOp(); }
-void op9() { undefinedOp(); }
-void op10() { undefinedOp(); }
-void op11() { undefinedOp(); }
-void op12() { undefinedOp(); }
-void op13() { undefinedOp(); }
-void op14() { undefinedOp(); }
-void op15() { undefinedOp(); }
-void op16() { undefinedOp(); }
-void op17() { undefinedOp(); }
-void op18() { undefinedOp(); }
-void op19() { undefinedOp(); }
-void op20() { undefinedOp(); }
-void op21() { undefinedOp(); }
-void op22() { undefinedOp(); }
-void op23() { undefinedOp(); }
-void op24() { undefinedOp(); }
-void op25() { undefinedOp(); }
-void op26() { undefinedOp(); }
-void op27() { undefinedOp(); }
-void op28() { undefinedOp(); }
-void op29() { undefinedOp(); }
-void op30() { undefinedOp(); }
-void op31() { undefinedOp(); }
-void op32() { undefinedOp(); }
-void op33() { undefinedOp(); }
-void op34() { undefinedOp(); }
-void op35() { undefinedOp(); }
-void op36() { undefinedOp(); }
-void op37() { undefinedOp(); }
-void op38() { undefinedOp(); }
-void op39() { undefinedOp(); }
-void op40() { undefinedOp(); }
-void op41() { undefinedOp(); }
-void op42() { undefinedOp(); }
-void op43() { undefinedOp(); }
-void op44() { undefinedOp(); }
-void op45() { undefinedOp(); }
-void op46() { undefinedOp(); }
-void op47() { undefinedOp(); }
-void op48() { undefinedOp(); }
-void op49() { undefinedOp(); }
-void op50() { undefinedOp(); }
-void op51() { undefinedOp(); }
-void op52() { undefinedOp(); }
-void op53() { undefinedOp(); }
-void op54() { undefinedOp(); }
-void op55() { undefinedOp(); }
-void op56() { undefinedOp(); }
-void op57() { undefinedOp(); }
-void op58() { undefinedOp(); }
-void op59() { undefinedOp(); }
-void op60() { undefinedOp(); }
-void op61() { undefinedOp(); }
-void op62() { undefinedOp(); }
-void op63() { undefinedOp(); }
-void op64() { undefinedOp(); }
-void op65() { undefinedOp(); }
-void op66() { undefinedOp(); }
-void op67() { undefinedOp(); }
-void op68() { undefinedOp(); }
-void op69() { undefinedOp(); }
-void op70() { undefinedOp(); }
-void op71() { undefinedOp(); }
-void op72() { undefinedOp(); }
-void op73() { undefinedOp(); }
-void op74() { undefinedOp(); }
-void op75() { undefinedOp(); }
-void op76() { undefinedOp(); }
-void op77() { undefinedOp(); }
-void op78() { undefinedOp(); }
-void op79() { undefinedOp(); }
-void op80() { undefinedOp(); }
-void op81() { undefinedOp(); }
-void op82() { undefinedOp(); }
-void op83() { undefinedOp(); }
-void op84() { undefinedOp(); }
-void op85() { undefinedOp(); }
-void op86() { undefinedOp(); }
-void op87() { undefinedOp(); }
-void op88() { undefinedOp(); }
-void op89() { undefinedOp(); }
-void op90() { undefinedOp(); }
-void op91() { undefinedOp(); }
-void op92() { undefinedOp(); }
-void op93() { undefinedOp(); }
-void op94() { undefinedOp(); }
-void op95() { undefinedOp(); }
-void op96() { undefinedOp(); }
-void op97() { undefinedOp(); }
-void op98() { undefinedOp(); }
-void op99() { undefinedOp(); }
-void op100() { undefinedOp(); }
-void op101() { undefinedOp(); }
-void op102() { undefinedOp(); }
-void op103() { undefinedOp(); }
-void op104() { undefinedOp(); }
-void op105() { undefinedOp(); }
-void op106() { undefinedOp(); }
-void op107() { undefinedOp(); }
-void op108() { undefinedOp(); }
-void op109() { undefinedOp(); }
-void op110() { undefinedOp(); }
-void op111() { undefinedOp(); }
-void op112() { undefinedOp(); }
-void op113() { undefinedOp(); }
-void op114() { undefinedOp(); }
-void op115() { undefinedOp(); }
-void op116() { undefinedOp(); }
-void op117() { undefinedOp(); }
-void op118() { undefinedOp(); }
-void op119() { undefinedOp(); }
-void op120() { undefinedOp(); }
-void op121() { undefinedOp(); }
-void op122() { undefinedOp(); }
-void op123() { undefinedOp(); }
-void op124() { undefinedOp(); }
-void op125() { undefinedOp(); }
-void op126() { undefinedOp(); }
-void op127() { undefinedOp(); }
-void op128() { undefinedOp(); }
-void op129() { undefinedOp(); }
-void op130() { undefinedOp(); }
-void op131() { undefinedOp(); }
-void op132() { undefinedOp(); }
-void op133() { undefinedOp(); }
-void op134() { undefinedOp(); }
-void op135() { undefinedOp(); }
-void op136() { undefinedOp(); }
-void op137() { undefinedOp(); }
-void op138() { undefinedOp(); }
-void op139() { undefinedOp(); }
-void op140() { undefinedOp(); }
-void op141() { undefinedOp(); }
-void op142() { undefinedOp(); }
-void op143() { undefinedOp(); }
-void op144() { undefinedOp(); }
-void op145() { undefinedOp(); }
-void op146() { undefinedOp(); }
-void op147() { undefinedOp(); }
-void op148() { undefinedOp(); }
-void op149() { undefinedOp(); }
-void op150() { undefinedOp(); }
-void op151() { undefinedOp(); }
-void op152() { undefinedOp(); }
-void op153() { undefinedOp(); }
-void op154() { undefinedOp(); }
-void op155() { undefinedOp(); }
-void op156() { undefinedOp(); }
-void op157() { undefinedOp(); }
-void op158() { undefinedOp(); }
-void op159() { undefinedOp(); }
-void op160() { undefinedOp(); }
-void op161() { undefinedOp(); }
-void op162() { undefinedOp(); }
-void op163() { undefinedOp(); }
-void op164() { undefinedOp(); }
-void op165() { undefinedOp(); }
-void op166() { undefinedOp(); }
-void op167() { undefinedOp(); }
-void op168() { undefinedOp(); }
-void op169() { undefinedOp(); }
-void op170() { undefinedOp(); }
-void op171() { undefinedOp(); }
-void op172() { undefinedOp(); }
-void op173() { undefinedOp(); }
-void op174() { undefinedOp(); }
-void op175() { undefinedOp(); }
-void op176() { undefinedOp(); }
-void op177() { undefinedOp(); }
-void op178() { undefinedOp(); }
-void op179() { undefinedOp(); }
-void op180() { undefinedOp(); }
-void op181() { undefinedOp(); }
-void op182() { undefinedOp(); }
-void op183() { undefinedOp(); }
-void op184() { undefinedOp(); }
-void op185() { undefinedOp(); }
-void op186() { undefinedOp(); }
-void op187() { undefinedOp(); }
-void op188() { undefinedOp(); }
-void op189() { undefinedOp(); }
-void op190() { undefinedOp(); }
-void op191() { undefinedOp(); }
-void op192() { undefinedOp(); }
-void op193() { undefinedOp(); }
-void op194() { undefinedOp(); }
-void op195() { undefinedOp(); }
-void op196() { undefinedOp(); }
-void op197() { undefinedOp(); }
-void op198() { undefinedOp(); }
-void op199() { undefinedOp(); }
-void op200() { undefinedOp(); }
-void op201() { undefinedOp(); }
-void op202() { undefinedOp(); }
-void op203() { undefinedOp(); }
-void op204() { undefinedOp(); }
-void op205() { undefinedOp(); }
-void op206() { undefinedOp(); }
-void op207() { undefinedOp(); }
-void op208() { undefinedOp(); }
-void op209() { undefinedOp(); }
-void op210() { undefinedOp(); }
-void op211() { undefinedOp(); }
-void op212() { undefinedOp(); }
-void op213() { undefinedOp(); }
-void op214() { undefinedOp(); }
-void op215() { undefinedOp(); }
-void op216() { undefinedOp(); }
-void op217() { undefinedOp(); }
-void op218() { undefinedOp(); }
-void op219() { undefinedOp(); }
-void op220() { undefinedOp(); }
-void op221() { undefinedOp(); }
-void op222() { undefinedOp(); }
-void op223() { undefinedOp(); }
-void op224() { undefinedOp(); }
-void op225() { undefinedOp(); }
-void op226() { undefinedOp(); }
-void op227() { undefinedOp(); }
-void op228() { undefinedOp(); }
-void op229() { undefinedOp(); }
-void op230() { undefinedOp(); }
-void op231() { undefinedOp(); }
-void op232() { undefinedOp(); }
-void op233() { undefinedOp(); }
-void op234() { undefinedOp(); }
-void op235() { undefinedOp(); }
-void op236() { undefinedOp(); }
-void op237() { undefinedOp(); }
-void op238() { undefinedOp(); }
-void op239() { undefinedOp(); }
-void op240() { undefinedOp(); }
-void op241() { undefinedOp(); }
-void op242() { undefinedOp(); }
-void op243() { undefinedOp(); }
-void op244() { undefinedOp(); }
-void op245() { undefinedOp(); }
-void op246() { undefinedOp(); }
-void op247() { undefinedOp(); }
-void op248() { undefinedOp(); }
-void op249() { undefinedOp(); }
-void op250() { undefinedOp(); }
-void op251() { undefinedOp(); }
-void op252() { undefinedOp(); }
-void op253() { undefinedOp(); }
-void op254() { undefinedOp(); }
-void op255() { undefinedOp(); }
+void op22() { uOP(); }
+void op23() { uOP(); }
+void op24() { uOP(); }
+void op25() { uOP(); }
+void op26() { uOP(); }
+void op27() { uOP(); }
+void op28() { uOP(); }
+void op29() { toModRM(); // SUB
+    if (modrm.val == 0xd8) { DBG("SUB EBX"); EAX -= EBX; }
+}
+void op2A() { uOP(); }
+void op2B() { uOP(); }
+void op2C() { uOP(); }
+void op2D() { uOP(); }
+void op2E() { uOP(); }
+void op2F() { uOP(); }
+void op30() { uOP(); }
+void op31() { toModRM(); // XOR
+    if (modrm.val == 0xd8) { DBG("XOR EAX, EBX"); EAX ^= EBX; }
+    if (modrm.val == 0xc0) { DBG("XOR EAX, EAX"); EAX ^= EAX; }
+}
+void op32() { uOP(); }
+void op33() { uOP(); }
+void op34() { uOP(); }
+void op35() { uOP(); }
+void op36() { uOP(); }
+void op37() { uOP(); }
+void op38() { uOP(); }
+void op39() { uOP(); }
+void op3A() { uOP(); }
+void op3B() { uOP(); }
+void op3C() { uOP(); }
+void op3D() { uOP(); }
+void op3E() { uOP(); }
+void op3F() { uOP(); }
+void op40() { uOP(); }
+void op41() { uOP(); }
+void op42() { uOP(); }
+void op43() { uOP(); }
+void op44() { uOP(); }
+void op45() { uOP(); }
+void op46() { uOP(); }
+void op47() { uOP(); }
+void op48() { uOP(); }
+void op49() { uOP(); }
+void op4A() { uOP(); }
+void op4B() { uOP(); }
+void op4C() { uOP(); }
+void op4D() { uOP(); }
+void op4E() { uOP(); }
+void op4F() { uOP(); }
+void op50() { DBG("PUSH EAX"); push(EAX); }
+void op51() { DBG("PUSH ECX"); push(ECX); }
+void op52() { DBG("PUSH EDX"); push(EDX); }
+void op53() { DBG("PUSH EBX"); push(EBX); }
+void op54() { DBG("PUSH ESP"); push(ESP); }
+void op55() { DBG("PUSH EBP"); push(EBP); }
+void op56() { DBG("PUSH ESI"); push(ESI); }
+void op57() { DBG("PUSH EDI"); push(EDI); }
+void op58() { DBG("POP EAX"); EAX = pop(); }
+void op59() { DBG("POP ECX"); ECX = pop(); }
+void op5A() { DBG("POP EDX"); EDX = pop(); }
+void op5B() { DBG("POP EBX"); EBX = pop(); }
+void op5C() { DBG("POP ESP"); ESP = pop(); }
+void op5D() { DBG("POP EBP"); EBP = pop(); }
+void op5E() { DBG("POP ESI"); ESI = pop(); }
+void op5F() { DBG("POP EDI"); EDI = pop(); }
+void op60() { uOP(); }
+void op61() { uOP(); }
+void op62() { uOP(); }
+void op63() { uOP(); }
+void op64() { uOP(); }
+void op65() { uOP(); }
+void op66() { uOP(); }
+void op67() { uOP(); }
+void op68() { uOP(); }
+void op69() { uOP(); }
+void op6A() { uOP(); }
+void op6B() { uOP(); }
+void op6C() { uOP(); }
+void op6D() { uOP(); }
+void op6E() { uOP(); }
+void op6F() { uOP(); }
+void op70() { uOP(); }
+void op71() { uOP(); }
+void op72() { uOP(); }
+void op73() { uOP(); }
+void op74() { uOP(); }
+void op75() { uOP(); }
+void op76() { uOP(); }
+void op77() { uOP(); }
+void op78() { uOP(); }
+void op79() { uOP(); }
+void op7A() { uOP(); }
+void op7B() { uOP(); }
+void op7C() { uOP(); }
+void op7D() { uOP(); }
+void op7E() { uOP(); }
+void op7F() { uOP(); }
+void op80() { uOP(); }
+void op81() { uOP(); }
+void op82() { uOP(); }
+void op83() { toModRM();
+    if (modrm.val == 0x45) { DBG1("MOV EAX #", f4(ip)); EAX += ip4(); }
+    else if (modrm.val == 0xc5) { DBG1("ADD EBP #", f1(ip)); EBP += f1(ip++); }
+    else if (modrm.val == 0xed) { DBG1("SUB EBP #", f1(ip)); EBP -= f1(ip++); }
+}
+void op84() { uOP(); }
+void op85() { uOP(); }
+void op86() { uOP(); }
+void op87() { toModRM();  // xchg reg1, reg2;
+    arg1 = reg[modrm.m];
+    reg[modrm.m] = reg[modrm.r];
+    reg[modrm.r] = arg1;
+}
+void op88() { uOP(); }
+void op89() { toModRM();
+    if (modrm.val == 0x45) { DBG("MOV [EBP+x], EAX"); s4(EBP+f1(ip++), EAX); }
+    else if (modrm.val == 0xc1) { DBG("MOV ECX, EAX"); ECX = EAX; }
+    else if (modrm.val == 0xc2) { DBG("MOV EDX, EAX"); EDX = EAX; }
+    else if (modrm.val == 0xc3) { DBG("MOV EBX, EAX"); EBX = EAX; }
+    else if (modrm.val == 0xc8) { DBG("MOV EAX, ECX"); EAX = ECX; }
+    else if (modrm.val == 0xd0) { DBG("MOV EAX, EDX"); EAX = EDX; }
+    else if (modrm.val == 0xd8) { DBG("MOV EAX, EBX"); EAX = EBX; }
+    // EAX = f4(EBP); ip += 2;
+}
+void op8A() { uOP(); }
+void op8B() { toModRM();
+    if (modrm.val == 0x45) { DBG("MOV EAX, [EBP+x]"); EAX = f4(EBP+f1(ip++)); }
+    // s4(EBP, EAX); ip += 2;
+}  // mov mem/reg to REG - 8B 45 00 - mov eax, [ebp]
+void op8C() { uOP(); }
+void op8D() { uOP(); }
+void op8E() { uOP(); }
+void op8F() { uOP(); }
+void op90() { DBG("NOP"); }
+void op91() { DBG("xchg EAX, ECX"); }
+void op92() { DBG("xchg EAX, EDX"); }
+void op93() { DBG("xchg EAX, EBX"); }
+void op94() { DBG("xchg EAX, ESP"); }
+void op95() { DBG("xchg EAX, EBP"); }
+void op96() { DBG("xchg EAX, ESI"); }
+void op97() { DBG("xchg EAX, EDI"); }
+void op98() { uOP(); }
+void op99() { uOP(); }
+void op9A() { uOP(); }
+void op9B() { uOP(); }
+void op9C() { uOP(); }
+void op9D() { uOP(); }
+void op9E() { uOP(); }
+void op9F() { uOP(); }
+void opA0() { byte *x = (byte *)&EAX; x[0] = f1(ip4()); } // mov AL, [mem]
+void opA1() { EAX = f4(ip4()); } // mov EAX, [mem]
+void opA2() { s1(ip4(), EAX&0xff); }  // mov [mem], AL
+void opA3() { s4(ip4(), EAX); }       // mov [mem], EAX
+void opA4() { uOP(); }
+void opA5() { uOP(); }
+void opA6() { uOP(); }
+void opA7() { uOP(); }
+void opA8() { uOP(); }
+void opA9() { uOP(); }
+void opAA() { uOP(); }
+void opAB() { uOP(); }
+void opAC() { uOP(); }
+void opAD() { uOP(); }
+void opAE() { uOP(); }
+void opAF() { uOP(); }
+void opB0() { uOP(); }
+void opB1() { uOP(); }
+void opB2() { uOP(); }
+void opB3() { uOP(); }
+void opB4() { uOP(); }
+void opB5() { uOP(); }
+void opB6() { uOP(); }
+void opB7() { uOP(); }
+void opB8() { DBG1("MOV EAX #", f4(ip));  EAX = ip4(); }  // mov EAX, <imm>
+void opB9() { DBG1("MOV ECX #", f4(ip));  ECX = ip4(); }  // mov ECX, <imm>
+void opBA() { DBG1("MOV EDX #", f4(ip));  EDX = ip4(); }  // mov EDX, <imm>
+void opBB() { DBG1("MOV EBX #", f4(ip));  EBX = ip4(); }  // mov EBX, <imm>
+void opBC() { DBG1("MOV ESP #", f4(ip));  ESP = ip4(); }  // mov ESP, <imm>
+void opBD() { DBG1("MOV EBP #", f4(ip));  EBP = ip4(); }  // mov EBP, <imm>
+void opBE() { DBG1("MOV ESI #", f4(ip));  ESI = ip4(); }  // mov ESI, <imm>
+void opBF() { DBG1("MOV EDI #", f4(ip));  EDI = ip4(); }  // mov EDI, <imm>
+void opC0() { uOP(); }
+void opC1() { uOP(); }
+void opC2() { uOP(); }
+void opC3() { uOP(); }
+void opC4() { uOP(); }
+void opC5() { uOP(); }
+void opC6() { uOP(); }
+void opC7() { uOP(); }
+void opC8() { uOP(); }
+void opC9() { uOP(); }
+void opCA() { uOP(); }
+void opCB() { uOP(); }
+void opCC() { uOP(); }
+void opCD() { uOP(); }
+void opCE() { uOP(); }
+void opCF() { uOP(); }
+void opD0() { uOP(); }
+void opD1() { uOP(); }
+void opD2() { uOP(); }
+void opD3() { uOP(); }
+void opD4() { uOP(); }
+void opD5() { uOP(); }
+void opD6() { uOP(); }
+void opD7() { uOP(); }
+void opD8() { uOP(); }
+void opD9() { uOP(); }
+void opDA() { uOP(); }
+void opDB() { uOP(); }
+void opDC() { uOP(); }
+void opDD() { uOP(); }
+void opDE() { uOP(); }
+void opDF() { uOP(); }
+void opE0() { uOP(); }
+void opE1() { uOP(); }
+void opE2() { uOP(); }
+void opE3() { uOP(); }
+void opE4() { uOP(); }
+void opE5() { uOP(); }
+void opE6() { uOP(); }
+void opE7() { uOP(); }
+void opE8() { uOP(); }
+void opE9() { uOP(); }
+void opEA() { uOP(); }
+void opEB() { uOP(); }
+void opEC() { uOP(); }
+void opED() { uOP(); }
+void opEE() { uOP(); }
+void opEF() { uOP(); }
+void opF0() { uOP(); }
+void opF1() { uOP(); }
+void opF2() { uOP(); }
+void opF3() { uOP(); }
+void opF4() { uOP(); }
+void opF5() { uOP(); }
+void opF6() { uOP(); }
+void opF7() { toModRM();  // IMUL / IDIV
+    if (modrm.val == 0xeb) { DBG("IMUL EBX"); EAX *= EBX; }
+    else if (modrm.val == 0xfb) { DBG("IDIV EBX"); EAX /= EBX; }
+}
+void opF8() { uOP(); }
+void opF9() { uOP(); }
+void opFA() { uOP(); }
+void opFB() { uOP(); }
+void opFC() { uOP(); }
+void opFD() { uOP(); }
+void opFE() { uOP(); }
+void opFF() { uOP(); }
 
 voidfn_t opcodes[256] = {
-    op0, op1, op2, op3, op4, op5, op6, op7,
-    op8, op9, op10, op11, op12, op13, op14, op15,
-    op16, op17, op18, op19, op20, op21, op22, op23,
-    op24, op25, op26, op27, op28, op29, op30, op31,
-    op32, op33, op34, op35, op36, op37, op38, op39,
-    op40, op41, op42, op43, op44, op45, op46, op47,
-    op48, op49, op50, op51, op52, op53, op54, op55,
-    op56, op57, op58, op59, op60, op61, op62, op63,
-    op64, op65, op66, op67, op68, op69, op70, op71,
-    op72, op73, op74, op75, op76, op77, op78, op79,
-    op80, op81, op82, op83, op84, op85, op86, op87,
-    op88, op89, op90, op91, op92, op93, op94, op95,
-    op96, op97, op98, op99, op100, op101, op102, op103,
-    op104, op105, op106, op107, op108, op109, op110, op111,
-    op112, op113, op114, op115, op116, op117, op118, op119,
-    op120, op121, op122, op123, op124, op125, op126, op127,
-    op128, op129, op130, op131, op132, op133, op134, op135,
-    op136, op137, op138, op139, op140, op141, op142, op143,
-    op144, op145, op146, op147, op148, op149, op150, op151,
-    op152, op153, op154, op155, op156, op157, op158, op159,
-    op160, op161, op162, op163, op164, op165, op166, op167,
-    op168, op169, op170, op171, op172, op173, op174, op175,
-    op176, op177, op178, op179, op180, op181, op182, op183,
-    op184, op185, op186, op187, op188, op189, op190, op191,
-    op192, op193, op194, op195, op196, op197, op198, op199,
-    op200, op201, op202, op203, op204, op205, op206, op207,
-    op208, op209, op210, op211, op212, op213, op214, op215,
-    op216, op217, op218, op219, op220, op221, op222, op223,
-    op224, op225, op226, op227, op228, op229, op230, op231,
-    op232, op233, op234, op235, op236, op237, op238, op239,
-    op240, op241, op242, op243, op244, op245, op246, op247,
-    op248, op249, op250, op251, op252, op253, op254, op255,
+op00, op01, op02, op03, op04, op05, op06, op07, op08, op09, op0A, op0B, op0C, op0D, op0E, op0F,
+op10, op11, op12, op13, op14, op15, op16, op17, op18, op19, op1A, op1B, op1C, op1D, op1E, op1F,
+op20, op21, op22, op23, op24, op25, op26, op27, op28, op29, op2A, op2B, op2C, op2D, op2E, op2F,
+op30, op31, op32, op33, op34, op35, op36, op37, op38, op39, op3A, op3B, op3C, op3D, op3E, op3F,
+op40, op41, op42, op43, op44, op45, op46, op47, op48, op49, op4A, op4B, op4C, op4D, op4E, op4F,
+op50, op51, op52, op53, op54, op55, op56, op57, op58, op59, op5A, op5B, op5C, op5D, op5E, op5F,
+op60, op61, op62, op63, op64, op65, op66, op67, op68, op69, op6A, op6B, op6C, op6D, op6E, op6F,
+op70, op71, op72, op73, op74, op75, op76, op77, op78, op79, op7A, op7B, op7C, op7D, op7E, op7F,
+op80, op81, op82, op83, op84, op85, op86, op87, op88, op89, op8A, op8B, op8C, op8D, op8E, op8F,
+op90, op91, op92, op93, op94, op95, op96, op97, op98, op99, op9A, op9B, op9C, op9D, op9E, op9F,
+opA0, opA1, opA2, opA3, opA4, opA5, opA6, opA7, opA8, opA9, opAA, opAB, opAC, opAD, opAE, opAF,
+opB0, opB1, opB2, opB3, opB4, opB5, opB6, opB7, opB8, opB9, opBA, opBB, opBC, opBD, opBE, opBF,
+opC0, opC1, opC2, opC3, opC4, opC5, opC6, opC7, opC8, opC9, opCA, opCB, opCC, opCD, opCE, opCF,
+opD0, opD1, opD2, opD3, opD4, opD5, opD6, opD7, opD8, opD9, opDA, opDB, opDC, opDD, opDE, opDF,
+opE0, opE1, opE2, opE3, opE4, opE5, opE6, opE7, opE8, opE9, opEA, opEB, opEC, opED, opEE, opEF,
+opF0, opF1, opF2, opF3, opF4, opF5, opF6, opF7, opF8, opF9, opFA, opFB, opFC, opFD, opFE, opFF
 };
 
-int32_t runOPcode(int op) {
-    if (BTWI(op, 0, 255)) {
-        opcodes[op]();
-    } else {
-        printf("Invalid opcode: %d\n", op);
+/*---------------------------------------------------------------------------*/
+// CPU loop.
+
+void GotoRC(int r, int c) { printf("\x1B[%d;%dH", r, c); }
+void CLS() { GotoRC(1,1); printf("\x1B[2J"); }
+
+void seeCPU() {
+    char *x[8] = {"EAX", "ECX" , "EDX" , "EBX" , "ESP" , "EBP" , "ESI" , "EDI" };
+    int y[8] = { 0,3,1,2,4,5,6,7 };
+    char *clr = "\x1B[K";
+    printf("\x1B[s"); // Save cursor
+    for (int i = 0; i < 8; i++) {
+        GotoRC(i+1, 80);
+        printf("%s: 0x%x/%d%s", x[y[i]], reg[y[i]], reg[y[i]], clr);
+    }
+    int depth = (EBP<EBPbase) ? 0 : (EBP - EBPbase) / 4;
+    GotoRC(10, 80); printf(" IP: 0x%x/%d%s", ip, ip, clr);
+    GotoRC(11, 80); printf(" IR: 0x%x/%d%s", f1(ip), f1(ip), clr);
+    GotoRC(12, 80); printf("TOS: 0x%x (%d)%s", f4(EBP), depth, clr);
+    GotoRC(13, 80); printf("  H: 0x%x/%d%s", here, here-memBase, clr);
+    printf("\x1B[u"); // Restore cursor
+
+    if (BTWI(ip, 0, here)) {
+        y[0]++; // break here if wanted
     }
 }
 
-void runCpu(int st) {
+void runCPU(uint32_t st) {
     ip = st;
     while (ip < here) {
+        if (dbg) { seeCPU(); }
         ir = f1(ip++);
-        runOPcode(ir);
+        if (dbg) { printf("\nIP: %08X, IR: %02x ", ip-1, ir); }
+        opcodes[ir]();
     }
+    if (dbg) { seeCPU(); printf("\n"); }
+}
+
+
+/*---------------------------------------------------------------------------*/
+// Tests
+void g1(int n) { s1(here++, n); }
+void g2(int n) { g1(n); g1(n>>8); }
+void g4(int n) { g2(n); g2(n>>16); }
+void gN(int n, char *bytes) { for (int i = 0; i < n; i++) { g1(bytes[i]); } }
+
+// https://yozan233.github.io/Online-Assembler-Disassembler/
+
+// Set EAX immediate
+void gSetEAXImm(int val) {
+    g1(0xb8); g4(val);   // mov eax, <val>
+}
+
+void gSetEBXImm(int val) {
+    g1(0xbb); g4(val);   // mov eax, <val>
+}
+
+void gMath(int op, int modrm) {
+    g1(op); g1(modrm);      // -see below-
+}
+
+void gAdd() { gMath(0x01, 0xd8); }  // add  : op01, mod/rm=xd8
+void gSub() { gMath(0x29, 0xd8); }  // sub  : op29, mod/rm=xd8
+void gMul() { gMath(0xf7, 0xeb); }  // imul : opf7, mod/rm=xeb
+void gDiv() { gMath(0xf7, 0xfb); }  // idiv : opf7, mod/rm=xfb
+void gAnd() { gMath(0x21, 0xd8); }  // and  : op21, mod/rm=xd8
+void gOr()  { gMath(0x09, 0xd8); }  // or   : op09, mod/rm=xd8
+void gXor() { gMath(0x31, 0xd8); }  // xor  : op31, mod/rm=xd8
+
+void gFetch1(uint32_t addr) { g1(0xa0); g4(addr); } // mov al, [addr]
+void gFetch4(uint32_t addr) { g1(0xa1); g4(addr); } // mov eax, [addr]
+void gStore1(uint32_t addr) { g1(0xa2); g4(addr); } // mov [addr], al
+void gStore4(uint32_t addr) { g1(0xa3); g4(addr); } // mov [addr], eax
+
+void assert(int32_t exp, char *msg) {
+    if (dbg) { CLS(); }
+    runCPU(memBase);
+    seeCPU();
+    if (EAX != exp) { printf("\nFAIL: %s, expected %d, got %d", msg, exp, EAX); }
+    else { printf("\nPASS: %s", msg); }
+    here = memBase; ESP = EBPbase;
+}
+
+void runTests() {
+    gSetEAXImm(0x4); gSetEBXImm(0x5); gAdd(); assert( 9, "add");
+    gSetEAXImm(0x7); gSetEBXImm(0x8); gSub(); assert(-1, "sub");
+    gSetEAXImm(0x6); gSetEBXImm(0x6); gMul(); assert(36, "mult");
+    gSetEAXImm(0x9); gSetEBXImm(0x2); gDiv(); assert( 4, "div");
+    gSetEAXImm(0xa); gSetEBXImm(0x7); gAnd(); assert( 2, "and");
+    gSetEAXImm(0x1); gSetEBXImm(0x2); gOr();  assert( 3, "or");
+    gSetEAXImm(0xa); gSetEBXImm(0xa); gXor(); assert( 0, "xor");
+    printf("\n");
 }
 
 /*---------------------------------------------------------------------------*/
-/* Main program. */
+// Main program.
 
 int main(int argc, char *argv[]) {
-    char *fn = (argc > 1) ? argv[1] : "tc.out";
+    char *fn = (argc > 1) ? argv[1] : "tc.lin";
     FILE *fp = fopen(fn, "rb");
     initVM();
-    if (!fp) { printf("can't open program"); }
+    if (!fp) { runTests(); }
     else {
         here = (int)fread(vm, 1, VM_SZ, fp);
+        here = (int)fread(vm, 1, VM_SZ, fp);
         fclose(fp);
-        fp = fopen("vm-lin.lst", "wt");
-        dis(fp);
-        fclose(fp);
-        runVM(0);
+        runCPU(0);
     }
     return 0;
 }
