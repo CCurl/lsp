@@ -6,7 +6,7 @@ Linux - x86 system calls
 Online Assembler -
 - https://yozan233.github.io/Online-Assembler-Disassembler/
 
-linux - execution start address: 0x08048000
+Linux - execution start address: 0x08048000
 
 sys_brk (syscall #45)
 - Put the requested new end address into EBX
