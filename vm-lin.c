@@ -1,19 +1,20 @@
-// An extremely simple x86 emulator to test my compiler.
-// It only implement the small subset of x86 opcodes,
-// those that the code generator uses.
+// An extremely simple Linux/x86 emulator to test my compiler.
+// It only implements the small subset of x86 opcodes
+// that the code generator uses.
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 
-#define VM_SZ     10000
-#define DSTK_SZ     128
+#define VM_SZ    0x20000
+#define DSTK_SZ      128
 
 #define BTWI(n,l,h) ((l<=n)&&(n<=h))
 typedef uint8_t byte;
 typedef void (*voidfn_t)();
 typedef struct { byte val, mod, r, m; } MODRM_T;
 
-// #define _DEBUG_ 1
+#define _DEBUG_ 1
 
 #ifdef _DEBUG_
     #define DBG(str) printf("-%s-", str)
@@ -34,7 +35,7 @@ typedef struct { byte val, mod, r, m; } MODRM_T;
 #define ESI reg[6]
 #define EDI reg[7]
 
-byte vm[VM_SZ];
+byte elfHeader[256];
 byte vm[VM_SZ];
 int32_t reg[8], disp, arg1, memBase, EBPbase;
 uint32_t ip, here, *src, *tgt;
@@ -315,7 +316,19 @@ void opC9() { uOP(); }
 void opCA() { uOP(); }
 void opCB() { uOP(); }
 void opCC() { uOP(); }
-void opCD() { uOP(); }
+void opCD() { DBG1("int #", f1(ip));
+    if (f1(ip++) != 0x80) { printf("only int 0x80 is supported"); return; }
+    switch(EAX) {
+        case  01: exit(EBX);
+        RCASE 03: // sys_read - EBX: fd, ECX: buf, EDX: size, RET: NBytes
+            EAX = fread(&vm[ECX-memBase], 1, EDX, stdin);
+        RCASE 04: // sys_write - EBX: fd, ECX: buf, EDX: size, RET: NBytes
+            EAX = fwrite(&vm[ECX-memBase], 1, EDX, stdout);
+        RCASE 45: // sys_brk - EBX: new brk
+            if (EBX == 0) { EAX = here + memBase; }
+            else { EAX = EBX; here = EBX - memBase; }
+    }
+}
 void opCE() { uOP(); }
 void opCF() { uOP(); }
 void opD0() { uOP(); }
@@ -421,7 +434,11 @@ void runCPU(uint32_t st) {
     while (ip < here) {
         if (dbg) { seeCPU(); }
         ir = f1(ip++);
-        if (dbg) { printf("\nIP: %08X, IR: %02x ", ip-1, ir); }
+        if (dbg) {
+            char buf[100];
+            printf("\nIP: %08X, IR: %02x ->", ip-1, ir);
+            fread(buf, 1, 1, stdin);
+        }
         opcodes[ir]();
     }
     if (dbg) { seeCPU(); printf("\n"); }
@@ -433,7 +450,8 @@ void runCPU(uint32_t st) {
 void g1(int n) { s1(here++, n); }
 void g2(int n) { g1(n); g1(n>>8); }
 void g4(int n) { g2(n); g2(n>>16); }
-void gN(int n, char *bytes) { for (int i = 0; i < n; i++) { g1(bytes[i]); } }
+void gN(int n, char *bytes) { for (int i=0; i<n; i++) { g1(bytes[i]); } }
+void sN(int n, char *b, int s) { for (int i=0; i<n; i++) { vm[s+i] = b[i]; } }
 
 // https://yozan233.github.io/Online-Assembler-Disassembler/
 
@@ -469,7 +487,7 @@ void assert(int32_t exp, char *msg) {
     seeCPU();
     if (EAX != exp) { printf("\nFAIL: %s, expected %d, got %d", msg, exp, EAX); }
     else { printf("\nPASS: %s", msg); }
-    here = memBase; ESP = EBPbase;
+    here = memBase;
 }
 
 void runTests() {
@@ -480,6 +498,14 @@ void runTests() {
     gSetEAXImm(0xa); gSetEBXImm(0x7); gAnd(); assert( 2, "and");
     gSetEAXImm(0x1); gSetEBXImm(0x2); gOr();  assert( 3, "or");
     gSetEAXImm(0xa); gSetEBXImm(0xa); gXor(); assert( 0, "xor");
+    sN(8, "hi there", 1024);
+    here = memBase;
+    gSetEAXImm(4); gSetEBXImm(4);
+    g1(0xb9); g4(1024+memBase); // mov ECX, 1024
+    g1(0xba); g4(8);            // mov EDX, 8
+    g1(0xcd); g1(0x80);
+    printf("\n%x, %x, %d", here, memBase, here-memBase);
+    runCPU(memBase);
     printf("\n");
 }
 
@@ -490,12 +516,13 @@ int main(int argc, char *argv[]) {
     char *fn = (argc > 1) ? argv[1] : "tc.lin";
     FILE *fp = fopen(fn, "rb");
     initVM();
-    if (!fp) { runTests(); }
-    else {
-        here = (int)fread(vm, 1, VM_SZ, fp);
+    if (fp) {
+        fread(elfHeader, 1, 64, fp);
         here = (int)fread(vm, 1, VM_SZ, fp);
         fclose(fp);
-        runCPU(0);
+        runCPU(memBase);
+    } else {
+        runTests();
     }
     return 0;
 }
