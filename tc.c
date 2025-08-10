@@ -45,6 +45,7 @@ enum {
     , IADD, ISUB, IMUL, IDIV
     , IAND, IOR, IXOR
     , JZ, JNZ, JMP, ICALL, IRET, HALT
+    , IMOV
 };
 
 byte vm[CODE_SZ];

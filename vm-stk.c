@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------*/
-/* Virtual machine. */
+/* A register based virtual machine. */
 
 #include <stdio.h>
 #include <stdint.h>
@@ -14,59 +14,107 @@ enum {
     , IADD, ISUB, IMUL, IDIV
     , IAND, IOR, IXOR
     , JZ, JNZ, JMP, ICALL, IRET, HALT
+    , IMOV
 };
 
 #define VM_SZ 10000
+
 byte vm[VM_SZ];
 int here;
-static long stk[0x80], sp;
-static long rstk[1000], rsp;
+static long stk[128];
 static long vals[1000];
-static long maxSp;
+static long EAX, EBX, ECX, EDX;
+static long ESP, EBP, ESI, EDI;
+static long EIP;
+
+#define rAX 0
+#define rCX 1
+#define rDX 2
+#define rBX 3
+#define rSP 4
+#define rBP 5
+#define rSI 6
+#define rDI 7
+#define R2R(rT, rF) ((3<<6) | (rF<<3) | rT)
 
 #define ACASE    goto again; case
 #define BCASE    break; case
-#define TOS      stk[sp]
-#define NOS      stk[sp-1]
 
 static int  f2(int a) { return *(int16_t*)(&vm[a]); }
 static int  f4(int a) { return *(int32_t*)(&vm[a]); }
 
 void initVM() {
-    maxSp = sp = rsp = here = 0;
+    ESP = here = 0;
 }
 
-void runVM(int pc) {
+static void mov(int what) {
+    switch (what) {
+        case R2R(rDX, rCX): EDX = ECX;  break;
+        case R2R(rCX, rBX): ECX = EBX;  break;
+        case R2R(rBX, rAX): EBX = EAX;  break;
+        case R2R(rAX, rBX): EAX = EBX;  break;
+        case R2R(rBX, rCX): EBX = ECX;  break;
+        case R2R(rCX, rDX): ECX = EDX;  break;
+    }
+}
+
+static void sPush() {
+    // EDX = ECX; ECX = EBX; EBX = EAX;
+    mov(R2R(rDX, rCX));
+    mov(R2R(rCX, rBX));
+    mov(R2R(rBX, rAX));
+}
+
+static void sPop() {
+    // EAX = EBX; EBX = ECX; ECX = EDX;
+    mov(R2R(rAX, rBX));
+    mov(R2R(rBX, rCX));
+    mov(R2R(rCX, rDX));
+}
+
+static void push(long x) { stk[++ESP] = x;  }
+static int  pop() { return stk[ESP--]; }
+
+#define TOS      EAX
+#define NOS      EBX
+// #define TOS      stk[sp]
+// #define NOS      stk[sp-1]
+
+void runVM(int st) {
+    byte ir;
+    EIP = st;
     again:
-    if (maxSp < sp) { maxSp = sp; }
-    // printf("-pc:%04x/ir:%d-\n", pc, vm[pc]);
-    switch (vm[pc++]) {
+    // if (maxSp < sp) { maxSp = sp; }
+    // printf("-EIP:%04x/ir:%d-\n", EIP, vm[EIP]);
+    ir = vm[EIP++];
+    switch (ir) {
         case  NOP:
-        ACASE IFETCH: stk[++sp] = vals[f2(pc)]; pc += 2;
-        ACASE ISTORE: vals[f2(pc)] = stk[sp--]; pc += 2;
-        ACASE ILIT: stk[++sp] = f4(pc); pc += 4;
-        ACASE IDROP: --sp;
-        ACASE ILT: NOS = (NOS < TOS) ? 1 : 0; --sp;
-        ACASE IGT: NOS = (NOS > TOS) ? 1 : 0; --sp;
-        ACASE IEQ: NOS = (NOS == TOS) ? 1 : 0; --sp;
-        ACASE INEQ: NOS = (NOS != TOS) ? 1 : 0; --sp;
-        ACASE ILAND: NOS = (NOS && TOS) ? 1 : 0; --sp;
-        ACASE ILOR: NOS = (NOS || TOS) ? 1 : 0; --sp;
-        ACASE ILNOT: TOS = TOS ? 0 : 1;
-        ACASE IADD: NOS += TOS; --sp;
-        ACASE ISUB: NOS -= TOS; --sp;
-        ACASE IMUL: NOS *= TOS; --sp;
-        ACASE IDIV: NOS /= TOS; --sp;
-        ACASE IAND: NOS &= TOS; --sp;
-        ACASE IOR: NOS |= TOS; --sp;
-        ACASE IXOR: NOS ^= TOS; --sp;
-        ACASE JZ:  if (stk[sp--] == 0) pc = f2(pc); else pc += 2;
-        ACASE JNZ: if (stk[sp--] != 0) pc = f2(pc); else pc += 2;
-        ACASE JMP: pc = f2(pc);
-        ACASE ICALL: rstk[rsp++] = pc+2; pc = f2(pc);
-        ACASE IRET: if (rsp) { pc = rstk[--rsp]; } else { return; }
+        ACASE IFETCH: sPush(); TOS = vals[f2(EIP)]; EIP += 2;
+        ACASE ISTORE: vals[f2(EIP)] = TOS; sPop(); EIP += 2;
+        ACASE ILIT:  sPush(); TOS = f4(EIP); EIP += 4;
+        ACASE IDROP: sPop();
+        ACASE ILT:   if (NOS <  TOS) { NOS = 1; } else { NOS = 0; } sPop();
+        ACASE IGT:   if (NOS >  TOS) { NOS = 1; } else { NOS = 0; } sPop();
+        ACASE IEQ:   if (NOS == TOS) { NOS = 1; } else { NOS = 0; } sPop();
+        ACASE INEQ:  if (NOS != TOS) { NOS = 1; } else { NOS = 0; } sPop();
+        ACASE ILAND: if (NOS && TOS) { NOS = 1; } else { NOS = 0; } sPop();
+        ACASE ILOR:  if (NOS || TOS) { NOS = 1; } else { NOS = 0; } sPop();
+        ACASE ILNOT: if (TOS == 0) { TOS = 1; } else { TOS = 0; }
+        ACASE IADD:  NOS = (NOS + TOS); sPop();
+        ACASE ISUB:  NOS = (NOS - TOS); sPop();
+        ACASE IMUL:  NOS = (NOS * TOS); sPop();
+        ACASE IDIV:  NOS = (NOS / TOS); sPop();
+        ACASE IAND:  NOS = (NOS & TOS); sPop();
+        ACASE IOR:   NOS = (NOS | TOS); sPop();
+        ACASE IXOR:  NOS = (NOS ^ TOS); sPop();
+        ACASE JZ:    if (TOS == 0) { EIP = f2(EIP); } else { EIP += 2; } sPop();
+        ACASE JNZ:   if (TOS != 0) { EIP = f2(EIP); } else { EIP += 2; } sPop();
+        ACASE JMP:   EIP = f2(EIP);
+        ACASE ICALL: push(EIP+2); EIP = f2(EIP);
+        ACASE IRET: if (ESP < 1) { return; } EIP = pop();
         ACASE HALT: return;
-        default: printf("Invalid IR: %d\n", vm[pc-1]);  return;
+        ACASE IMOV: mov(vm[EIP++]);
+        default: printf("Invalid IR: %d\n", vm[EIP-1]);  return;
     }
 }
 
@@ -82,19 +130,19 @@ static void pN2(int n) { pN1(n); pN1(n >> 8); }
 static void pN4(int n) { pN2(n); pN2(n >> 16); }
 
 void dis(FILE *toFp) {
-    int pc = 0;
+    EIP = 0;
     long t;
     outFp = toFp ? toFp : stdout;
 
     fprintf(outFp, "\nVM: %d bytes, %d used, 0x0000:0x%04X.", VM_SZ, here, here-1);
     fprintf(outFp, "\n-------------------------------------------");
-    while (pc < here) {
-        fprintf(outFp, "\n%04X: %02X ", pc, vm[pc]);
-        switch (vm[pc++]) {
+    while (EIP < here) {
+        fprintf(outFp, "\n%04lX: %02X ", EIP, vm[EIP]);
+        switch (vm[EIP++]) {
             case  NOP:    pB(12); pS("nop");
-            BCASE IFETCH: pN2(f2(pc)); pB(6); pS("fetch"); t = f2(pc); pNX(t); pc += 2;
-            BCASE ISTORE: pN2(f2(pc)); pB(6); pS("store"); t = f2(pc); pNX(t); pc += 2;
-            BCASE ILIT:   pN4(f4(pc)); pS("lit4");  pNX(f4(pc)); pc += 4;
+            BCASE IFETCH: pN2(f2(EIP)); pB(6); pS("fetch"); t = f2(EIP); pNX(t); EIP += 2;
+            BCASE ISTORE: pN2(f2(EIP)); pB(6); pS("store"); t = f2(EIP); pNX(t); EIP += 2;
+            BCASE ILIT:   pN4(f4(EIP)); pS("lit4");  pNX(f4(EIP)); EIP += 4;
             BCASE IDROP:  pB(12); pS("drop");
             BCASE ILT:    pB(12); pS("lt");
             BCASE IGT:    pB(12); pS("gt");
@@ -110,10 +158,10 @@ void dis(FILE *toFp) {
             BCASE IAND:   pB(12); pS("and");
             BCASE IOR:    pB(12); pS("or");
             BCASE IXOR:   pB(12); pS("xor");
-            BCASE JZ:     pN2(f2(pc)); pB(6); pS("jz");   pNX(f2(pc)); pc += 2;
-            BCASE JNZ:    pN2(f2(pc)); pB(6); pS("jnz");  pNX(f2(pc)); pc += 2;
-            BCASE JMP:    pN2(f2(pc)); pB(6); pS("jmp");  pNX(f2(pc)); pc += 2;
-            BCASE ICALL:  pN2(f2(pc)); pB(6); pS("call"); t = f2(pc); pNX(t); pc += 2;
+            BCASE JZ:     pN2(f2(EIP)); pB(6); pS("jz");   pNX(f2(EIP)); EIP += 2;
+            BCASE JNZ:    pN2(f2(EIP)); pB(6); pS("jnz");  pNX(f2(EIP)); EIP += 2;
+            BCASE JMP:    pN2(f2(EIP)); pB(6); pS("jmp");  pNX(f2(EIP)); EIP += 2;
+            BCASE ICALL:  pN2(f2(EIP)); pB(6); pS("call"); t = f2(EIP); pNX(t); EIP += 2;
             BCASE IRET:   pB(12); pS("ret");
             BCASE HALT:   pB(12); pS("halt"); break;
             default:      pB(12); pS("<invalid>");
@@ -140,7 +188,7 @@ int main(int argc, char *argv[]) {
         for (int i=0; i<1000; i++) {
             if (vals[i] != 0) { printf("%d: %ld\n", i, vals[i]); }
         }
-        printf("max-sp: %ld\n", maxSp);
+        // printf("max-sp: %ld\n", maxSp);
     }
     return 0;
 }
