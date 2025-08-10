@@ -35,9 +35,9 @@ The grammar of language in EBNF is:
                   ";"
   <paren_expr> ::= "(" <expr> ")"
   <expr>       ::= <math> | <math> <test-op> <math>
-  <test-op>    ::= "<" | "==" | ">"
+  <test-op>    ::= one of (< = > != || &&)
   <math>       ::= <term> | <math> <math_op> <term>
-  <math-op>    ::= "+" | "-" | "*" | "/"
+  <math-op>    ::= one of (+ - * / & | ^)
   <term>       ::= <id> | <int> | <paren_expr>
   <id>         ::= <alpha><alpha-numeric>*
   <int>        ::= [0-9]*

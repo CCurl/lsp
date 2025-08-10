@@ -9,10 +9,12 @@ typedef unsigned char byte;
 
 // VM opcodes
 enum {
-    NOP, IFETCH, ISTORE, ILIT, IDROP, IADD, ISUB, IMUL, IDIV,
-    ILT, IGT, IEQ, JZ, JNZ, JMP, ICALL, IRET, HALT
+    NOP, IFETCH, ISTORE, ILIT, IDROP
+    , ILT, IGT, IEQ, INEQ, ILAND, ILOR, ILNOT
+    , IADD, ISUB, IMUL, IDIV
+    , IAND, IOR, IXOR
+    , JZ, JNZ, JMP, ICALL, IRET, HALT
 };
-
 
 #define VM_SZ 10000
 byte vm[VM_SZ];
@@ -20,6 +22,7 @@ int here;
 static long stk[0x80], sp;
 static long rstk[1000], rsp;
 static long vals[1000];
+static long maxSp;
 
 #define ACASE    goto again; case
 #define BCASE    break; case
@@ -30,11 +33,12 @@ static int  f2(int a) { return *(int16_t*)(&vm[a]); }
 static int  f4(int a) { return *(int32_t*)(&vm[a]); }
 
 void initVM() {
-    sp = rsp = here = 0;
+    maxSp = sp = rsp = here = 0;
 }
 
 void runVM(int pc) {
     again:
+    if (maxSp < sp) { maxSp = sp; }
     // printf("-pc:%04x/ir:%d-\n", pc, vm[pc]);
     switch (vm[pc++]) {
         case  NOP:
@@ -42,13 +46,20 @@ void runVM(int pc) {
         ACASE ISTORE: vals[f2(pc)] = stk[sp--]; pc += 2;
         ACASE ILIT: stk[++sp] = f4(pc); pc += 4;
         ACASE IDROP: --sp;
+        ACASE ILT: NOS = (NOS < TOS) ? 1 : 0; --sp;
+        ACASE IGT: NOS = (NOS > TOS) ? 1 : 0; --sp;
+        ACASE IEQ: NOS = (NOS == TOS) ? 1 : 0; --sp;
+        ACASE INEQ: NOS = (NOS != TOS) ? 1 : 0; --sp;
+        ACASE ILAND: NOS = (NOS && TOS) ? 1 : 0; --sp;
+        ACASE ILOR: NOS = (NOS || TOS) ? 1 : 0; --sp;
+        ACASE ILNOT: TOS = TOS ? 0 : 1;
         ACASE IADD: NOS += TOS; --sp;
         ACASE ISUB: NOS -= TOS; --sp;
         ACASE IMUL: NOS *= TOS; --sp;
         ACASE IDIV: NOS /= TOS; --sp;
-        ACASE ILT: NOS = (NOS < TOS) ? 1 : 0; --sp;
-        ACASE IGT: NOS = (NOS > TOS) ? 1 : 0; --sp;
-        ACASE IEQ: NOS = (NOS == TOS) ? 1 : 0; --sp;
+        ACASE IAND: NOS &= TOS; --sp;
+        ACASE IOR: NOS |= TOS; --sp;
+        ACASE IXOR: NOS ^= TOS; --sp;
         ACASE JZ:  if (stk[sp--] == 0) pc = f2(pc); else pc += 2;
         ACASE JNZ: if (stk[sp--] != 0) pc = f2(pc); else pc += 2;
         ACASE JMP: pc = f2(pc);
@@ -83,15 +94,22 @@ void dis(FILE *toFp) {
             case  NOP:    pB(12); pS("nop");
             BCASE IFETCH: pN2(f2(pc)); pB(6); pS("fetch"); t = f2(pc); pNX(t); pc += 2;
             BCASE ISTORE: pN2(f2(pc)); pB(6); pS("store"); t = f2(pc); pNX(t); pc += 2;
-            BCASE ILIT:    pN4(f4(pc)); pS("lit4");  pNX(f4(pc)); pc += 4;
+            BCASE ILIT:   pN4(f4(pc)); pS("lit4");  pNX(f4(pc)); pc += 4;
             BCASE IDROP:  pB(12); pS("drop");
+            BCASE ILT:    pB(12); pS("lt");
+            BCASE IGT:    pB(12); pS("gt");
+            BCASE IEQ:    pB(12); pS("eq");
+            BCASE INEQ:   pB(12); pS("neq");
+            BCASE ILAND:  pB(12); pS("land");
+            BCASE ILOR:   pB(12); pS("lor");
+            BCASE ILNOT:  pB(12); pS("lnot");
             BCASE IADD:   pB(12); pS("add");
             BCASE ISUB:   pB(12); pS("sub");
             BCASE IMUL:   pB(12); pS("mul");
             BCASE IDIV:   pB(12); pS("div");
-            BCASE ILT:    pB(12); pS("lt");
-            BCASE IGT:    pB(12); pS("gt");
-            BCASE IEQ:    pB(12); pS("eq");
+            BCASE IAND:   pB(12); pS("and");
+            BCASE IOR:    pB(12); pS("or");
+            BCASE IXOR:   pB(12); pS("xor");
             BCASE JZ:     pN2(f2(pc)); pB(6); pS("jz");   pNX(f2(pc)); pc += 2;
             BCASE JNZ:    pN2(f2(pc)); pB(6); pS("jnz");  pNX(f2(pc)); pc += 2;
             BCASE JMP:    pN2(f2(pc)); pB(6); pS("jmp");  pNX(f2(pc)); pc += 2;
@@ -122,6 +140,7 @@ int main(int argc, char *argv[]) {
         for (int i=0; i<1000; i++) {
             if (vals[i] != 0) { printf("%d: %ld\n", i, vals[i]); }
         }
+        printf("max-sp: %ld\n", maxSp);
     }
     return 0;
 }
