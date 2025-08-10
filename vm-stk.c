@@ -1,5 +1,6 @@
 /*---------------------------------------------------------------------------*/
-/* A register based virtual machine. */
+// A register-based virtual machine.
+// This is (will be) an extremely stripped down 32-bit Linux/x86 emulator.
 
 #include <stdio.h>
 #include <stdint.h>
@@ -23,8 +24,7 @@ byte vm[VM_SZ];
 int here;
 static long stk[128];
 static long vals[1000];
-static long EAX, EBX, ECX, EDX;
-static long ESP, EBP, ESI, EDI;
+static long EAX, EBX, ECX, EDX, ESP, EBP, ESI, EDI;
 static long EIP;
 
 #define rAX 0
@@ -40,6 +40,7 @@ static long EIP;
 #define ACASE    goto again; case
 #define BCASE    break; case
 
+static int  f1(int a) { return *(int8_t*)(&vm[a]); }
 static int  f2(int a) { return *(int16_t*)(&vm[a]); }
 static int  f4(int a) { return *(int32_t*)(&vm[a]); }
 
@@ -75,11 +76,6 @@ static void sPop() {
 static void push(long x) { stk[++ESP] = x;  }
 static int  pop() { return stk[ESP--]; }
 
-#define TOS      EAX
-#define NOS      EBX
-// #define TOS      stk[sp]
-// #define NOS      stk[sp-1]
-
 void runVM(int st) {
     byte ir;
     EIP = st;
@@ -89,26 +85,26 @@ void runVM(int st) {
     ir = vm[EIP++];
     switch (ir) {
         case  NOP:
-        ACASE IFETCH: sPush(); TOS = vals[f2(EIP)]; EIP += 2;
-        ACASE ISTORE: vals[f2(EIP)] = TOS; sPop(); EIP += 2;
-        ACASE ILIT:  sPush(); TOS = f4(EIP); EIP += 4;
+        ACASE IFETCH: sPush(); EAX = vals[f2(EIP)]; EIP += 2;
+        ACASE ISTORE: vals[f2(EIP)] = EAX; sPop(); EIP += 2;
+        ACASE ILIT:  sPush(); EAX = f4(EIP); EIP += 4;
         ACASE IDROP: sPop();
-        ACASE ILT:   if (NOS <  TOS) { NOS = 1; } else { NOS = 0; } sPop();
-        ACASE IGT:   if (NOS >  TOS) { NOS = 1; } else { NOS = 0; } sPop();
-        ACASE IEQ:   if (NOS == TOS) { NOS = 1; } else { NOS = 0; } sPop();
-        ACASE INEQ:  if (NOS != TOS) { NOS = 1; } else { NOS = 0; } sPop();
-        ACASE ILAND: if (NOS && TOS) { NOS = 1; } else { NOS = 0; } sPop();
-        ACASE ILOR:  if (NOS || TOS) { NOS = 1; } else { NOS = 0; } sPop();
-        ACASE ILNOT: if (TOS == 0) { TOS = 1; } else { TOS = 0; }
-        ACASE IADD:  NOS = (NOS + TOS); sPop();
-        ACASE ISUB:  NOS = (NOS - TOS); sPop();
-        ACASE IMUL:  NOS = (NOS * TOS); sPop();
-        ACASE IDIV:  NOS = (NOS / TOS); sPop();
-        ACASE IAND:  NOS = (NOS & TOS); sPop();
-        ACASE IOR:   NOS = (NOS | TOS); sPop();
-        ACASE IXOR:  NOS = (NOS ^ TOS); sPop();
-        ACASE JZ:    if (TOS == 0) { EIP = f2(EIP); } else { EIP += 2; } sPop();
-        ACASE JNZ:   if (TOS != 0) { EIP = f2(EIP); } else { EIP += 2; } sPop();
+        ACASE ILT:   if (EBX <  EAX) { EBX = 1; } else { EBX = 0; } sPop();
+        ACASE IGT:   if (EBX >  EAX) { EBX = 1; } else { EBX = 0; } sPop();
+        ACASE IEQ:   if (EBX == EAX) { EBX = 1; } else { EBX = 0; } sPop();
+        ACASE INEQ:  if (EBX != EAX) { EBX = 1; } else { EBX = 0; } sPop();
+        ACASE ILAND: if (EBX && EAX) { EBX = 1; } else { EBX = 0; } sPop();
+        ACASE ILOR:  if (EBX || EAX) { EBX = 1; } else { EBX = 0; } sPop();
+        ACASE ILNOT: if (EAX == 0) { EAX = 1; } else { EAX = 0; }
+        ACASE IADD:  EBX = (EBX + EAX); sPop();
+        ACASE ISUB:  EBX = (EBX - EAX); sPop();
+        ACASE IMUL:  EBX = (EBX * EAX); sPop();
+        ACASE IDIV:  EBX = (EBX / EAX); sPop();
+        ACASE IAND:  EBX = (EBX & EAX); sPop();
+        ACASE IOR:   EBX = (EBX | EAX); sPop();
+        ACASE IXOR:  EBX = (EBX ^ EAX); sPop();
+        ACASE JZ:    if (EAX == 0) { EIP = f2(EIP); } else { EIP += 2; } sPop();
+        ACASE JNZ:   if (EAX != 0) { EIP = f2(EIP); } else { EIP += 2; } sPop();
         ACASE JMP:   EIP = f2(EIP);
         ACASE ICALL: push(EIP+2); EIP = f2(EIP);
         ACASE IRET: if (ESP < 1) { return; } EIP = pop();
@@ -163,8 +159,9 @@ void dis(FILE *toFp) {
             BCASE JMP:    pN2(f2(EIP)); pB(6); pS("jmp");  pNX(f2(EIP)); EIP += 2;
             BCASE ICALL:  pN2(f2(EIP)); pB(6); pS("call"); t = f2(EIP); pNX(t); EIP += 2;
             BCASE IRET:   pB(12); pS("ret");
-            BCASE HALT:   pB(12); pS("halt"); break;
-            default:      pB(12); pS("<invalid>");
+            BCASE HALT:   pB(12); pS("halt");
+            BCASE IMOV:   pB(9);  pS("mov"); pNX(f1(EIP)); EIP += 1;
+            break; default: pB(12); pS("<invalid>");
         }
     }
     fprintf(outFp, "\n");
