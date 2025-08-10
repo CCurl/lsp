@@ -270,6 +270,9 @@ int mathop() {
     else if (tok == TOK_SLASH) { return ND_DIV; }
     else if (tok == TOK_LAND)  { return ND_LAND; }
     else if (tok == TOK_LOR)   { return ND_LOR; }
+    else if (tok == TOK_AND)   { return ND_AND; }
+    else if (tok == TOK_OR)    { return ND_OR; }
+    else if (tok == TOK_XOR)   { return ND_XOR; }
     return 0;
 }
 
@@ -287,11 +290,10 @@ node *math() {
 /* <expr> ::= <math> | <math> <test-op> <math> */
 node *expr() {
     node *x = math();
-    if (tok == TOK_LT)   { next_token(); return gen(ND_LT,   x, math()); }
-    if (tok == TOK_GT)   { next_token(); return gen(ND_GT,   x, math()); }
-    if (tok == TOK_EQ)   { next_token(); return gen(ND_EQ,   x, math()); }
-    if (tok == TOK_NEQ)  { next_token(); return gen(ND_NEQ,  x, math()); }
-    // if (tok == TOK_LNOT) { next_token(); return gen(ND_LNOT, x, expr()); }
+    if (tok == TOK_LT)  { next_token(); return gen(ND_LT,  x, math()); }
+    if (tok == TOK_GT)  { next_token(); return gen(ND_GT,  x, math()); }
+    if (tok == TOK_EQ)  { next_token(); return gen(ND_EQ,  x, math()); }
+    if (tok == TOK_NEQ) { next_token(); return gen(ND_NEQ, x, math()); }
     return x;
 }
 

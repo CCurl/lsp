@@ -60,7 +60,7 @@ static void mov(int what) {
 
 static void sPush() {
     // EDX = ECX; ECX = EBX; EBX = EAX;
-    mov(R2R(rDX, rCX));
+    // mov(R2R(rDX, rCX));
     mov(R2R(rCX, rBX));
     mov(R2R(rBX, rAX));
 }
@@ -69,7 +69,7 @@ static void sPop() {
     // EAX = EBX; EBX = ECX; ECX = EDX;
     mov(R2R(rAX, rBX));
     mov(R2R(rBX, rCX));
-    mov(R2R(rCX, rDX));
+    //mov(R2R(rCX, rDX));
 }
 
 static void push(long x) { stk[++ESP] = x;  }
