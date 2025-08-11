@@ -398,6 +398,15 @@ void gInit() {
     addrSz = 2;
 }
 
+/*
+  89 D9             mov ecx, ebx ; PUSH
+  89 C3             mov ebx, eax
+  C3                ret 
+  89 D8             mov eax, ebx ; POP
+  89 CB             mov ebx, ecx
+  C3                ret 
+*/
+
 void gMov1(int arg1) { g(0x89); g(arg1); }
 void gFetch(int v) { g(IFETCH); gAddr(v); }
 void gStore(int v) { g(ISTORE); gAddr(v); }
