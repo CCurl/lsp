@@ -34,7 +34,7 @@ enum {
     , ND_LT, ND_EQ, ND_GT, ND_NEQ, ND_SET
     , ND_AND, ND_OR, ND_XOR, ND_LAND, ND_LOR, ND_LNOT
     , ND_FUNC_CALL, ND_FUNC_DEF
-    , ND_IF1, ND_IF2, ND_WHILE, ND_DO, ND_EMPTY, ND_SEQ, ND_PROG
+    , ND_IF1, ND_IF2, ND_WHILE, ND_DO, ND_EMPTY, ND_SEQ
     , ND_RET
 };
 
@@ -44,8 +44,8 @@ enum {
     , ILT, IGT, IEQ, INEQ, ILAND, ILOR, ILNOT
     , IADD, ISUB, IMUL, IDIV
     , IAND, IOR, IXOR
-    , JZ, JNZ, JMP, ICALL, IRET, HALT
-    , IMOV
+    , JZ, JNZ, JMP
+    , ICALL=0xe8, IRET=0xc3
 };
 
 byte vm[CODE_SZ];
@@ -401,17 +401,28 @@ void gInit() {
 /*
   89 D9             mov ecx, ebx ; PUSH
   89 C3             mov ebx, eax
-  C3                ret 
+
   89 D8             mov eax, ebx ; POP
   89 CB             mov ebx, ecx
+  
+  A1 78 56 34 12    mov eax, [0x12345678]
+  A3 22 11 55 44    mov [0x44551122], EAX
   C3                ret 
 */
 
-void gMov1(int arg1) { g(0x89); g(arg1); }
-void gFetch(int v) { g(IFETCH); gAddr(v); }
-void gStore(int v) { g(ISTORE); gAddr(v); }
-void gLit(int v) { g(ILIT); g4(v); }
-void gCall(int v) { g(ICALL); gAddr(v); }
+void gPush() { g4(0xc389d989); }
+void gPop()  { g4(0xc889d889); }
+void gMovRR(int RR) { g(0x89); g(RR); }
+void gMovIMM(int val) { gPush(); g(0xb8); g4(val); }
+void gMovStore(int loc) { g(0xa3); g4(loc); }
+void gMovFetch(int loc) { g(0xa1); g4(loc); }
+
+void gFetchO(int v) { g(IFETCH); gAddr(v); }
+void gFetch(int v) { gMovFetch(v); }
+void gStoreO(int v) { g(ISTORE); gAddr(v); }
+void gStore(int v) { gMovStore(v); }
+void gLit(int v) { gMovIMM(v); }
+void gCall(int v) { g(ICALL); g4(v); }
 void gReturn() { g(IRET); }
 void gAdd() { g(IADD); }
 void gMul() { g(IMUL); }
@@ -430,7 +441,6 @@ void gXor() { g(IXOR); }
 void gJmp()   { g(JMP); }
 void gJmpZ()  { g(JZ); }
 void gJmpNZ() { g(JNZ); }
-void gBye() { g(HALT); }
 // ----------------------------------------------------------
 
 void c(node *x) {
@@ -465,7 +475,6 @@ void c(node *x) {
         case ND_FUNC_CALL: if (x->val == 0) { error("undefined function!"); }
             gCall(x->val); break;
         case ND_FUNC_DEF: c(x->o1); break;
-        case ND_PROG: c(x->o1); gBye();  break;
         case ND_RET: gReturn(); break;
     }
 }
