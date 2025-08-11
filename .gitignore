@@ -8,12 +8,8 @@ tc
 pgm.vm
 tc.out
 tc.sym
-vm-stk.lst
-vm-stk
 hex-dump
 xx
 a.out
 xxc
-gen-lin
-vm-lin
-vm-lin.lst
+vm

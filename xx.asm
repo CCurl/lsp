@@ -18,34 +18,25 @@ exit:
     mov ebx, 0      ; exit code 22
     int 0x80        ; call kernel
 
-sPushEAX:
-    lea esi, [esi+4]
-    mov [esi], eax
-    mov eax, ebx
+sPush:
+    mov eax,0x77777777
+    mov ecx, ebx
+    mov ebx, eax
     ret
 
 sPop:
-    xchg ebx, eax
-    mov eax, [esi]
-    lea esi, [esi-4]
+    mov eax, ebx
+    mov ebx, ecx
     ret
+    mov eax,0x77777777
 
 doEmit:
     mov eax, 4
     mov edx, 1
     int 0x80
-
-main:
-    mov eax,0x79797979
-    lea esi, [stk]
-    lea ecx, [xmsg]
-    mov eax,0x11223344
-    call sPushEAX
-    call sPop
-
 doAdd: 
     call sPop
-    add ebx
+    add eax, ebx
     ret
 
 main:
@@ -53,15 +44,16 @@ main:
     lea esi, [stk]
     lea ecx, [xmsg]
     mov eax, 0x11223344
-    call sPushEAX
+    call sPush
+    mov eax, 0x11223344
     call sPop
     jmp exit
 
     mov eax,0x79797979
 
 ; segment readable writable
-dt:   db "-DATA-", 0
+dtx:  db "-DATA-", 0
 stk:  db 64 dup(0)
-msg:  db "hi there",0
+xmsg: db "hi there",0
 here: dd 0
-dte:  db 1024*1024 dup(?)
+dte:  db 1024 dup(?)

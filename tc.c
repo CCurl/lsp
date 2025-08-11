@@ -8,7 +8,7 @@
 
 #define SYMBOLS_SZ   500
 #define CODE_SZ     2500
-#define NODES_SZ    1000
+#define NODES_SZ   10000
 
 #define BTWI(n,l,h) ((l<=n)&&(n<=h))
 
@@ -397,6 +397,8 @@ void gInit() {
     memBase = 0; // 0x08048000; // Linux 23-bit code start (134512640)
     addrSz = 2;
 }
+
+void gMov1(int arg1) { g(0x89); g(arg1); }
 void gFetch(int v) { g(IFETCH); gAddr(v); }
 void gStore(int v) { g(ISTORE); gAddr(v); }
 void gLit(int v) { g(ILIT); g4(v); }

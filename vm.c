@@ -178,7 +178,7 @@ int main(int argc, char *argv[]) {
     else {
         here = (int)fread(vm, 1, VM_SZ, fp);
         fclose(fp);
-        fp = fopen("vm-stk.lst", "wt");
+        fp = fopen("vm.lst", "wt");
         dis(fp);
         fclose(fp);
         runVM(0);
