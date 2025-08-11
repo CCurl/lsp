@@ -1,7 +1,7 @@
 /Debug
 /Release
 /x64
-/tc.vcxproj.user
+/*.vcxproj.user
 /.vs
 /lsp
 tc
@@ -13,3 +13,4 @@ xx
 a.out
 xxc
 vm
+vm-lin
