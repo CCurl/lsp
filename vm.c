@@ -10,9 +10,9 @@ typedef unsigned char byte;
 
 // VM opcodes
 enum {
-    NOP, IFETCH, ISTORE, ILIT, IDROP
+    NOP, IADD, ISTORE, ILIT, IDROP
     , ILT, IGT, IEQ, INEQ, ILAND, ILOR, ILNOT
-    , IADD, ISUB, IMUL, IDIV
+    , ISUB, IMUL, IDIV
     , IAND, IOR, IXOR
     , JZ, JNZ, JMP
     , ICALL=0xe8, IRET=0xc3
@@ -97,7 +97,7 @@ void runVM(int st) {
         ACASE ILAND: if (EBX && EAX) { EBX = 1; } else { EBX = 0; } sPop();
         ACASE ILOR:  if (EBX || EAX) { EBX = 1; } else { EBX = 0; } sPop();
         ACASE ILNOT: if (EAX == 0) { EAX = 1; } else { EAX = 0; }
-        ACASE IADD:  EBX = (EBX + EAX); sPop();
+        ACASE IADD:  ir = vm[EIP++]; if (ir==0xD8) { EAX += EBX; }
         ACASE ISUB:  EBX = (EBX - EAX); sPop();
         ACASE IMUL:  EBX = (EBX * EAX); sPop();
         ACASE IDIV:  EBX = (EBX / EAX); sPop();
@@ -130,18 +130,18 @@ static void pN1(int n) { pNX((n & 0xff)); }
 static void pN2(int n) { pN1(n); pN1(n >> 8); }
 static void pN4(int n) { pN2(n); pN2(n >> 16); }
 
-static void pRR(int a) {
-    int t = a & 3;
-    if (t == 0) { fprintf(outFp, "EAX, "); }
-    else if (t == 1) { fprintf(outFp, "ECX, "); }
-    else if (t == 2) { fprintf(outFp, "EDX, "); }
-    else if (t == 3) { fprintf(outFp, "EBX, "); }
+static void pR(int r) {
+    r = r&3;
+    if (r == 0) { fprintf(outFp, "EAX"); }
+    else if (r == 1) { fprintf(outFp, "ECX"); }
+    else if (r == 2) { fprintf(outFp, "EDX"); }
+    else if (r == 3) { fprintf(outFp, "EBX"); }
+}
 
-    t = (a>>3) & 3;
-    if (t == 0) { fprintf(outFp, "EAX "); }
-    else if (t == 1) { fprintf(outFp, "ECX"); }
-    else if (t == 2) { fprintf(outFp, "EDX"); }
-    else if (t == 3) { fprintf(outFp, "EBX"); }
+static void pRR(int a) {
+    pR(a & 3);
+    fprintf(outFp, ", "),
+    pR((a>>3) & 3);
 }
 
 void dis(FILE *toFp) {
@@ -155,7 +155,7 @@ void dis(FILE *toFp) {
         fprintf(outFp, "\n%04lX: %02X ", EIP, vm[EIP]);
         switch (vm[EIP++]) {
             case  NOP:    pB(12); pS("nop");
-            BCASE IFETCH: pN2(f2(EIP)); pB(6); pS("fetch"); t = f2(EIP); pNX(t); EIP += 2;
+            //BCASE IFETCH: pN2(f2(EIP)); pB(6); pS("fetch"); t = f2(EIP); pNX(t); EIP += 2;
             BCASE ISTORE: pN2(f2(EIP)); pB(6); pS("store"); t = f2(EIP); pNX(t); EIP += 2;
             BCASE ILIT:   pN4(f4(EIP)); pS("lit4");  pNX(f4(EIP)); EIP += 4;
             BCASE IDROP:  pB(12); pS("drop");
@@ -166,7 +166,7 @@ void dis(FILE *toFp) {
             BCASE ILAND:  pB(12); pS("land");
             BCASE ILOR:   pB(12); pS("lor");
             BCASE ILNOT:  pB(12); pS("lnot");
-            BCASE IADD:   pB(12); pS("add");
+            BCASE IADD:   t=f1(EIP); pN1(t); pB(9); pS("add "); pR(t); EIP += 1;
             BCASE ISUB:   pB(12); pS("sub");
             BCASE IMUL:   pB(12); pS("mul");
             BCASE IDIV:   pB(12); pS("div");

@@ -1,309 +1,314 @@
 
-VM: 10000 bytes, 784 used, 0x0000:0x030F.
+VM: 10000 bytes, 796 used, 0x0000:0x031B.
 -------------------------------------------
-0000: 15 F6 02       ; jmp 2F6 
+0000: 14 02 03       ; jmp 302 
 0003: 89 D9          ; mov  ECX, EBX
-0005: 89 C3          ; mov  EBX, EAX 
+0005: 89 C3          ; mov  EBX, EAX
 0007: B8 6F 00 00 00 ; mov eax, 6F 
 000C: A3 01 00 00 00 ; store to 01 
 0011: 89 D9          ; mov  ECX, EBX
-0013: 89 C3          ; mov  EBX, EAX 
+0013: 89 C3          ; mov  EBX, EAX
 0015: B8 01 00 00 00 ; mov eax, 01 
 001A: A3 02 00 00 00 ; store to 02 
 001F: 89 D9          ; mov  ECX, EBX
-0021: 89 C3          ; mov  EBX, EAX 
+0021: 89 C3          ; mov  EBX, EAX
 0023: B8 02 00 00 00 ; mov eax, 02 
 0028: 89 D9          ; mov  ECX, EBX
-002A: 89 C3          ; mov  EBX, EAX 
+002A: 89 C3          ; mov  EBX, EAX
 002C: B8 03 00 00 00 ; mov eax, 03 
 0031: 06             ; gt 
 0032: 89 D9          ; mov  ECX, EBX
-0034: 89 C3          ; mov  EBX, EAX 
+0034: 89 C3          ; mov  EBX, EAX
 0036: B8 03 00 00 00 ; mov eax, 03 
 003B: 89 D9          ; mov  ECX, EBX
-003D: 89 C3          ; mov  EBX, EAX 
+003D: 89 C3          ; mov  EBX, EAX
 003F: B8 04 00 00 00 ; mov eax, 04 
 0044: 08             ; neq 
 0045: 09             ; land 
 0046: 89 D9          ; mov  ECX, EBX
-0048: 89 C3          ; mov  EBX, EAX 
+0048: 89 C3          ; mov  EBX, EAX
 004A: B8 00 00 00 00 ; mov eax, 00 
 004F: 07             ; eq 
-0050: 13 61 00       ; jz 61 
+0050: 12 61 00       ; jz 61 
 0053: 89 D9          ; mov  ECX, EBX
-0055: 89 C3          ; mov  EBX, EAX 
+0055: 89 C3          ; mov  EBX, EAX
 0057: B8 02 00 00 00 ; mov eax, 02 
 005C: A3 02 00 00 00 ; store to 02 
 0061: 89 D9          ; mov  ECX, EBX
-0063: 89 C3          ; mov  EBX, EAX 
+0063: 89 C3          ; mov  EBX, EAX
 0065: B8 01 00 00 00 ; mov eax, 01 
 006A: A3 03 00 00 00 ; store to 03 
 006F: 89 D9          ; mov  ECX, EBX
-0071: 89 C3          ; mov  EBX, EAX 
+0071: 89 C3          ; mov  EBX, EAX
 0073: B8 02 00 00 00 ; mov eax, 02 
 0078: 89 D9          ; mov  ECX, EBX
-007A: 89 C3          ; mov  EBX, EAX 
+007A: 89 C3          ; mov  EBX, EAX
 007C: B8 03 00 00 00 ; mov eax, 03 
 0081: 06             ; gt 
 0082: 89 D9          ; mov  ECX, EBX
-0084: 89 C3          ; mov  EBX, EAX 
+0084: 89 C3          ; mov  EBX, EAX
 0086: B8 03 00 00 00 ; mov eax, 03 
 008B: 89 D9          ; mov  ECX, EBX
-008D: 89 C3          ; mov  EBX, EAX 
+008D: 89 C3          ; mov  EBX, EAX
 008F: B8 04 00 00 00 ; mov eax, 04 
 0094: 08             ; neq 
 0095: 0A             ; lor 
 0096: 89 D9          ; mov  ECX, EBX
-0098: 89 C3          ; mov  EBX, EAX 
+0098: 89 C3          ; mov  EBX, EAX
 009A: B8 00 00 00 00 ; mov eax, 00 
 009F: 08             ; neq 
-00A0: 13 B1 00       ; jz B1 
+00A0: 12 B1 00       ; jz B1 
 00A3: 89 D9          ; mov  ECX, EBX
-00A5: 89 C3          ; mov  EBX, EAX 
+00A5: 89 C3          ; mov  EBX, EAX
 00A7: B8 02 00 00 00 ; mov eax, 02 
 00AC: A3 03 00 00 00 ; store to 03 
 00B1: C3             ; ret 
 00B2: 89 D9          ; mov  ECX, EBX
-00B4: 89 C3          ; mov  EBX, EAX 
+00B4: 89 C3          ; mov  EBX, EAX
 00B6: B8 DE 00 00 00 ; mov eax, DE 
 00BB: A3 05 00 00 00 ; store to 05 
 00C0: 89 D9          ; mov  ECX, EBX
-00C2: 89 C3          ; mov  EBX, EAX 
+00C2: 89 C3          ; mov  EBX, EAX
 00C4: B8 01 00 00 00 ; mov eax, 01 
 00C9: A3 06 00 00 00 ; store to 06 
 00CE: 89 D9          ; mov  ECX, EBX
-00D0: 89 C3          ; mov  EBX, EAX 
+00D0: 89 C3          ; mov  EBX, EAX
 00D2: B8 00 00 00 00 ; mov eax, 00 
 00D7: A3 07 00 00 00 ; store to 07 
 00DC: A1 06 00 00 00 ; fetch from 06 
 00E1: 89 D9          ; mov  ECX, EBX
-00E3: 89 C3          ; mov  EBX, EAX 
+00E3: 89 C3          ; mov  EBX, EAX
 00E5: B8 01 04 00 00 ; mov eax, 401 
 00EA: 05             ; lt 
-00EB: 13 19 01       ; jz 119 
+00EB: 12 1C 01       ; jz 11C 
 00EE: A1 07 00 00 00 ; fetch from 07 
 00F3: 89 D9          ; mov  ECX, EBX
-00F5: 89 C3          ; mov  EBX, EAX 
+00F5: 89 C3          ; mov  EBX, EAX
 00F7: B8 01 00 00 00 ; mov eax, 01 
-00FC: 0C             ; add 
-00FD: A3 07 00 00 00 ; store to 07 
-0102: A1 06 00 00 00 ; fetch from 06 
-0107: 89 D9          ; mov  ECX, EBX
-0109: 89 C3          ; mov  EBX, EAX 
-010B: B8 02 00 00 00 ; mov eax, 02 
-0110: 0E             ; mul 
-0111: A3 06 00 00 00 ; store to 06 
-0116: 15 DC 00       ; jmp DC 
-0119: 89 D9          ; mov  ECX, EBX
-011B: 89 C3          ; mov  EBX, EAX 
-011D: B8 01 00 00 00 ; mov eax, 01 
-0122: A3 08 00 00 00 ; store to 08 
-0127: A1 06 00 00 00 ; fetch from 06 
-012C: 89 D9          ; mov  ECX, EBX
-012E: 89 C3          ; mov  EBX, EAX 
-0130: B8 FF 07 00 00 ; mov eax, 7FF 
-0135: A1 08 00 00 00 ; fetch from 08 
-013A: 0C             ; add 
-013B: 07             ; eq 
-013C: 13 4D 01       ; jz 14D 
-013F: 89 D9          ; mov  ECX, EBX
-0141: 89 C3          ; mov  EBX, EAX 
-0143: B8 02 00 00 00 ; mov eax, 02 
-0148: A3 08 00 00 00 ; store to 08 
-014D: 89 D9          ; mov  ECX, EBX
-014F: 89 C3          ; mov  EBX, EAX 
-0151: B8 01 00 00 00 ; mov eax, 01 
-0156: A3 09 00 00 00 ; store to 09 
-015B: A1 07 00 00 00 ; fetch from 07 
-0160: 89 D9          ; mov  ECX, EBX
-0162: 89 C3          ; mov  EBX, EAX 
-0164: B8 0B 00 00 00 ; mov eax, 0B 
-0169: 07             ; eq 
-016A: 13 7B 01       ; jz 17B 
-016D: 89 D9          ; mov  ECX, EBX
-016F: 89 C3          ; mov  EBX, EAX 
-0171: B8 02 00 00 00 ; mov eax, 02 
-0176: A3 09 00 00 00 ; store to 09 
-017B: C3             ; ret 
-017C: 89 D9          ; mov  ECX, EBX
-017E: 89 C3          ; mov  EBX, EAX 
-0180: B8 4D 01 00 00 ; mov eax, 14D 
-0185: A3 0B 00 00 00 ; store to 0B 
-018A: 89 D9          ; mov  ECX, EBX
-018C: 89 C3          ; mov  EBX, EAX 
-018E: B8 01 00 00 00 ; mov eax, 01 
-0193: A3 0C 00 00 00 ; store to 0C 
-0198: 89 D9          ; mov  ECX, EBX
-019A: 89 C3          ; mov  EBX, EAX 
-019C: B8 08 00 00 00 ; mov eax, 08 
-01A1: 89 D9          ; mov  ECX, EBX
-01A3: 89 C3          ; mov  EBX, EAX 
-01A5: B8 01 00 00 00 ; mov eax, 01 
-01AA: 0C             ; add 
-01AB: 89 D9          ; mov  ECX, EBX
-01AD: 89 C3          ; mov  EBX, EAX 
-01AF: B8 0C 00 00 00 ; mov eax, 0C 
+00FC: 01 D8          ; add  EAX
+00FE: 89 CB          ; mov  EBX, ECX
+0100: A3 07 00 00 00 ; store to 07 
+0105: A1 06 00 00 00 ; fetch from 06 
+010A: 89 D9          ; mov  ECX, EBX
+010C: 89 C3          ; mov  EBX, EAX
+010E: B8 02 00 00 00 ; mov eax, 02 
+0113: 0D             ; mul 
+0114: A3 06 00 00 00 ; store to 06 
+0119: 14 DC 00       ; jmp DC 
+011C: 89 D9          ; mov  ECX, EBX
+011E: 89 C3          ; mov  EBX, EAX
+0120: B8 01 00 00 00 ; mov eax, 01 
+0125: A3 08 00 00 00 ; store to 08 
+012A: A1 06 00 00 00 ; fetch from 06 
+012F: 89 D9          ; mov  ECX, EBX
+0131: 89 C3          ; mov  EBX, EAX
+0133: B8 FF 07 00 00 ; mov eax, 7FF 
+0138: A1 08 00 00 00 ; fetch from 08 
+013D: 01 D8          ; add  EAX
+013F: 89 CB          ; mov  EBX, ECX
+0141: 07             ; eq 
+0142: 12 53 01       ; jz 153 
+0145: 89 D9          ; mov  ECX, EBX
+0147: 89 C3          ; mov  EBX, EAX
+0149: B8 02 00 00 00 ; mov eax, 02 
+014E: A3 08 00 00 00 ; store to 08 
+0153: 89 D9          ; mov  ECX, EBX
+0155: 89 C3          ; mov  EBX, EAX
+0157: B8 01 00 00 00 ; mov eax, 01 
+015C: A3 09 00 00 00 ; store to 09 
+0161: A1 07 00 00 00 ; fetch from 07 
+0166: 89 D9          ; mov  ECX, EBX
+0168: 89 C3          ; mov  EBX, EAX
+016A: B8 0B 00 00 00 ; mov eax, 0B 
+016F: 07             ; eq 
+0170: 12 81 01       ; jz 181 
+0173: 89 D9          ; mov  ECX, EBX
+0175: 89 C3          ; mov  EBX, EAX
+0177: B8 02 00 00 00 ; mov eax, 02 
+017C: A3 09 00 00 00 ; store to 09 
+0181: C3             ; ret 
+0182: 89 D9          ; mov  ECX, EBX
+0184: 89 C3          ; mov  EBX, EAX
+0186: B8 4D 01 00 00 ; mov eax, 14D 
+018B: A3 0B 00 00 00 ; store to 0B 
+0190: 89 D9          ; mov  ECX, EBX
+0192: 89 C3          ; mov  EBX, EAX
+0194: B8 01 00 00 00 ; mov eax, 01 
+0199: A3 0C 00 00 00 ; store to 0C 
+019E: 89 D9          ; mov  ECX, EBX
+01A0: 89 C3          ; mov  EBX, EAX
+01A2: B8 08 00 00 00 ; mov eax, 08 
+01A7: 89 D9          ; mov  ECX, EBX
+01A9: 89 C3          ; mov  EBX, EAX
+01AB: B8 01 00 00 00 ; mov eax, 01 
+01B0: 01 D8          ; add  EAX
+01B2: 89 CB          ; mov  EBX, ECX
 01B4: 89 D9          ; mov  ECX, EBX
-01B6: 89 C3          ; mov  EBX, EAX 
-01B8: B8 01 00 00 00 ; mov eax, 01 
-01BD: 0D             ; sub 
-01BE: 0E             ; mul 
-01BF: 89 D9          ; mov  ECX, EBX
-01C1: 89 C3          ; mov  EBX, EAX 
-01C3: B8 64 00 00 00 ; mov eax, 64 
+01B6: 89 C3          ; mov  EBX, EAX
+01B8: B8 0C 00 00 00 ; mov eax, 0C 
+01BD: 89 D9          ; mov  ECX, EBX
+01BF: 89 C3          ; mov  EBX, EAX
+01C1: B8 01 00 00 00 ; mov eax, 01 
+01C6: 0C             ; sub 
+01C7: 0D             ; mul 
 01C8: 89 D9          ; mov  ECX, EBX
-01CA: 89 C3          ; mov  EBX, EAX 
-01CC: B8 01 00 00 00 ; mov eax, 01 
-01D1: 0D             ; sub 
-01D2: 07             ; eq 
-01D3: 13 E4 01       ; jz 1E4 
-01D6: 89 D9          ; mov  ECX, EBX
-01D8: 89 C3          ; mov  EBX, EAX 
-01DA: B8 02 00 00 00 ; mov eax, 02 
-01DF: A3 0C 00 00 00 ; store to 0C 
-01E4: C3             ; ret 
-01E5: 89 D9          ; mov  ECX, EBX
-01E7: 89 C3          ; mov  EBX, EAX 
-01E9: B8 BC 01 00 00 ; mov eax, 1BC 
-01EE: A3 0E 00 00 00 ; store to 0E 
-01F3: 89 D9          ; mov  ECX, EBX
-01F5: 89 C3          ; mov  EBX, EAX 
-01F7: B8 00 00 00 00 ; mov eax, 00 
-01FC: A3 0F 00 00 00 ; store to 0F 
-0201: A1 10 00 00 00 ; fetch from 10 
-0206: 89 D9          ; mov  ECX, EBX
-0208: 89 C3          ; mov  EBX, EAX 
-020A: B8 40 4B 4C 00 ; mov eax, 4C4B40 
-020F: 05             ; lt 
-0210: 13 2A 02       ; jz 22A 
-0213: A1 10 00 00 00 ; fetch from 10 
-0218: 89 D9          ; mov  ECX, EBX
-021A: 89 C3          ; mov  EBX, EAX 
-021C: B8 01 00 00 00 ; mov eax, 01 
-0221: 0C             ; add 
-0222: A3 10 00 00 00 ; store to 10 
-0227: 15 01 02       ; jmp 201 
-022A: A1 10 00 00 00 ; fetch from 10 
-022F: 89 D9          ; mov  ECX, EBX
-0231: 89 C3          ; mov  EBX, EAX 
-0233: B8 40 4B 4C 00 ; mov eax, 4C4B40 
-0238: 07             ; eq 
-0239: 13 4A 02       ; jz 24A 
-023C: 89 D9          ; mov  ECX, EBX
-023E: 89 C3          ; mov  EBX, EAX 
-0240: B8 02 00 00 00 ; mov eax, 02 
-0245: A3 10 00 00 00 ; store to 10 
-024A: C3             ; ret 
-024B: 89 D9          ; mov  ECX, EBX
-024D: 89 C3          ; mov  EBX, EAX 
-024F: B8 2B 02 00 00 ; mov eax, 22B 
-0254: A3 12 00 00 00 ; store to 12 
-0259: 89 D9          ; mov  ECX, EBX
-025B: 89 C3          ; mov  EBX, EAX 
-025D: B8 00 00 00 00 ; mov eax, 00 
-0262: A3 13 00 00 00 ; store to 13 
-0267: 89 D9          ; mov  ECX, EBX
-0269: 89 C3          ; mov  EBX, EAX 
-026B: B8 01 00 00 00 ; mov eax, 01 
-0270: 89 D9          ; mov  ECX, EBX
-0272: 89 C3          ; mov  EBX, EAX 
-0274: B8 02 00 00 00 ; mov eax, 02 
-0279: 10             ; and 
-027A: 89 D9          ; mov  ECX, EBX
-027C: 89 C3          ; mov  EBX, EAX 
-027E: B8 00 00 00 00 ; mov eax, 00 
-0283: 07             ; eq 
-0284: 13 95 02       ; jz 295 
-0287: 89 D9          ; mov  ECX, EBX
-0289: 89 C3          ; mov  EBX, EAX 
-028B: B8 02 00 00 00 ; mov eax, 02 
-0290: A3 13 00 00 00 ; store to 13 
-0295: 89 D9          ; mov  ECX, EBX
-0297: 89 C3          ; mov  EBX, EAX 
-0299: B8 00 00 00 00 ; mov eax, 00 
-029E: A3 14 00 00 00 ; store to 14 
-02A3: 89 D9          ; mov  ECX, EBX
-02A5: 89 C3          ; mov  EBX, EAX 
-02A7: B8 01 00 00 00 ; mov eax, 01 
-02AC: 89 D9          ; mov  ECX, EBX
-02AE: 89 C3          ; mov  EBX, EAX 
-02B0: B8 02 00 00 00 ; mov eax, 02 
-02B5: 11             ; or 
-02B6: 89 D9          ; mov  ECX, EBX
-02B8: 89 C3          ; mov  EBX, EAX 
-02BA: B8 03 00 00 00 ; mov eax, 03 
-02BF: 07             ; eq 
-02C0: 13 D1 02       ; jz 2D1 
-02C3: 89 D9          ; mov  ECX, EBX
-02C5: 89 C3          ; mov  EBX, EAX 
-02C7: B8 02 00 00 00 ; mov eax, 02 
-02CC: A3 14 00 00 00 ; store to 14 
-02D1: 89 D9          ; mov  ECX, EBX
-02D3: 89 C3          ; mov  EBX, EAX 
-02D5: B8 01 00 00 00 ; mov eax, 01 
-02DA: A3 15 00 00 00 ; store to 15 
-02DF: A1 15 00 00 00 ; fetch from 15 
-02E4: 13 F5 02       ; jz 2F5 
-02E7: 89 D9          ; mov  ECX, EBX
-02E9: 89 C3          ; mov  EBX, EAX 
-02EB: B8 02 00 00 00 ; mov eax, 02 
-02F0: A3 15 00 00 00 ; store to 15 
-02F5: C3             ; ret 
-02F6: E8 03 00 00 00 ; call 03 
-02FB: E8 B2 00 00 00 ; call B2 
-0300: E8 7C 01 00 00 ; call 17C 
-0305: E8 E5 01 00 00 ; call 1E5 
-030A: E8 4B 02 00 00 ; call 24B 
-030F: C3             ; ret 
+01CA: 89 C3          ; mov  EBX, EAX
+01CC: B8 64 00 00 00 ; mov eax, 64 
+01D1: 89 D9          ; mov  ECX, EBX
+01D3: 89 C3          ; mov  EBX, EAX
+01D5: B8 01 00 00 00 ; mov eax, 01 
+01DA: 0C             ; sub 
+01DB: 07             ; eq 
+01DC: 12 ED 01       ; jz 1ED 
+01DF: 89 D9          ; mov  ECX, EBX
+01E1: 89 C3          ; mov  EBX, EAX
+01E3: B8 02 00 00 00 ; mov eax, 02 
+01E8: A3 0C 00 00 00 ; store to 0C 
+01ED: C3             ; ret 
+01EE: 89 D9          ; mov  ECX, EBX
+01F0: 89 C3          ; mov  EBX, EAX
+01F2: B8 BC 01 00 00 ; mov eax, 1BC 
+01F7: A3 0E 00 00 00 ; store to 0E 
+01FC: 89 D9          ; mov  ECX, EBX
+01FE: 89 C3          ; mov  EBX, EAX
+0200: B8 00 00 00 00 ; mov eax, 00 
+0205: A3 0F 00 00 00 ; store to 0F 
+020A: A1 10 00 00 00 ; fetch from 10 
+020F: 89 D9          ; mov  ECX, EBX
+0211: 89 C3          ; mov  EBX, EAX
+0213: B8 40 4B 4C 00 ; mov eax, 4C4B40 
+0218: 05             ; lt 
+0219: 12 36 02       ; jz 236 
+021C: A1 10 00 00 00 ; fetch from 10 
+0221: 89 D9          ; mov  ECX, EBX
+0223: 89 C3          ; mov  EBX, EAX
+0225: B8 01 00 00 00 ; mov eax, 01 
+022A: 01 D8          ; add  EAX
+022C: 89 CB          ; mov  EBX, ECX
+022E: A3 10 00 00 00 ; store to 10 
+0233: 14 0A 02       ; jmp 20A 
+0236: A1 10 00 00 00 ; fetch from 10 
+023B: 89 D9          ; mov  ECX, EBX
+023D: 89 C3          ; mov  EBX, EAX
+023F: B8 40 4B 4C 00 ; mov eax, 4C4B40 
+0244: 07             ; eq 
+0245: 12 56 02       ; jz 256 
+0248: 89 D9          ; mov  ECX, EBX
+024A: 89 C3          ; mov  EBX, EAX
+024C: B8 02 00 00 00 ; mov eax, 02 
+0251: A3 10 00 00 00 ; store to 10 
+0256: C3             ; ret 
+0257: 89 D9          ; mov  ECX, EBX
+0259: 89 C3          ; mov  EBX, EAX
+025B: B8 2B 02 00 00 ; mov eax, 22B 
+0260: A3 12 00 00 00 ; store to 12 
+0265: 89 D9          ; mov  ECX, EBX
+0267: 89 C3          ; mov  EBX, EAX
+0269: B8 00 00 00 00 ; mov eax, 00 
+026E: A3 13 00 00 00 ; store to 13 
+0273: 89 D9          ; mov  ECX, EBX
+0275: 89 C3          ; mov  EBX, EAX
+0277: B8 01 00 00 00 ; mov eax, 01 
+027C: 89 D9          ; mov  ECX, EBX
+027E: 89 C3          ; mov  EBX, EAX
+0280: B8 02 00 00 00 ; mov eax, 02 
+0285: 0F             ; and 
+0286: 89 D9          ; mov  ECX, EBX
+0288: 89 C3          ; mov  EBX, EAX
+028A: B8 00 00 00 00 ; mov eax, 00 
+028F: 07             ; eq 
+0290: 12 A1 02       ; jz 2A1 
+0293: 89 D9          ; mov  ECX, EBX
+0295: 89 C3          ; mov  EBX, EAX
+0297: B8 02 00 00 00 ; mov eax, 02 
+029C: A3 13 00 00 00 ; store to 13 
+02A1: 89 D9          ; mov  ECX, EBX
+02A3: 89 C3          ; mov  EBX, EAX
+02A5: B8 00 00 00 00 ; mov eax, 00 
+02AA: A3 14 00 00 00 ; store to 14 
+02AF: 89 D9          ; mov  ECX, EBX
+02B1: 89 C3          ; mov  EBX, EAX
+02B3: B8 01 00 00 00 ; mov eax, 01 
+02B8: 89 D9          ; mov  ECX, EBX
+02BA: 89 C3          ; mov  EBX, EAX
+02BC: B8 02 00 00 00 ; mov eax, 02 
+02C1: 10             ; or 
+02C2: 89 D9          ; mov  ECX, EBX
+02C4: 89 C3          ; mov  EBX, EAX
+02C6: B8 03 00 00 00 ; mov eax, 03 
+02CB: 07             ; eq 
+02CC: 12 DD 02       ; jz 2DD 
+02CF: 89 D9          ; mov  ECX, EBX
+02D1: 89 C3          ; mov  EBX, EAX
+02D3: B8 02 00 00 00 ; mov eax, 02 
+02D8: A3 14 00 00 00 ; store to 14 
+02DD: 89 D9          ; mov  ECX, EBX
+02DF: 89 C3          ; mov  EBX, EAX
+02E1: B8 01 00 00 00 ; mov eax, 01 
+02E6: A3 15 00 00 00 ; store to 15 
+02EB: A1 15 00 00 00 ; fetch from 15 
+02F0: 12 01 03       ; jz 301 
+02F3: 89 D9          ; mov  ECX, EBX
+02F5: 89 C3          ; mov  EBX, EAX
+02F7: B8 02 00 00 00 ; mov eax, 02 
+02FC: A3 15 00 00 00 ; store to 15 
+0301: C3             ; ret 
+0302: E8 03 00 00 00 ; call 03 
+0307: E8 B2 00 00 00 ; call B2 
+030C: E8 82 01 00 00 ; call 182 
+0311: E8 EE 01 00 00 ; call 1EE 
+0316: E8 57 02 00 00 ; call 257 
+031B: C3             ; ret 
 
-HEX dump - 784 bytes
+HEX dump - 796 bytes
 -------------------------------------------------------
-0000: 15 F6 02 89 D9 89 C3 B8  6F 00 00 00 A3 01 00 00   ; ........o.......
+0000: 14 02 03 89 D9 89 C3 B8  6F 00 00 00 A3 01 00 00   ; ........o.......
 0010: 00 89 D9 89 C3 B8 01 00  00 00 A3 02 00 00 00 89   ; ................
 0020: D9 89 C3 B8 02 00 00 00  89 D9 89 C3 B8 03 00 00   ; ................
 0030: 00 06 89 D9 89 C3 B8 03  00 00 00 89 D9 89 C3 B8   ; ................
 0040: 04 00 00 00 08 09 89 D9  89 C3 B8 00 00 00 00 07   ; ................
-0050: 13 61 00 89 D9 89 C3 B8  02 00 00 00 A3 02 00 00   ; .a..............
+0050: 12 61 00 89 D9 89 C3 B8  02 00 00 00 A3 02 00 00   ; .a..............
 0060: 00 89 D9 89 C3 B8 01 00  00 00 A3 03 00 00 00 89   ; ................
 0070: D9 89 C3 B8 02 00 00 00  89 D9 89 C3 B8 03 00 00   ; ................
 0080: 00 06 89 D9 89 C3 B8 03  00 00 00 89 D9 89 C3 B8   ; ................
 0090: 04 00 00 00 08 0A 89 D9  89 C3 B8 00 00 00 00 08   ; ................
-00A0: 13 B1 00 89 D9 89 C3 B8  02 00 00 00 A3 03 00 00   ; ................
+00A0: 12 B1 00 89 D9 89 C3 B8  02 00 00 00 A3 03 00 00   ; ................
 00B0: 00 C3 89 D9 89 C3 B8 DE  00 00 00 A3 05 00 00 00   ; ................
 00C0: 89 D9 89 C3 B8 01 00 00  00 A3 06 00 00 00 89 D9   ; ................
 00D0: 89 C3 B8 00 00 00 00 A3  07 00 00 00 A1 06 00 00   ; ................
-00E0: 00 89 D9 89 C3 B8 01 04  00 00 05 13 19 01 A1 07   ; ................
-00F0: 00 00 00 89 D9 89 C3 B8  01 00 00 00 0C A3 07 00   ; ................
-0100: 00 00 A1 06 00 00 00 89  D9 89 C3 B8 02 00 00 00   ; ................
-0110: 0E A3 06 00 00 00 15 DC  00 89 D9 89 C3 B8 01 00   ; ................
-0120: 00 00 A3 08 00 00 00 A1  06 00 00 00 89 D9 89 C3   ; ................
-0130: B8 FF 07 00 00 A1 08 00  00 00 0C 07 13 4D 01 89   ; .............M..
-0140: D9 89 C3 B8 02 00 00 00  A3 08 00 00 00 89 D9 89   ; ................
-0150: C3 B8 01 00 00 00 A3 09  00 00 00 A1 07 00 00 00   ; ................
-0160: 89 D9 89 C3 B8 0B 00 00  00 07 13 7B 01 89 D9 89   ; ...........{....
-0170: C3 B8 02 00 00 00 A3 09  00 00 00 C3 89 D9 89 C3   ; ................
-0180: B8 4D 01 00 00 A3 0B 00  00 00 89 D9 89 C3 B8 01   ; .M..............
-0190: 00 00 00 A3 0C 00 00 00  89 D9 89 C3 B8 08 00 00   ; ................
-01A0: 00 89 D9 89 C3 B8 01 00  00 00 0C 89 D9 89 C3 B8   ; ................
-01B0: 0C 00 00 00 89 D9 89 C3  B8 01 00 00 00 0D 0E 89   ; ................
-01C0: D9 89 C3 B8 64 00 00 00  89 D9 89 C3 B8 01 00 00   ; ....d...........
-01D0: 00 0D 07 13 E4 01 89 D9  89 C3 B8 02 00 00 00 A3   ; ................
-01E0: 0C 00 00 00 C3 89 D9 89  C3 B8 BC 01 00 00 A3 0E   ; ................
-01F0: 00 00 00 89 D9 89 C3 B8  00 00 00 00 A3 0F 00 00   ; ................
-0200: 00 A1 10 00 00 00 89 D9  89 C3 B8 40 4B 4C 00 05   ; ...........@KL..
-0210: 13 2A 02 A1 10 00 00 00  89 D9 89 C3 B8 01 00 00   ; .*..............
-0220: 00 0C A3 10 00 00 00 15  01 02 A1 10 00 00 00 89   ; ................
-0230: D9 89 C3 B8 40 4B 4C 00  07 13 4A 02 89 D9 89 C3   ; ....@KL...J.....
-0240: B8 02 00 00 00 A3 10 00  00 00 C3 89 D9 89 C3 B8   ; ................
-0250: 2B 02 00 00 A3 12 00 00  00 89 D9 89 C3 B8 00 00   ; +...............
-0260: 00 00 A3 13 00 00 00 89  D9 89 C3 B8 01 00 00 00   ; ................
-0270: 89 D9 89 C3 B8 02 00 00  00 10 89 D9 89 C3 B8 00   ; ................
-0280: 00 00 00 07 13 95 02 89  D9 89 C3 B8 02 00 00 00   ; ................
-0290: A3 13 00 00 00 89 D9 89  C3 B8 00 00 00 00 A3 14   ; ................
-02A0: 00 00 00 89 D9 89 C3 B8  01 00 00 00 89 D9 89 C3   ; ................
-02B0: B8 02 00 00 00 11 89 D9  89 C3 B8 03 00 00 00 07   ; ................
-02C0: 13 D1 02 89 D9 89 C3 B8  02 00 00 00 A3 14 00 00   ; ................
-02D0: 00 89 D9 89 C3 B8 01 00  00 00 A3 15 00 00 00 A1   ; ................
-02E0: 15 00 00 00 13 F5 02 89  D9 89 C3 B8 02 00 00 00   ; ................
-02F0: A3 15 00 00 00 C3 E8 03  00 00 00 E8 B2 00 00 00   ; ................
-0300: E8 7C 01 00 00 E8 E5 01  00 00 E8 4B 02 00 00 C3   ; .|.........K....
+00E0: 00 89 D9 89 C3 B8 01 04  00 00 05 12 1C 01 A1 07   ; ................
+00F0: 00 00 00 89 D9 89 C3 B8  01 00 00 00 01 D8 89 CB   ; ................
+0100: A3 07 00 00 00 A1 06 00  00 00 89 D9 89 C3 B8 02   ; ................
+0110: 00 00 00 0D A3 06 00 00  00 14 DC 00 89 D9 89 C3   ; ................
+0120: B8 01 00 00 00 A3 08 00  00 00 A1 06 00 00 00 89   ; ................
+0130: D9 89 C3 B8 FF 07 00 00  A1 08 00 00 00 01 D8 89   ; ................
+0140: CB 07 12 53 01 89 D9 89  C3 B8 02 00 00 00 A3 08   ; ...S............
+0150: 00 00 00 89 D9 89 C3 B8  01 00 00 00 A3 09 00 00   ; ................
+0160: 00 A1 07 00 00 00 89 D9  89 C3 B8 0B 00 00 00 07   ; ................
+0170: 12 81 01 89 D9 89 C3 B8  02 00 00 00 A3 09 00 00   ; ................
+0180: 00 C3 89 D9 89 C3 B8 4D  01 00 00 A3 0B 00 00 00   ; .......M........
+0190: 89 D9 89 C3 B8 01 00 00  00 A3 0C 00 00 00 89 D9   ; ................
+01A0: 89 C3 B8 08 00 00 00 89  D9 89 C3 B8 01 00 00 00   ; ................
+01B0: 01 D8 89 CB 89 D9 89 C3  B8 0C 00 00 00 89 D9 89   ; ................
+01C0: C3 B8 01 00 00 00 0C 0D  89 D9 89 C3 B8 64 00 00   ; .............d..
+01D0: 00 89 D9 89 C3 B8 01 00  00 00 0C 07 12 ED 01 89   ; ................
+01E0: D9 89 C3 B8 02 00 00 00  A3 0C 00 00 00 C3 89 D9   ; ................
+01F0: 89 C3 B8 BC 01 00 00 A3  0E 00 00 00 89 D9 89 C3   ; ................
+0200: B8 00 00 00 00 A3 0F 00  00 00 A1 10 00 00 00 89   ; ................
+0210: D9 89 C3 B8 40 4B 4C 00  05 12 36 02 A1 10 00 00   ; ....@KL...6.....
+0220: 00 89 D9 89 C3 B8 01 00  00 00 01 D8 89 CB A3 10   ; ................
+0230: 00 00 00 14 0A 02 A1 10  00 00 00 89 D9 89 C3 B8   ; ................
+0240: 40 4B 4C 00 07 12 56 02  89 D9 89 C3 B8 02 00 00   ; @KL...V.........
+0250: 00 A3 10 00 00 00 C3 89  D9 89 C3 B8 2B 02 00 00   ; ............+...
+0260: A3 12 00 00 00 89 D9 89  C3 B8 00 00 00 00 A3 13   ; ................
+0270: 00 00 00 89 D9 89 C3 B8  01 00 00 00 89 D9 89 C3   ; ................
+0280: B8 02 00 00 00 0F 89 D9  89 C3 B8 00 00 00 00 07   ; ................
+0290: 12 A1 02 89 D9 89 C3 B8  02 00 00 00 A3 13 00 00   ; ................
+02A0: 00 89 D9 89 C3 B8 00 00  00 00 A3 14 00 00 00 89   ; ................
+02B0: D9 89 C3 B8 01 00 00 00  89 D9 89 C3 B8 02 00 00   ; ................
+02C0: 00 10 89 D9 89 C3 B8 03  00 00 00 07 12 DD 02 89   ; ................
+02D0: D9 89 C3 B8 02 00 00 00  A3 14 00 00 00 89 D9 89   ; ................
+02E0: C3 B8 01 00 00 00 A3 15  00 00 00 A1 15 00 00 00   ; ................
+02F0: 12 01 03 89 D9 89 C3 B8  02 00 00 00 A3 15 00 00   ; ................
+0300: 00 C3 E8 03 00 00 00 E8  B2 00 00 00 E8 82 01 00   ; ................
+0310: 00 E8 EE 01 00 00 E8 57  02 00 00 C3 00 00 00 00   ; .......W........

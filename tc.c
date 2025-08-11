@@ -40,9 +40,9 @@ enum {
 
 // VM opcodes
 enum {
-    NOP, IFETCH, ISTORE, ILIT, IDROP
+    NOP, IADD, ISTORE, ILIT, IDROP
     , ILT, IGT, IEQ, INEQ, ILAND, ILOR, ILNOT
-    , IADD, ISUB, IMUL, IDIV
+    , ISUB, IMUL, IDIV
     , IAND, IOR, IXOR
     , JZ, JNZ, JMP
     , ICALL=0xe8, IRET=0xc3
@@ -417,14 +417,13 @@ void gMovIMM(int val) { gPush(); g(0xb8); g4(val); }
 void gMovStore(int loc) { g(0xa3); g4(loc); }
 void gMovFetch(int loc) { g(0xa1); g4(loc); }
 
-void gFetchO(int v) { g(IFETCH); gAddr(v); }
 void gFetch(int v) { gMovFetch(v); }
 void gStoreO(int v) { g(ISTORE); gAddr(v); }
 void gStore(int v) { gMovStore(v); }
 void gLit(int v) { gMovIMM(v); }
 void gCall(int v) { g(ICALL); g4(v); }
 void gReturn() { g(IRET); }
-void gAdd() { g(IADD); }
+void gAdd() { g(IADD); g(0xd8); g2(0xcb89); }
 void gMul() { g(IMUL); }
 void gSub() { g(ISUB); }
 void gDiv() { g(IDIV); }
