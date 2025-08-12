@@ -147,6 +147,7 @@
     <None Include="test.bat" />
     <None Include="test.tc" />
     <None Include="README.md" />
+    <None Include="vm.lst" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="vm.c" />

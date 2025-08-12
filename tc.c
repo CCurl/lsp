@@ -47,6 +47,7 @@ enum {
     , ISUB=0x29, MULDIV=0xf7
     , ICALL=0xe8, IRET=0xc3
     , MovRR=0x89, MovIMM=0xb8, MovFet=0xa1, MovSto=0xa3
+    , SWAPAB = 0x93
 };
 
 byte vm[CODE_SZ];
@@ -426,7 +427,7 @@ void gReturn() { g(IRET); }
 void gAdd() { g(IADD); g(0xd8); gCtoB(); }
 void gSub() { g(ISUB); g(0xc3); gPop(); }
 void gMul() { g(MULDIV); g(0xeb); gCtoB(); }
-void gDiv() { g(MULDIV); g(0xfb); gCtoB(); } // TODO: NEED CXHG EAX,EBX HERE
+void gDiv() { g(SWAPAB); g(MULDIV); g(0xfb); gCtoB(); }
 void gLT() { g(ILT); }
 void gGT() { g(IGT); }
 void gEQ() { g(IEQ); }

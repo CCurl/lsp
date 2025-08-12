@@ -17,6 +17,7 @@ enum {
     , ISUB=0x29, MULDIV=0xf7
     , ICALL=0xe8, IRET=0xc3
     , MovRR=0x89, MovIMM=0xb8, MovFet=0xa1, MovSto=0xa3
+    , SWAPAB=0x93
 };
 
 #define VM_SZ 10000
@@ -26,7 +27,7 @@ int here;
 static long stk[128];
 static long vals[1000];
 static long EAX, EBX, ECX, EDX, ESP, EBP, ESI, EDI;
-static long EIP;
+static long EIP, t;
 
 #define rAX 0
 #define rCX 1
@@ -89,30 +90,31 @@ void runVM(int st) {
     ir = vm[EIP++];
     switch (ir) {
         case  NOP:
-        ACASE ILT:   if (EBX <  EAX) { EBX = 1; } else { EBX = 0; } sPop();
-        ACASE IGT:   if (EBX >  EAX) { EBX = 1; } else { EBX = 0; } sPop();
-        ACASE IEQ:   if (EBX == EAX) { EBX = 1; } else { EBX = 0; } sPop();
-        ACASE INEQ:  if (EBX != EAX) { EBX = 1; } else { EBX = 0; } sPop();
-        ACASE ILAND: if (EBX && EAX) { EBX = 1; } else { EBX = 0; } sPop();
-        ACASE ILOR:  if (EBX || EAX) { EBX = 1; } else { EBX = 0; } sPop();
-        ACASE ILNOT: if (EAX == 0) { EAX = 1; } else { EAX = 0; }
-        ACASE IADD:  if (ip1()==0xd8) { EAX += EBX; }
-        ACASE ISUB:  if (ip1()==0xc3) { EBX -= EAX; }
+        ACASE ILT:    if (EBX <  EAX) { EBX = 1; } else { EBX = 0; } sPop();
+        ACASE IGT:    if (EBX >  EAX) { EBX = 1; } else { EBX = 0; } sPop();
+        ACASE IEQ:    if (EBX == EAX) { EBX = 1; } else { EBX = 0; } sPop();
+        ACASE INEQ:   if (EBX != EAX) { EBX = 1; } else { EBX = 0; } sPop();
+        ACASE ILAND:  if (EBX && EAX) { EBX = 1; } else { EBX = 0; } sPop();
+        ACASE ILOR:   if (EBX || EAX) { EBX = 1; } else { EBX = 0; } sPop();
+        ACASE ILNOT:  if (EAX == 0) { EAX = 1; } else { EAX = 0; }
+        ACASE IADD:   if (ip1()==0xd8) { EAX += EBX; }
+        ACASE ISUB:   if (ip1()==0xc3) { EBX -= EAX; }
         ACASE MULDIV: ir=ip1();
                       if (ir==0xeb) { EAX *= EBX; }
                       if (ir==0xfb) { EAX /= EBX; }
-        ACASE IAND:  if (ip1()==0xd8) { EAX &= EBX; }
-        ACASE IOR:   if (ip1()==0xd8) { EAX |= EBX; }
-        ACASE IXOR:  if (ip1()==0xd8) { EAX ^= EBX; }
-        ACASE JZ:    if (EAX == 0) { EIP = f2(EIP); } else { EIP += 2; } sPop();
-        ACASE JNZ:   if (EAX != 0) { EIP = f2(EIP); } else { EIP += 2; } sPop();
-        ACASE JMP:   EIP = f2(EIP);
-        ACASE ICALL: push(EIP+4); EIP = f4(EIP);
-        ACASE IRET: if (ESP < 1) { return; } EIP = pop();
-        ACASE MovRR: MOV(vm[EIP++]);
+        ACASE IAND:   if (ip1()==0xd8) { EAX &= EBX; }
+        ACASE IOR:    if (ip1()==0xd8) { EAX |= EBX; }
+        ACASE IXOR:   if (ip1()==0xd8) { EAX ^= EBX; }
+        ACASE JZ:     if (EAX == 0) { EIP = f2(EIP); } else { EIP += 2; } sPop();
+        ACASE JNZ:    if (EAX != 0) { EIP = f2(EIP); } else { EIP += 2; } sPop();
+        ACASE JMP:    EIP = f2(EIP);
+        ACASE ICALL:  push(EIP+4); EIP = f4(EIP);
+        ACASE IRET:   if (ESP < 1) { return; } EIP = pop();
+        ACASE MovRR:  MOV(vm[EIP++]);
         ACASE MovIMM: EAX = ip4();
         ACASE MovFet: EAX = vals[ip4()];
         ACASE MovSto: vals[ip4()] = EAX;
+        ACASE SWAPAB: t=EAX; EAX=EBX; EBX=t;
         goto again; default: 
             printf("Invalid IR: %d at 04%lX\n", ir, EIP-1);  return;
     }
@@ -145,7 +147,6 @@ static void pRR(int a) {
 
 void dis(FILE *toFp) {
     EIP = 0;
-    long t;
     outFp = toFp ? toFp : stdout;
 
     fprintf(outFp, "\nVM: %d bytes, %d used, 0x0000:0x%04X.", VM_SZ, here, here-1);
@@ -177,7 +178,8 @@ void dis(FILE *toFp) {
             BCASE MovRR:  t=ip1(); pN1(t); pB(9); pS("MOV"); pRR(t);
             BCASE MovFet: t=ip4(); pN4(t); fprintf(outFp, "; MOV EAX, [0x%08lx]", t);
             BCASE MovSto: t=ip4(); pN4(t); fprintf(outFp, "; MOV [0x%08lx], EAX", t);
-            BCASE MovIMM: t=ip4(); pN4(t); fprintf(outFp, "; MOV EAX, 0x%08lx", t);
+            BCASE MovIMM: t=ip4(); pN4(t); fprintf(outFp, "; MOV EAX, 0x%08lx (%ld)", t, t);
+            BCASE SWAPAB: pB(12); pS("XCHG EAX, EBX");
             break; default: pB(12); pS("<invalid>");
         }
     }
