@@ -10,11 +10,12 @@ typedef unsigned char byte;
 
 // VM opcodes
 enum {
-    NOP, IADD, ISTORE, ILIT, IDROP
+    NOP, IADD=0x01, ISTORE, ILIT, IDROP
     , ILT, IGT, IEQ, INEQ, ILAND, ILOR, ILNOT
-    , ISUB, IMUL, IDIV
+    , IDIV
     , IAND, IOR, IXOR
     , JZ, JNZ, JMP
+    , ISUB=0x29, IMUL=0xf7
     , ICALL=0xe8, IRET=0xc3
     , MovRR=0x89, MovIMM=0xb8, MovFet=0xa1, MovSto=0xa3
 };
@@ -41,15 +42,18 @@ static long EIP;
 #define ACASE    goto again; case
 #define BCASE    break; case
 
-static int  f1(int a) { return *(int8_t*)(&vm[a]); }
-static int  f2(int a) { return *(int16_t*)(&vm[a]); }
-static int  f4(int a) { return *(int32_t*)(&vm[a]); }
+static int f1(int a) { return vm[a]; }
+static int f2(int a) { return *(int16_t*)(&vm[a]); }
+static int f4(int a) { return *(int32_t*)(&vm[a]); }
+static int ip1() { int t=f1(EIP); EIP += 1; return t; }
+static int ip2() { int t=f2(EIP); EIP += 2; return t; }
+static int ip4() { int t=f4(EIP); EIP += 4; return t; }
 
 void initVM() {
     ESP = here = 0;
 }
 
-static void mov(int what) {
+static void MOV(int what) {
     switch (what) {
         case R2R(rDX, rCX): EDX = ECX;  break;
         case R2R(rCX, rBX): ECX = EBX;  break;
@@ -62,16 +66,16 @@ static void mov(int what) {
 
 static void sPush() {
     // EDX = ECX; ECX = EBX; EBX = EAX;
-    // mov(R2R(rDX, rCX));
-    mov(R2R(rCX, rBX));
-    mov(R2R(rBX, rAX));
+    // MOV(R2R(rDX, rCX));
+    MOV(R2R(rCX, rBX));
+    MOV(R2R(rBX, rAX));
 }
 
 static void sPop() {
     // EAX = EBX; EBX = ECX; ECX = EDX;
-    mov(R2R(rAX, rBX));
-    mov(R2R(rBX, rCX));
-    //mov(R2R(rCX, rDX));
+    MOV(R2R(rAX, rBX));
+    MOV(R2R(rBX, rCX));
+    //MOV(R2R(rCX, rDX));
 }
 
 static void push(long x) { stk[++ESP] = x;  }
@@ -88,8 +92,8 @@ void runVM(int st) {
         case  NOP:
         // ACASE IFETCH: sPush(); EAX = vals[f2(EIP)]; EIP += 2;
         // ACASE ISTORE: vals[f2(EIP)] = EAX; sPop(); EIP += 2;
-        ACASE ILIT:  sPush(); EAX = f4(EIP); EIP += 4;
-        ACASE IDROP: sPop();
+        // ACASE ILIT:  sPush(); EAX = ip4();
+        // ACASE IDROP: sPop();
         ACASE ILT:   if (EBX <  EAX) { EBX = 1; } else { EBX = 0; } sPop();
         ACASE IGT:   if (EBX >  EAX) { EBX = 1; } else { EBX = 0; } sPop();
         ACASE IEQ:   if (EBX == EAX) { EBX = 1; } else { EBX = 0; } sPop();
@@ -97,9 +101,9 @@ void runVM(int st) {
         ACASE ILAND: if (EBX && EAX) { EBX = 1; } else { EBX = 0; } sPop();
         ACASE ILOR:  if (EBX || EAX) { EBX = 1; } else { EBX = 0; } sPop();
         ACASE ILNOT: if (EAX == 0) { EAX = 1; } else { EAX = 0; }
-        ACASE IADD:  ir = vm[EIP++]; if (ir==0xD8) { EAX += EBX; }
-        ACASE ISUB:  EBX = (EBX - EAX); sPop();
-        ACASE IMUL:  EBX = (EBX * EAX); sPop();
+        ACASE IADD:  if (ip1()==0xd8) { EAX += EBX; }
+        ACASE ISUB:  if (ip1()==0xc3) { EBX -= EAX; }
+        ACASE IMUL:  if (ip1()==0xeb) { EAX *= EBX; }
         ACASE IDIV:  EBX = (EBX / EAX); sPop();
         ACASE IAND:  EBX = (EBX & EAX); sPop();
         ACASE IOR:   EBX = (EBX | EAX); sPop();
@@ -110,10 +114,10 @@ void runVM(int st) {
         ACASE ICALL: push(EIP+4); EIP = f4(EIP);
         ACASE IRET: if (ESP < 1) { return; } EIP = pop();
         // ACASE HALT: return;
-        ACASE MovRR: mov(vm[EIP++]);
-        ACASE MovIMM: EAX = f4(EIP); EIP += 4;
-        ACASE MovFet: sPush(); EAX = vals[f4(EIP)]; EIP += 4;
-        ACASE MovSto: vals[f4(EIP)] = EAX; sPop(); EIP += 4;
+        ACASE MovRR: MOV(vm[EIP++]);
+        ACASE MovIMM: EAX = ip4();
+        ACASE MovFet: EAX = vals[ip4()];
+        ACASE MovSto: vals[ip4()] = EAX;
         goto again; default: 
             printf("Invalid IR: %d at 04%lX\n", ir, EIP-1);  return;
     }
@@ -156,9 +160,9 @@ void dis(FILE *toFp) {
         switch (vm[EIP++]) {
             case  NOP:    pB(12); pS("nop");
             //BCASE IFETCH: pN2(f2(EIP)); pB(6); pS("fetch"); t = f2(EIP); pNX(t); EIP += 2;
-            BCASE ISTORE: pN2(f2(EIP)); pB(6); pS("store"); t = f2(EIP); pNX(t); EIP += 2;
-            BCASE ILIT:   pN4(f4(EIP)); pS("lit4");  pNX(f4(EIP)); EIP += 4;
-            BCASE IDROP:  pB(12); pS("drop");
+            // BCASE ISTORE: pN2(f2(EIP)); pB(6); pS("store"); t = f2(EIP); pNX(t); EIP += 2;
+            // BCASE ILIT:   pN4(f4(EIP)); pS("lit4");  pNX(f4(EIP)); EIP += 4;
+            // BCASE IDROP:  pB(12); pS("drop");
             BCASE ILT:    pB(12); pS("lt");
             BCASE IGT:    pB(12); pS("gt");
             BCASE IEQ:    pB(12); pS("eq");
@@ -166,23 +170,23 @@ void dis(FILE *toFp) {
             BCASE ILAND:  pB(12); pS("land");
             BCASE ILOR:   pB(12); pS("lor");
             BCASE ILNOT:  pB(12); pS("lnot");
-            BCASE IADD:   t=f1(EIP); pN1(t); pB(9); pS("add "); pR(t); EIP += 1;
-            BCASE ISUB:   pB(12); pS("sub");
-            BCASE IMUL:   pB(12); pS("mul");
+            BCASE IADD:   t=ip1(); pN1(t); pB(9); pS("ADD"); pRR(t);
+            BCASE ISUB:   t=ip1(); pN1(t); pB(9); pS("SUB"); pRR(t);
+            BCASE IMUL:   t=ip1(); pN1(t); pB(9); pS("MUL"); pR(t);
             BCASE IDIV:   pB(12); pS("div");
             BCASE IAND:   pB(12); pS("and");
             BCASE IOR:    pB(12); pS("or");
             BCASE IXOR:   pB(12); pS("xor");
-            BCASE JZ:     pN2(f2(EIP)); pB(6); pS("jz");   pNX(f2(EIP)); EIP += 2;
-            BCASE JNZ:    pN2(f2(EIP)); pB(6); pS("jnz");  pNX(f2(EIP)); EIP += 2;
-            BCASE JMP:    pN2(f2(EIP)); pB(6); pS("jmp");  pNX(f2(EIP)); EIP += 2;
-            BCASE ICALL:  t=f4(EIP); pN4(t);   pS("call"); pNX(t);  EIP += 4;
-            BCASE IRET:   pB(12); pS("ret");
+            BCASE JZ:     t=ip2(); pN2(t); pB(6); fprintf(outFp, "; JMPZ 0x%04lx", t);
+            BCASE JNZ:    t=ip2(); pN2(t); pB(6); fprintf(outFp, "; JMPNZ 0x%04lx", t);
+            BCASE JMP:    t=ip2(); pN2(t); pB(6); fprintf(outFp, "; JMP 0x%04lx", t);
+            BCASE ICALL:  t=ip4(); pN4(t);        pS("call"); pNX(t);
+            BCASE IRET:   pB(12); pS("RET");
             // BCASE HALT:   pB(12); pS("halt");
-            BCASE MovRR:  t=f1(EIP); pN1(t); pB(9); pS("mov "); pRR(t); EIP += 1;
-            BCASE MovFet: t=f4(EIP); pN4(t); pB(0); pS("fetch from"); pNX(t); EIP += 4;
-            BCASE MovSto: t=f4(EIP); pN4(t); pB(0); pS("store to");   pNX(t); EIP += 4;
-            BCASE MovIMM: t=f4(EIP); pN4(t); pB(0); pS("mov eax,");  pNX(t); EIP += 4;
+            BCASE MovRR:  t=ip1(); pN1(t); pB(9); pS("MOV"); pRR(t);
+            BCASE MovFet: t=ip4(); pN4(t); fprintf(outFp, "; MOV EAX, [0x%08lx]", t);
+            BCASE MovSto: t=ip4(); pN4(t); fprintf(outFp, "; MOV [0x%08lx], EAX", t);
+            BCASE MovIMM: t=ip4(); pN4(t); fprintf(outFp, "; MOV EAX, 0x%08lx", t);
             break; default: pB(12); pS("<invalid>");
         }
     }

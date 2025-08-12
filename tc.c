@@ -40,12 +40,14 @@ enum {
 
 // VM opcodes
 enum {
-    NOP, IADD, ISTORE, ILIT, IDROP
+    NOP, IADD=0x01, ISTORE, ILIT, IDROP
     , ILT, IGT, IEQ, INEQ, ILAND, ILOR, ILNOT
-    , ISUB, IMUL, IDIV
+    , IDIV
     , IAND, IOR, IXOR
     , JZ, JNZ, JMP
+    , ISUB=0x29, IMUL=0xf7
     , ICALL=0xe8, IRET=0xc3
+    , MovRR=0x89, MovIMM=0xb8, MovFet=0xa1, MovSto=0xa3
 };
 
 byte vm[CODE_SZ];
@@ -410,12 +412,14 @@ void gInit() {
   C3                ret 
 */
 
+void gBtoA() { g2(0xc389); }
+void gCtoB() { g2(0xcb89); }
 void gPush() { g4(0xc389d989); }
 void gPop()  { g4(0xc889d889); }
 void gMovRR(int RR) { g(0x89); g(RR); }
 void gMovIMM(int val) { gPush(); g(0xb8); g4(val); }
 void gMovStore(int loc) { g(0xa3); g4(loc); }
-void gMovFetch(int loc) { g(0xa1); g4(loc); }
+void gMovFetch(int loc) { gPush(); g(0xa1); g4(loc); }
 
 void gFetch(int v) { gMovFetch(v); }
 void gStoreO(int v) { g(ISTORE); gAddr(v); }
@@ -423,9 +427,9 @@ void gStore(int v) { gMovStore(v); }
 void gLit(int v) { gMovIMM(v); }
 void gCall(int v) { g(ICALL); g4(v); }
 void gReturn() { g(IRET); }
-void gAdd() { g(IADD); g(0xd8); g2(0xcb89); }
-void gMul() { g(IMUL); }
-void gSub() { g(ISUB); }
+void gAdd() { g(IADD); g(0xd8); gCtoB(); }
+void gMul() { g(IMUL); g(0xeb); gCtoB(); }
+void gSub() { g(ISUB); g(0xc3); gPop(); }
 void gDiv() { g(IDIV); }
 void gLT() { g(ILT); }
 void gGT() { g(IGT); }
