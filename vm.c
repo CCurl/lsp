@@ -12,12 +12,13 @@ typedef unsigned char byte;
 enum {
     NOP, IADD=0x01
     , ILT=0x50, IGT, IEQ, INEQ, ILAND, ILOR, ILNOT
-    , JZ, JNZ, JMP
+    , JMPZ, JMPNZ, IJMP
     , IAND=0x21, IOR=0x09, IXOR=0x31
     , ISUB=0x29, MULDIV=0xf7
     , ICALL=0xe8, IRET=0xc3
     , MovRR=0x89, MovIMM=0xb8, MovFet=0xa1, MovSto=0xa3
-    , SWAPAB=0x93
+    , SWAPAB=0x93, ICMP=0x39
+    , JNZ=0x75, INCDX=0x42
 };
 
 #define VM_SZ 10000
@@ -55,12 +56,13 @@ void initVM() {
 
 static void MOV(int what) {
     switch (what) {
-        case R2R(rDX, rCX): EDX = ECX;  break;
-        case R2R(rCX, rBX): ECX = EBX;  break;
-        case R2R(rBX, rAX): EBX = EAX;  break;
         case R2R(rAX, rBX): EAX = EBX;  break;
+        case R2R(rAX, rDX): EAX = EDX;  break;
+        case R2R(rBX, rAX): EBX = EAX;  break;
         case R2R(rBX, rCX): EBX = ECX;  break;
+        case R2R(rCX, rBX): ECX = EBX;  break;
         case R2R(rCX, rDX): ECX = EDX;  break;
+        case R2R(rDX, rCX): EDX = ECX;  break;
     }
 }
 
@@ -81,6 +83,14 @@ static void sPop() {
 static void push(long x) { stk[++ESP] = x;  }
 static int  pop() { return stk[ESP--]; }
 
+byte isZero, isNeg;
+void doCmp(int ir) {
+    long r = 1;
+    if (ir == 0xc3) { r = EBX - EAX; }
+    isZero = (r == 0) ? 1 : 0;
+    isNeg  = (r <  0) ? 1 : 0;
+}
+
 void runVM(int st) {
     byte ir;
     EIP = st;
@@ -90,25 +100,33 @@ void runVM(int st) {
     ir = vm[EIP++];
     switch (ir) {
         case  NOP:
+        // TODO: these are left to migrate to x86
+        ACASE IEQ:    if (EBX == EAX) { EBX = 1; } else { EBX = 0; } sPop();
         ACASE ILT:    if (EBX <  EAX) { EBX = 1; } else { EBX = 0; } sPop();
         ACASE IGT:    if (EBX >  EAX) { EBX = 1; } else { EBX = 0; } sPop();
-        ACASE IEQ:    if (EBX == EAX) { EBX = 1; } else { EBX = 0; } sPop();
         ACASE INEQ:   if (EBX != EAX) { EBX = 1; } else { EBX = 0; } sPop();
         ACASE ILAND:  if (EBX && EAX) { EBX = 1; } else { EBX = 0; } sPop();
         ACASE ILOR:   if (EBX || EAX) { EBX = 1; } else { EBX = 0; } sPop();
         ACASE ILNOT:  if (EAX == 0) { EAX = 1; } else { EAX = 0; }
+        ACASE JMPZ:   if (EAX == 0) { EIP = f2(EIP); } else { EIP += 2; } sPop();
+        ACASE JMPNZ:  if (EAX != 0) { EIP = f2(EIP); } else { EIP += 2; } sPop();
+        ACASE IJMP:   EIP = f2(EIP);
+        ACASE ICALL:  push(EIP+4); EIP = f4(EIP);
+        // TODO: these are left to migrate to x86
+
         ACASE IADD:   if (ip1()==0xd8) { EAX += EBX; }
         ACASE ISUB:   if (ip1()==0xc3) { EBX -= EAX; }
-        ACASE MULDIV: ir=ip1();
+        ACASE MULDIV: ir = ip1();
                       if (ir==0xeb) { EAX *= EBX; }
-                      if (ir==0xfb) { EAX /= EBX; }
+                      else if (ir==0xfb) { EAX /= EBX; }
         ACASE IAND:   if (ip1()==0xd8) { EAX &= EBX; }
         ACASE IOR:    if (ip1()==0xd8) { EAX |= EBX; }
-        ACASE IXOR:   if (ip1()==0xd8) { EAX ^= EBX; }
-        ACASE JZ:     if (EAX == 0) { EIP = f2(EIP); } else { EIP += 2; } sPop();
-        ACASE JNZ:    if (EAX != 0) { EIP = f2(EIP); } else { EIP += 2; } sPop();
-        ACASE JMP:    EIP = f2(EIP);
-        ACASE ICALL:  push(EIP+4); EIP = f4(EIP);
+        ACASE IXOR:   ir = ip1();
+                      if (ir==0xd8) { EAX ^= EBX; }
+                      else if (ir==0xd2) { EDX ^= EDX; }
+        ACASE INCDX:  EDX++;
+        ACASE ICMP:   ir = ip1(); doCmp(ir);
+        ACASE JNZ:    ir = ip1(); if (isZero==0) { EIP += (char)ir; } 
         ACASE IRET:   if (ESP < 1) { return; } EIP = pop();
         ACASE MovRR:  MOV(vm[EIP++]);
         ACASE MovIMM: EAX = ip4();
@@ -170,9 +188,9 @@ void dis(FILE *toFp) {
             BCASE IAND:   t=ip1(); pN1(t); pB(9); pS("AND"); pRR(t);
             BCASE IOR:    t=ip1(); pN1(t); pB(9); pS("OR"); pRR(t);
             BCASE IXOR:   t=ip1(); pN1(t); pB(9); pS("XOR"); pRR(t);
-            BCASE JZ:     t=ip2(); pN2(t); pB(6); fprintf(outFp, "; JMPZ 0x%04lx", t);
-            BCASE JNZ:    t=ip2(); pN2(t); pB(6); fprintf(outFp, "; JMPNZ 0x%04lx", t);
-            BCASE JMP:    t=ip2(); pN2(t); pB(6); fprintf(outFp, "; JMP 0x%04lx", t);
+            BCASE JMPZ:   t=ip2(); pN2(t); pB(6); fprintf(outFp, "; JMPZ 0x%04lx", t);
+            BCASE JMPNZ:    t=ip2(); pN2(t); pB(6); fprintf(outFp, "; JMPNZ 0x%04lx", t);
+            BCASE IJMP:    t=ip2(); pN2(t); pB(6); fprintf(outFp, "; IJMP 0x%04lx", t);
             BCASE ICALL:  t=ip4(); pN4(t);        pS("call"); pNX(t);
             BCASE IRET:   pB(12); pS("RET");
             BCASE MovRR:  t=ip1(); pN1(t); pB(9); pS("MOV"); pRR(t);

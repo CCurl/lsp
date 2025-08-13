@@ -42,12 +42,13 @@ enum {
 enum {
     NOP, IADD=0x01
     , ILT=0x50, IGT, IEQ, INEQ, ILAND, ILOR, ILNOT
-    , JZ, JNZ, JMP
+    , JMPZ, JMPNZ, IJMP
     , IAND=0x21, IOR=0x09, IXOR=0x31
     , ISUB=0x29, MULDIV=0xf7
     , ICALL=0xe8, IRET=0xc3
     , MovRR=0x89, MovIMM=0xb8, MovFet=0xa1, MovSto=0xa3
-    , SWAPAB = 0x93
+    , SWAPAB=0x93, ICMP=0x39
+    , JNZ=0x75, INCDX=0x42
 };
 
 byte vm[CODE_SZ];
@@ -388,6 +389,9 @@ void g(int c) { s1(here, c); here=here+1; vmHere=vmHere+1; }
 void g2(int n) { g(n); g(n>>8); }
 void g4(int n) { g2(n); g2(n>>16); }
 void gAddr(int a) { g2(a); if (addrSz==4) { g2(a>>16); } }
+void gN(int n, char *bytes) {
+    for (int i=0; i<n; i++) { g(bytes[i]); }
+}
 
 int hole() { gAddr(0); return here-addrSz; }
 void fix(int a, int v) {  s2(a, v); if (addrSz==4) { s2(a+2, v>>16); } }
@@ -399,18 +403,6 @@ void gInit() {
     memBase = 0; // 0x08048000; // Linux 23-bit code start (134512640)
     addrSz = 2;
 }
-
-/*
-  89 D9             mov ecx, ebx ; PUSH
-  89 C3             mov ebx, eax
-
-  89 D8             mov eax, ebx ; POP
-  89 CB             mov ebx, ecx
-  
-  A1 78 56 34 12    mov eax, [0x12345678]
-  A3 22 11 55 44    mov [0x44551122], EAX
-  C3                ret 
-*/
 
 void gBtoA() { g2(0xc389); }
 void gCtoB() { g2(0xcb89); }
@@ -428,9 +420,11 @@ void gAdd() { g(IADD); g(0xd8); gCtoB(); }
 void gSub() { g(ISUB); g(0xc3); gPop(); }
 void gMul() { g(MULDIV); g(0xeb); gCtoB(); }
 void gDiv() { g(SWAPAB); g(MULDIV); g(0xfb); gCtoB(); }
+void gCMP() { g(ICMP); }
 void gLT() { g(ILT); }
 void gGT() { g(IGT); }
 void gEQ() { g(IEQ); }
+void gEQU() { gN(11,"\x31\xd2\x39\xc3\x75\x01\x42\x89\xd0\x89\xd0");  }
 void gNEQ() { g(INEQ); }
 void gLAnd() { g(ILAND); }
 void gLOr() { g(ILOR); }
@@ -438,9 +432,9 @@ void gLNot() { g(ILNOT); }
 void gAnd() { g(IAND); g(0xd8); gCtoB(); }
 void gOr()  { g(IOR);  g(0xd8); gCtoB(); }
 void gXor() { g(IXOR); g(0xd8); gCtoB(); }
-void gJmp()   { g(JMP); }
-void gJmpZ()  { g(JZ); }
-void gJmpNZ() { g(JNZ); }
+void gJmp()   { g(IJMP); }
+void gJmpZ()  { g(JMPZ); }
+void gJmpNZ() { g(JMPNZ); }
 // ----------------------------------------------------------
 
 void c(node *x) {

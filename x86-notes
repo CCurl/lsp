@@ -58,3 +58,22 @@ cd 80 -  int 0x80
 39 c3 - cmp eax, ebx
 
 c3 - ret
+
+   zz:
+0x10000:      31 D2                    xor edx, edx
+0x10002:      39 C3                    cmp ebx, eax
+0x10004:      75 01                    jne FALSE
+0x10006:      42                       inc edx
+   FALSE:
+0x10007:      89 D0                    mov eax, edx
+
+0x10009:      89 CB                    mov ebx, ecx
+0x1000b:      E8 F0 FF FF FF           call zz
+0x10010:      91                       xchg eax, ecx
+0x10011:      87 CB                    xchg ebx, ecx
+0x10013:      21 D8                    and eax, ebx
+0x10015:      09 D8                    or  eax, ebx
+0x10017:      31 D8                    xor eax, ebx
+0x10019:      F7 EB                    imul ebx
+0x1001b:      F7 FB                    idiv ebx
+0x1001d:      C3                       ret

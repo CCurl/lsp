@@ -1,7 +1,7 @@
 
 VM: 10000 bytes, 935 used, 0x0000:0x03A6.
 -------------------------------------------
-0000: 59 8D 03       ; JMP 0x038d
+0000: 59 8D 03       ; IJMP 0x038d
 0003: 89 D9          ; MOV ECX, EBX
 0005: 89 C3          ; MOV EBX, EAX
 0007: B8 67 2B 00 00 ; MOV EAX, 0x00002b67 (11111)
@@ -128,7 +128,7 @@ VM: 10000 bytes, 935 used, 0x0000:0x03A6.
 016C: F7 EB          ; IMUL EBX
 016E: 89 CB          ; MOV EBX, ECX
 0170: A3 07 00 00 00 ; MOV [0x00000007], EAX
-0175: 59 29 01       ; JMP 0x0129
+0175: 59 29 01       ; IJMP 0x0129
 0178: 89 D9          ; MOV ECX, EBX
 017A: 89 C3          ; MOV EBX, EAX
 017C: B8 01 00 00 00 ; MOV EAX, 0x00000001 (1)
@@ -235,7 +235,7 @@ VM: 10000 bytes, 935 used, 0x0000:0x03A6.
 02A7: 01 D8          ; ADD EAX, EBX
 02A9: 89 CB          ; MOV EBX, ECX
 02AB: A3 11 00 00 00 ; MOV [0x00000011], EAX
-02B0: 59 7F 02       ; JMP 0x027f
+02B0: 59 7F 02       ; IJMP 0x027f
 02B3: 89 D9          ; MOV ECX, EBX
 02B5: 89 C3          ; MOV EBX, EAX
 02B7: A1 11 00 00 00 ; MOV EAX, [0x00000011]
