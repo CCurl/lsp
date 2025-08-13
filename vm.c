@@ -15,7 +15,7 @@ enum {
     , JMPZ, JMPNZ, IJMP
     , IAND=0x21, IOR=0x09, IXOR=0x31
     , ISUB=0x29, MULDIV=0xf7
-    , ICALL=0xe8, IRET=0xc3
+    , IRET=0xc3
     , MovRR=0x89, MovIMM=0xb8, MovFet=0xa1, MovSto=0xa3
     , SWAPAB=0x93, ICMP=0x39
     , JNZ=0x75, INCDX=0x42
@@ -111,7 +111,6 @@ void runVM(int st) {
         ACASE JMPZ:   if (EAX == 0) { EIP = f2(EIP); } else { EIP += 2; } sPop();
         ACASE JMPNZ:  if (EAX != 0) { EIP = f2(EIP); } else { EIP += 2; } sPop();
         ACASE IJMP:   EIP = f2(EIP);
-        ACASE ICALL:  push(EIP+4); EIP = f4(EIP);
         // TODO: these are left to migrate to x86
 
         ACASE IADD:   if (ip1()==0xd8) { EAX += EBX; }
@@ -133,6 +132,8 @@ void runVM(int st) {
         ACASE MovFet: EAX = vals[ip4()];
         ACASE MovSto: vals[ip4()] = EAX;
         ACASE SWAPAB: t=EAX; EAX=EBX; EBX=t;
+        ACASE 0x8d:   ir=ip1(); t=ip4(); if (ir == 0x15) { EDX = t; }
+        ACASE 0xff:   ir=ip1(); if (ir == 0xd2) { push(EIP); EIP = EDX; }
         goto again; default: 
             printf("Invalid IR: %d at 04%lX\n", ir, EIP-1);  return;
     }
@@ -142,7 +143,7 @@ void runVM(int st) {
 /* Disassembly. */
 
 static FILE *outFp;
-static void pB(int n) { for (int i=0; i<n; i++) fprintf(outFp, " "); }
+static void pB(int n) { for (int i=0; i<(n*3); i++) fprintf(outFp, " "); }
 static void pS(char *s) { fprintf(outFp, "; %s ", s); }
 static void pNX(long n) { fprintf(outFp, "%02lX ", n); }
 static void pN1(int n) { pNX((n & 0xff)); }
@@ -166,39 +167,41 @@ static void pRR(int a) {
 void dis(FILE *toFp) {
     EIP = 0;
     outFp = toFp ? toFp : stdout;
+    byte ir;
 
     fprintf(outFp, "\nVM: %d bytes, %d used, 0x0000:0x%04X.", VM_SZ, here, here-1);
     fprintf(outFp, "\n-------------------------------------------");
     while (EIP < here) {
         fprintf(outFp, "\n%04lX: %02X ", EIP, vm[EIP]);
         switch (vm[EIP++]) {
-            case  NOP:    pB(12); pS("nop");
-            BCASE ILT:    pB(12); pS("lt");
-            BCASE IGT:    pB(12); pS("gt");
-            BCASE IEQ:    pB(12); pS("eq");
-            BCASE INEQ:   pB(12); pS("neq");
-            BCASE ILAND:  pB(12); pS("land");
-            BCASE ILOR:   pB(12); pS("lor");
-            BCASE ILNOT:  pB(12); pS("lnot");
-            BCASE IADD:   t=ip1(); pN1(t); pB(9); pS("ADD"); pRR(t);
-            BCASE ISUB:   t=ip1(); pN1(t); pB(9); pS("SUB"); pRR(t);
-            BCASE MULDIV: t=ip1(); pN1(t); pB(9);
+            case  NOP:    pB(5); pS("nop");
+            BCASE ILT:    pB(5); pS("lt");
+            BCASE IGT:    pB(5); pS("gt");
+            BCASE IEQ:    pB(5); pS("eq");
+            BCASE INEQ:   pB(5); pS("neq");
+            BCASE ILAND:  pB(5); pS("land");
+            BCASE ILOR:   pB(5); pS("lor");
+            BCASE ILNOT:  pB(5); pS("lnot");
+            BCASE IADD:   t=ip1(); pN1(t); pB(4); pS("ADD"); pRR(t);
+            BCASE ISUB:   t=ip1(); pN1(t); pB(4); pS("SUB"); pRR(t);
+            BCASE MULDIV: t=ip1(); pN1(t); pB(4);
                           if (t==0xeb) { fprintf(outFp, "; IMUL EBX"); }
                           if (t==0xfb) { fprintf(outFp, "; IDIV EBX"); }
-            BCASE IAND:   t=ip1(); pN1(t); pB(9); pS("AND"); pRR(t);
-            BCASE IOR:    t=ip1(); pN1(t); pB(9); pS("OR"); pRR(t);
-            BCASE IXOR:   t=ip1(); pN1(t); pB(9); pS("XOR"); pRR(t);
-            BCASE JMPZ:   t=ip2(); pN2(t); pB(6); fprintf(outFp, "; JMPZ 0x%04lx", t);
-            BCASE JMPNZ:    t=ip2(); pN2(t); pB(6); fprintf(outFp, "; JMPNZ 0x%04lx", t);
-            BCASE IJMP:    t=ip2(); pN2(t); pB(6); fprintf(outFp, "; IJMP 0x%04lx", t);
-            BCASE ICALL:  t=ip4(); pN4(t);        pS("call"); pNX(t);
-            BCASE IRET:   pB(12); pS("RET");
-            BCASE MovRR:  t=ip1(); pN1(t); pB(9); pS("MOV"); pRR(t);
-            BCASE MovFet: t=ip4(); pN4(t); fprintf(outFp, "; MOV EAX, [0x%08lx]", t);
-            BCASE MovSto: t=ip4(); pN4(t); fprintf(outFp, "; MOV [0x%08lx], EAX", t);
-            BCASE MovIMM: t=ip4(); pN4(t); fprintf(outFp, "; MOV EAX, 0x%08lx (%ld)", t, t);
-            BCASE SWAPAB: pB(12); pS("XCHG EAX, EBX");
-            break; default: pB(12); pS("<invalid>");
+            BCASE IAND:   t=ip1(); pN1(t); pB(4); pS("AND"); pRR(t);
+            BCASE IOR:    t=ip1(); pN1(t); pB(4); pS("OR"); pRR(t);
+            BCASE IXOR:   t=ip1(); pN1(t); pB(4); pS("XOR"); pRR(t);
+            BCASE JMPZ:   t=ip2(); pN2(t); pB(3); fprintf(outFp, "; JMPZ 0x%04lx", t);
+            BCASE JMPNZ:  t=ip2(); pN2(t); pB(3); fprintf(outFp, "; JMPNZ 0x%04lx", t);
+            BCASE IJMP:   t=ip2(); pN2(t); pB(3); fprintf(outFp, "; JMP 0x%04lx", t);
+            BCASE IRET:   pB(5); pS("RET");
+            BCASE MovRR:  t=ip1(); pN1(t); pB(4); pS("MOV"); pRR(t);
+            BCASE MovFet: t=ip4(); pN4(t); pB(1); fprintf(outFp, "; MOV EAX, [0x%08lx]", t);
+            BCASE MovSto: t=ip4(); pN4(t); pB(1); fprintf(outFp, "; MOV [0x%08lx], EAX", t);
+            BCASE MovIMM: t=ip4(); pN4(t); pB(1); fprintf(outFp, "; MOV EAX, 0x%08lx (%ld)", t, t);
+            BCASE SWAPAB: pB(5); pS("XCHG EAX, EBX");
+            BCASE 0x8d:   ir=ip1(); t=ip4(); pN1(ir); pN4(t); if (ir == 0x15) { fprintf(outFp, "; LEA EDX, [0x%08lx]", t); }
+            BCASE 0xff:   ir=ip1(); pN1(ir); pB(4); if (ir == 0xd2) { fprintf(outFp, "; CALL EDX"); }
+            break; default: pB(5); pS("<invalid>");
         }
     }
     fprintf(outFp, "\n");

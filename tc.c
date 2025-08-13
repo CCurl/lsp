@@ -45,7 +45,7 @@ enum {
     , JMPZ, JMPNZ, IJMP
     , IAND=0x21, IOR=0x09, IXOR=0x31
     , ISUB=0x29, MULDIV=0xf7
-    , ICALL=0xe8, IRET=0xc3
+    , IRET=0xc3
     , MovRR=0x89, MovIMM=0xb8, MovFet=0xa1, MovSto=0xa3
     , SWAPAB=0x93, ICMP=0x39
     , JNZ=0x75, INCDX=0x42
@@ -414,7 +414,7 @@ void gMovIMM(int val) { gPush(); g(0xb8); g4(val); }
 void gStore(int loc) { g(0xa3); g4(loc); }
 void gFetch(int loc) { gPush(); g(0xa1); g4(loc); }
 void gLit(int v) { gMovIMM(v); }
-void gCall(int v) { g(ICALL); g4(v); }
+void gCall(int v) { gN(2, "\x8d\x15"); g4(v); gN(2, "\xff\xd2"); }
 void gReturn() { g(IRET); }
 void gAdd() { g(IADD); g(0xd8); gCtoB(); }
 void gSub() { g(ISUB); g(0xc3); gPop(); }
