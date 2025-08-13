@@ -144,10 +144,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <None Include="bm.tc" />
     <None Include="test.bat" />
     <None Include="test.tc" />
     <None Include="makefile" />
     <None Include="README.md" />
+    <None Include="x86-notes" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="tc.c" />

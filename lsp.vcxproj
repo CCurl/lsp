@@ -148,6 +148,7 @@
     <None Include="test.tc" />
     <None Include="README.md" />
     <None Include="vm.lst" />
+    <None Include="xx.asm" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="vm.c" />

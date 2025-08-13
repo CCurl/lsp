@@ -66,9 +66,18 @@ c3 - ret
 0x10006:      42                       inc edx
    FALSE:
 0x10007:      89 D0                    mov eax, edx
-
 0x10009:      89 CB                    mov ebx, ecx
-0x1000b:      E8 F0 FF FF FF           call zz
+
+; Calling
+   test:
+0x12345:      29 D8                      sub eax, ebx
+0x12347:      F7 D0                      not eax
+0x12349:      C3                         ret
+0x1234a:      8D 15 45 23 01 00          lea edx, [0x00012345]
+0x12350:      8D 15 45 23 01 00          lea edx, [test]
+0x12356:      FF D2                      call edx
+0x12358:      C3                         ret
+
 0x10010:      91                       xchg eax, ecx
 0x10011:      87 CB                    xchg ebx, ecx
 0x10013:      21 D8                    and eax, ebx
@@ -77,3 +86,8 @@ c3 - ret
 0x10019:      F7 EB                    imul ebx
 0x1001b:      F7 FB                    idiv ebx
 0x1001d:      C3                       ret
+
+0x10000:      29 D8                      sub eax, ebx
+0x10002:      F7 D0                      not eax
+0x10004:      C3                         ret
+0x10013:      C3                         ret
