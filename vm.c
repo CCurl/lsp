@@ -132,8 +132,11 @@ void runVM(int st) {
         ACASE MovFet: EAX = vals[ip4()];
         ACASE MovSto: vals[ip4()] = EAX;
         ACASE SWAPAB: t=EAX; EAX=EBX; EBX=t;
-        ACASE 0x8d:   ir=ip1(); t=ip4(); if (ir == 0x15) { EDX = t; }
-        ACASE 0xff:   ir=ip1(); if (ir == 0xd2) { push(EIP); EIP = EDX; }
+        ACASE 0x8d:   ir=ip1(); t=ip4(); if (ir == 0x15) { EDX = t; }      // LEA EDX, [addr]
+        ACASE 0xff:   ir=ip1();
+                      if (ir == 0xd2) { push(EIP); EIP = EDX; }            // CALL EDX
+                      else if (ir == 0x15) { push(EIP+4); EIP = ip4(); }   // CALL [addr]
+                      else if (ir == 0x25) { EIP = ip4(); }                // JMP [addr]
         goto again; default: 
             printf("Invalid IR: %d at 04%lX\n", ir, EIP-1);  return;
     }
@@ -200,7 +203,10 @@ void dis(FILE *toFp) {
             BCASE MovIMM: t=ip4(); pN4(t); pB(1); fprintf(outFp, "; MOV EAX, 0x%08lx (%ld)", t, t);
             BCASE SWAPAB: pB(5); pS("XCHG EAX, EBX");
             BCASE 0x8d:   ir=ip1(); t=ip4(); pN1(ir); pN4(t); if (ir == 0x15) { fprintf(outFp, "; LEA EDX, [0x%08lx]", t); }
-            BCASE 0xff:   ir=ip1(); pN1(ir); pB(4); if (ir == 0xd2) { fprintf(outFp, "; CALL EDX"); }
+            BCASE 0xff:   ir=ip1(); pN1(ir);
+                    if (ir == 0xd2) { pB(4); fprintf(outFp, "; CALL EDX"); }
+                    if (ir == 0x15) { t=ip4(); pN4(t); pB(0); fprintf(outFp, "; CALL [0x%08lx]", t); }
+                    if (ir == 0x25) { t=ip4(); pN4(t); pB(0); fprintf(outFp, "; JMP [0x%08lx]", t); }
             break; default: pB(5); pS("<invalid>");
         }
     }

@@ -414,7 +414,7 @@ void gMovIMM(int val) { gPush(); g(0xb8); g4(val); }
 void gStore(int loc) { g(0xa3); g4(loc); }
 void gFetch(int loc) { gPush(); g(0xa1); g4(loc); }
 void gLit(int v) { gMovIMM(v); }
-void gCall(int v) { gN(2, "\x8d\x15"); g4(v); gN(2, "\xff\xd2"); }
+void gCall(int v) { gN(2, "\xff\x15"); g4(v); }
 void gReturn() { g(IRET); }
 void gAdd() { g(IADD); g(0xd8); gCtoB(); }
 void gSub() { g(ISUB); g(0xc3); gPop(); }
@@ -432,6 +432,7 @@ void gLNot() { g(ILNOT); }
 void gAnd() { g(IAND); g(0xd8); gCtoB(); }
 void gOr()  { g(IOR);  g(0xd8); gCtoB(); }
 void gXor() { g(IXOR); g(0xd8); gCtoB(); }
+void gJmpN() { gN(2, "\xff\x25"); }
 void gJmp()   { g(IJMP); }
 void gJmpZ()  { g(JMPZ); }
 void gJmpNZ() { g(JMPNZ); }
@@ -462,7 +463,7 @@ void c(node *x) {
             gJmp(); p2 = hole(); fix(p1, vmHere);
             c(x->o3); fix(p2, vmHere); break;
         case ND_WHILE: p1 = vmHere; c(x->o1); gJmpZ(); p2 = hole(); c(x->o2);
-            gJmp(); gAddr(p1); fix(p2, vmHere); break;
+            gJmpN(); g4(p1); fix(p2, vmHere); break;
         case ND_DO: p1 = vmHere; c(x->o1); c(x->o2); gJmpNZ(); gAddr(p1); break;
         case ND_EMPTY: break;
         case ND_SEQ: c(x->o1); c(x->o2); break;
@@ -531,15 +532,15 @@ int main(int argc, char *argv[]) {
     if (fn) { input_fp = fopen(fn, "rt"); }
     if (!input_fp) { input_fp = stdin; }
     gInit();
-    gJmp();
-    gAddr(0);
+    gJmpN();
+    g4(0);
     defs(NULL);
     if (input_fp != stdin) { fclose(input_fp); }
     printf("%d code bytes (%d nodes)\n", here, num_nodes);
 
     int mainSym = findSymbol("main", TOK_FUNC);
     if (mainSym < 0) { printf("no main() function!"); }
-    fix(1, symbols[mainSym].val);
+    else { s4(2, symbols[mainSym].val); }
     FILE *fp = fopen("tc.out", "wb");
     if (fp) { fwrite(vm, 1, here, fp); fclose(fp); }
 
