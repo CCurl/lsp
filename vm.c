@@ -108,9 +108,9 @@ void runVM(int st) {
         ACASE ILAND:  if (EBX && EAX) { EBX = 1; } else { EBX = 0; } sPop();
         ACASE ILOR:   if (EBX || EAX) { EBX = 1; } else { EBX = 0; } sPop();
         ACASE ILNOT:  if (EAX == 0) { EAX = 1; } else { EAX = 0; }
-        ACASE JMPZ:   if (EAX == 0) { EIP = f2(EIP); } else { EIP += 2; } sPop();
-        ACASE JMPNZ:  if (EAX != 0) { EIP = f2(EIP); } else { EIP += 2; } sPop();
-        ACASE IJMP:   EIP = f2(EIP);
+        ACASE JMPZ:   if (EAX == 0) { EIP = f4(EIP); } else { EIP += 4; } sPop();
+        ACASE JMPNZ:  if (EAX != 0) { EIP = f4(EIP); } else { EIP += 4; } sPop();
+        ACASE IJMP:   EIP = f4(EIP);
         // TODO: these are left to migrate to x86
 
         ACASE IADD:   if (ip1()==0xd8) { EAX += EBX; }
@@ -180,11 +180,15 @@ void dis(FILE *toFp) {
             case  NOP:    pB(5); pS("nop");
             BCASE ILT:    pB(5); pS("lt");
             BCASE IGT:    pB(5); pS("gt");
-            BCASE IEQ:    pB(5); pS("eq");
+            BCASE IEQ:    pB(5); pS("equ");
             BCASE INEQ:   pB(5); pS("neq");
             BCASE ILAND:  pB(5); pS("land");
             BCASE ILOR:   pB(5); pS("lor");
             BCASE ILNOT:  pB(5); pS("lnot");
+            BCASE JMPZ:   t=ip4(); pN4(t); pB(1); fprintf(outFp, "; jmpz 0x%08lx", t);
+            BCASE JMPNZ:  t=ip4(); pN4(t); pB(1); fprintf(outFp, "; jmpnz 0x%08lx", t);
+            BCASE IJMP:   t=ip4(); pN4(t); pB(1); fprintf(outFp, "; jmp 0x%08lx", t);
+
             BCASE IADD:   t=ip1(); pN1(t); pB(4); pS("ADD"); pRR(t);
             BCASE ISUB:   t=ip1(); pN1(t); pB(4); pS("SUB"); pRR(t);
             BCASE MULDIV: t=ip1(); pN1(t); pB(4);
@@ -193,9 +197,6 @@ void dis(FILE *toFp) {
             BCASE IAND:   t=ip1(); pN1(t); pB(4); pS("AND"); pRR(t);
             BCASE IOR:    t=ip1(); pN1(t); pB(4); pS("OR"); pRR(t);
             BCASE IXOR:   t=ip1(); pN1(t); pB(4); pS("XOR"); pRR(t);
-            BCASE JMPZ:   t=ip2(); pN2(t); pB(3); fprintf(outFp, "; JMPZ 0x%04lx", t);
-            BCASE JMPNZ:  t=ip2(); pN2(t); pB(3); fprintf(outFp, "; JMPNZ 0x%04lx", t);
-            BCASE IJMP:   t=ip2(); pN2(t); pB(3); fprintf(outFp, "; JMP 0x%04lx", t);
             BCASE IRET:   pB(5); pS("RET");
             BCASE MovRR:  t=ip1(); pN1(t); pB(4); pS("MOV"); pRR(t);
             BCASE MovFet: t=ip4(); pN4(t); pB(1); fprintf(outFp, "; MOV EAX, [0x%08lx]", t);

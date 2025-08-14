@@ -401,13 +401,19 @@ void fix(int a, int v) {  s2(a, v); if (addrSz==4) { s2(a+2, v>>16); } }
 void gInit() {
     here = 0;
     memBase = 0; // 0x08048000; // Linux 23-bit code start (134512640)
-    addrSz = 2;
+    addrSz = 4;
 }
 
-void gBtoA() { g2(0xc389); }
-void gCtoB() { g2(0xcb89); }
-void gPush() { g4(0xc389d989); }
-void gPop()  { g4(0xc889d889); }
+// Used to perform a pop
+void gBtoA() { gN(2, "\x89\xd8"); } // MOV EAX, EBX
+void gCtoB() { gN(2, "\x89\xcb"); } // MOV EBX, ECX
+
+// Used to open space for new TOS
+void gBtoC() { gN(2, "\x89\xd9"); } // MOV ECX, EBX
+void gAtoB() { gN(2, "\x89\xc3"); } // MOV EBX, EAX
+
+void gPush() { gBtoC(); gAtoB(); }
+void gPop()  { gBtoA(); gCtoB(); }
 
 void gMovRR(int RR) { g(0x89); g(RR); }
 void gMovIMM(int val) { gPush(); g(0xb8); g4(val); }

@@ -59,6 +59,14 @@ cd 80 -  int 0x80
 
 c3 - ret
 
+  push:
+0x10006:      89 D9                    mov ecx, ebx
+0x10002:      89 C3                    mov ebx, eax
+
+    pop:
+0x10000:      89 D8                    mov eax, ebx
+0x10004:      89 CB                    mov ebx, ecx
+
    zz:
 0x10000:      31 D2                    xor edx, edx
 0x10002:      39 C3                    cmp ebx, eax
