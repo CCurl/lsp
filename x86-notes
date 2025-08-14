@@ -45,6 +45,9 @@ ba 55 66 77 88 - mov edx, 0x88776655
 59 - pop ecx
 5a - pop edx
 
+68 78 56 34 12             push 0x12345678
+FF 35 78 56 34 12          push [0x12345678]
+
 31 c0 - xor eax, eax
 31 db - xor ebx, ebx
 31 c9 - xor ecx, ecx

@@ -22,14 +22,13 @@ void stopDBG() {}
 // VM opcodes
 enum {
     NOP, IADD=0x01
-    , ILT=0x50, IGT, IEQ, INEQ, ILAND, ILOR, ILNOT
-    , JMPZ, JMPNZ, IJMP
     , IAND=0x21, IOR=0x09, IXOR=0x31
     , ISUB=0x29, MULDIV=0xf7
     , IRET=0xc3
     , MovRR=0x89, MovIMM=0xb8, MovFet=0xa1, MovSto=0xa3
     , SWAPAB=0x93, ICMP=0x39
     , JNZ=0x75, INCDX=0x42
+    , ILT=0x60, IGT, IEQ, INEQ, ILAND, ILOR, ILNOT, JMPZ, JMPNZ, IJMP
 };
 
 #define VM_SZ 10000
@@ -108,25 +107,33 @@ void runVM(int st) {
     again:
     // if (maxSp < sp) { maxSp = sp; }
     #ifdef DBG
-    fprintf(trcf, "-EIP:%04lX/ir:%02X-", EIP, vm[EIP]);
-    fprintf(trcf, "EAX:%ld,EBX:%ld,ECX:%ld\n", EAX, EBX, ECX);
+    fprintf(trcf, "EIP:%04lX, ir:%02X, ", EIP, vm[EIP]);
+    fprintf(trcf, "ESP:%2ld, EAX:%ld, NOS:%ld, EBX:%ld\n", ESP, EAX, stk[ESP], EBX);
     #endif
     ir = vm[EIP++];
     switch (ir) {
         case  NOP:
         // TODO: these are left to migrate to x86
-        ACASE IEQ:    if (EBX == EAX) { EBX = 1; } else { EBX = 0; } sPop();
+        ACASE IEQ:    if (EBX == EAX) { EAX = 1; } else { EAX = 0; }
         ACASE ILT:    if (EBX <  EAX) { EBX = 1; } else { EBX = 0; } sPop();
         ACASE IGT:    if (EBX >  EAX) { EBX = 1; } else { EBX = 0; } sPop();
         ACASE INEQ:   if (EBX != EAX) { EBX = 1; } else { EBX = 0; } sPop();
         ACASE ILAND:  if (EBX && EAX) { EBX = 1; } else { EBX = 0; } sPop();
         ACASE ILOR:   if (EBX || EAX) { EBX = 1; } else { EBX = 0; } sPop();
         ACASE ILNOT:  if (EAX == 0) { EAX = 1; } else { EAX = 0; }
-        ACASE JMPZ:   if (EAX == 0) { EIP = f4(EIP); } else { EIP += 4; } sPop();
-        ACASE JMPNZ:  if (EAX != 0) { EIP = f4(EIP); } else { EIP += 4; } sPop();
+        ACASE JMPZ:   if (EAX == 0) { EIP = f4(EIP); } else { EIP += 4; } EAX=pop();
+        ACASE JMPNZ:  if (EAX != 0) { EIP = f4(EIP); } else { EIP += 4; } EAX=pop();
         ACASE IJMP:   EIP = f4(EIP);
         // TODO: these are left to migrate to x86
 
+        ACASE 0x50:   push(EAX);
+        ACASE 0x51:   push(ECX);
+        ACASE 0x52:   push(EDX);
+        ACASE 0x53:   push(EBX);
+        ACASE 0x58:   EAX = pop();
+        ACASE 0x59:   ECX = pop();
+        ACASE 0x5a:   EDX = pop();
+        ACASE 0x5b:   EBX = pop();
         ACASE IADD:   if (ip1()==0xd8) { EAX += EBX; }
         ACASE ISUB:   if (ip1()==0xc3) { EBX -= EAX; }
         ACASE MULDIV: ir = ip1();
@@ -152,7 +159,7 @@ void runVM(int st) {
                       else if (ir == 0x15) { push(EIP+4); EIP = ip4(); }   // CALL [addr]
                       else if (ir == 0x25) { EIP = ip4(); }                // JMP [addr]
         goto again; default: 
-            printf("Invalid IR: %d at 04%lX\n", ir, EIP-1);  return;
+            printf("Invalid IR: %02X at %04lX\n", ir, EIP-1);  return;
     }
 }
 
@@ -203,6 +210,14 @@ void dis(FILE *toFp) {
             BCASE JMPNZ:  t=ip4(); pN4(t); pB(1); fprintf(outFp, "; jmpnz 0x%08lx", t);
             BCASE IJMP:   t=ip4(); pN4(t); pB(1); fprintf(outFp, "; jmp 0x%08lx", t);
 
+            BCASE 0x50:   pB(5); fprintf(outFp, "; PUSH EAX");
+            BCASE 0x51:   pB(5); fprintf(outFp, "; PUSH ECX");
+            BCASE 0x52:   pB(5); fprintf(outFp, "; PUSH EDX");
+            BCASE 0x53:   pB(5); fprintf(outFp, "; PUSH EBX");
+            BCASE 0x58:   pB(5); fprintf(outFp, "; POP EAX");
+            BCASE 0x59:   pB(5); fprintf(outFp, "; POP ECX");
+            BCASE 0x5a:   pB(5); fprintf(outFp, "; POP EDX");
+            BCASE 0x5b:   pB(5); fprintf(outFp, "; POP EBX");
             BCASE IADD:   t=ip1(); pN1(t); pB(4); pS("ADD"); pRR(t);
             BCASE ISUB:   t=ip1(); pN1(t); pB(4); pS("SUB"); pRR(t);
             BCASE MULDIV: t=ip1(); pN1(t); pB(4);
