@@ -8,6 +8,17 @@
 #define BTWI(n,l,h) ((l<=n)&&(n<=h))
 typedef unsigned char byte;
 
+#define DBG
+
+#ifdef DBG
+FILE *trcf;
+void startDBG() { trcf = fopen("vm.trc","wt"); }
+void stopDBG() { fclose(trcf); }
+#else
+void startDBG() {}
+void stopDBG() {}
+#endif
+
 // VM opcodes
 enum {
     NOP, IADD=0x01
@@ -96,7 +107,10 @@ void runVM(int st) {
     EIP = st;
     again:
     // if (maxSp < sp) { maxSp = sp; }
-    // printf("-EIP:%04x/ir:%d-\n", EIP, vm[EIP]);
+    #ifdef DBG
+    fprintf(trcf, "-EIP:%04lxx/ir:%02X-", EIP, vm[EIP]);
+    fprintf(trcf, "EAX:%ld,EBX:%ld,ECX:%ld\n", EAX, EBX, ECX);
+    #endif
     ir = vm[EIP++];
     switch (ir) {
         case  NOP:
@@ -220,6 +234,7 @@ void dis(FILE *toFp) {
 int main(int argc, char *argv[]) {
     char *fn = (argc > 1) ? argv[1] : "tc.out";
     FILE *fp = fopen(fn, "rb");
+    startDBG();
     initVM();
     if (!fp) { printf("can't open program"); }
     else {
@@ -234,5 +249,7 @@ int main(int argc, char *argv[]) {
         }
         // printf("max-sp: %ld\n", maxSp);
     }
+
+    stopDBG();
     return 0;
 }
