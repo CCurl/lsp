@@ -108,7 +108,7 @@ void runVM(int st) {
     again:
     // if (maxSp < sp) { maxSp = sp; }
     #ifdef DBG
-    fprintf(trcf, "-EIP:%04lxx/ir:%02X-", EIP, vm[EIP]);
+    fprintf(trcf, "-EIP:%04lX/ir:%02X-", EIP, vm[EIP]);
     fprintf(trcf, "EAX:%ld,EBX:%ld,ECX:%ld\n", EAX, EBX, ECX);
     #endif
     ir = vm[EIP++];
