@@ -413,16 +413,15 @@ void gDtoA() { gN(2, "\x89\xd0"); } // MOV EAX, EBX
 void gCtoB() { gN(2, "\x89\xcb"); } // MOV EBX, ECX
 void gBtoC() { gN(2, "\x89\xd9"); } // MOV ECX, EBX
 
-void gPushA() { g(0x50); }
-void gPushA_Bad() {
-    if (vm[here-1] == 0x58) { vm[here-1] = NOP; }
+void gNOP() { g(0x90); }
+void gPushA_Old() { g(0x50); }
+void gPushA() {
+    if (vm[here-1] == 0x58) { --here; --vmHere; }
+    // if (vm[here-1] == 0x58) { vm[here-1] = NOP; }
     else { g(0x50); }
 }
 void gPopA()  { g(0x58); }
 void gPopB()  { g(0x5b); }
-
-void gPush() { gBtoC(); gAtoB(); }
-void gPop()  {  gBtoA(); gCtoB(); }
 
 void gMovRR(int RR) { g(0x89); g(RR); }
 void gMovIMM(int val) { g(0xb8); g4(val); }
@@ -483,9 +482,9 @@ void c(node *x) {
         case ND_IF2:  c(x->o1); gJmpZ(); p1 = hole(); c(x->o2);
             gJmpN(); p2 = hole(); fix(p1, vmHere);
             c(x->o3); fix(p2, vmHere); break;
-        case ND_WHILE: p1 = vmHere; c(x->o1); gJmpZ(); p2 = hole(); c(x->o2);
+        case ND_WHILE: gNOP(); p1 = vmHere; c(x->o1); gJmpZ(); p2 = hole(); c(x->o2);
             gJmpN(); g4(p1); fix(p2, vmHere); break;
-        case ND_DO: p1 = vmHere; c(x->o1); c(x->o2); gJmpNZ(); gAddr(p1); break;
+        case ND_DO: gNOP(); p1 = vmHere; c(x->o1); c(x->o2); gJmpNZ(); gAddr(p1); break;
         case ND_EMPTY: break;
         case ND_SEQ: c(x->o1); c(x->o2); break;
         case ND_FUNC_CALL: if (x->val == 0) { error("undefined function!"); }
