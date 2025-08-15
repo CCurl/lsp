@@ -40,14 +40,16 @@ enum {
 
 // VM opcodes
 enum {
-    NOP, IADD=0x01
+    // These are real
+    NOP=0x90, IADD=0x01
     , IAND=0x21, IOR=0x09, IXOR=0x31
     , ISUB=0x29, MULDIV=0xf7
     , IRET=0xc3
     , MovRR=0x89, MovIMM=0xb8, MovFet=0xa1, MovSto=0xa3
     , SWAPAB=0x93, ICMP=0x39
     , JNZ=0x75, INCDX=0x42
-    , ILT=0x60, IGT, IEQ, INEQ, ILAND, ILOR, ILNOT, JMPZ, JMPNZ, IJMP
+    // These are fake
+    , ILT=0x60, IGT, ILAND, ILNOT, JMPZ, JMPNZ //, IJMP
 };
 
 byte vm[CODE_SZ];
@@ -404,14 +406,17 @@ void gInit() {
 }
 
 // Used to perform a pop
-void gBtoA() { gN(2, "\x89\xd8"); } // MOV EAX, EBX
-void gCtoB() { gN(2, "\x89\xcb"); } // MOV EBX, ECX
-
-// Used to open space for new TOS
-void gBtoC() { gN(2, "\x89\xd9"); } // MOV ECX, EBX
 void gAtoB() { gN(2, "\x89\xc3"); } // MOV EBX, EAX
+void gBtoA() { gN(2, "\x89\xd8"); } // MOV EAX, EBX
+void gDtoA() { gN(2, "\x89\xd0"); } // MOV EAX, EBX
+void gCtoB() { gN(2, "\x89\xcb"); } // MOV EBX, ECX
+void gBtoC() { gN(2, "\x89\xd9"); } // MOV ECX, EBX
 
 void gPushA() { g(0x50); }
+void gPushA_Bad() {
+    if (vm[here-1] == 0x58) { vm[here-1] = NOP; }
+    else { g(0x50); }
+}
 void gPopA()  { g(0x58); }
 void gPopB()  { g(0x5b); }
 
@@ -427,24 +432,27 @@ void gLit(int v) { gPushA(); gMovIMM(v); }
 
 void gCall(int v) { gN(2, "\xff\x15"); g4(v); }
 void gReturn() { g(IRET); }
-void gAdd() { g(IADD); g(0xd8); gCtoB(); }
-void gSub() { g(ISUB); g(0xc3); gPop(); }
+// pop ebx ; add eax, ebx
+void gAdd() { gN(3, "\x5b\x01\xd8"); }
+// mov ebx, eax ; pop eax ; sub eax, ebx
+void gSub() { gAtoB(); gN(3, "\x58\x29\xd8"); }
 void gMul() { gAtoB(); gPopA(); g(MULDIV); g(0xeb); }
 void gDiv() { gAtoB(); gPopA(); g(MULDIV); g(0xfb); }
 void gCMP() { g(ICMP); }
 void gLT() { g(ILT); }
 void gGT() { g(IGT); }
-void gEQ() { gPopB(); g(IEQ); }
-void gEQU() { gN(11,"\x31\xd2\x39\xc3\x75\x01\x42\x89\xd0\x89\xd0");  }
-void gNEQ() { g(INEQ); }
+// xor edx, edx ; pop ebx ; cmp ebx, eax ; jnz +1 ; inc edx ; mov eax, edx
+void gEQ() { gN(8,"\x31\xd2\x5b\x39\xc3\x75\x01\x42"); gDtoA(); }
+// xor edx, edx ; pop ebx ; cmp ebx, eax ; jz +1 ; inc edx ; mov eax, edx
+void gNEQ() { gN(8,"\x31\xd2\x5b\x39\xc3\x74\x01\x42"); gDtoA(); }
 void gLAnd() { g(ILAND); }
-void gLOr() { g(ILOR); }
 void gLNot() { g(ILNOT); }
 void gAnd() { g(IAND); g(0xd8); gCtoB(); }
-void gOr()  { g(IOR);  g(0xd8); gCtoB(); }
+// pop ebx ; or eax, ebx ;
+void gOr() { gN(3,"\x5b\x09\xd8"); }
 void gXor() { g(IXOR); g(0xd8); gCtoB(); }
 void gJmpN() { gN(2, "\xff\x25"); }
-void gJmp()   { g(IJMP); }
+// void gJmp()   { g(IJMP); }
 void gJmpZ()  { g(JMPZ); }
 void gJmpNZ() { g(JMPNZ); }
 // ----------------------------------------------------------
@@ -463,7 +471,7 @@ void c(node *x) {
         case ND_EQ:   c(x->o1); c(x->o2); gEQ();   break;
         case ND_NEQ:  c(x->o1); c(x->o2); gNEQ();  break;
         case ND_LAND: c(x->o1); c(x->o2); gLAnd(); break;
-        case ND_LOR:  c(x->o1); c(x->o2); gLOr();  break;
+        case ND_LOR:  c(x->o1); c(x->o2); gOr();   break;
         case ND_LNOT: c(x->o1); c(x->o2); gLNot(); break;
         case ND_AND:  c(x->o1); c(x->o2); gAnd();  break;
         case ND_OR:   c(x->o1); c(x->o2); gOr();   break;
@@ -471,7 +479,7 @@ void c(node *x) {
         case ND_SET:  c(x->o2); gStore(x->o1->val); break;
         case ND_IF1:  c(x->o1); gJmpZ(); p1 = hole(); c(x->o2); fix(p1, vmHere); break;
         case ND_IF2:  c(x->o1); gJmpZ(); p1 = hole(); c(x->o2);
-            gJmp(); p2 = hole(); fix(p1, vmHere);
+            gJmpN(); p2 = hole(); fix(p1, vmHere);
             c(x->o3); fix(p2, vmHere); break;
         case ND_WHILE: p1 = vmHere; c(x->o1); gJmpZ(); p2 = hole(); c(x->o2);
             gJmpN(); g4(p1); fix(p2, vmHere); break;

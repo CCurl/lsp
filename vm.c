@@ -5,10 +5,13 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#define VM_SZ 10000
+#define STK_SZ   63
+
 #define BTWI(n,l,h) ((l<=n)&&(n<=h))
 typedef unsigned char byte;
 
-#define DBG
+// #define DBG
 
 #ifdef DBG
 FILE *trcf;
@@ -21,21 +24,19 @@ void stopDBG() {}
 
 // VM opcodes
 enum {
-    NOP, IADD=0x01
+    NOP=0x90, IADD=0x01
     , IAND=0x21, IOR=0x09, IXOR=0x31
     , ISUB=0x29, MULDIV=0xf7
     , IRET=0xc3
     , MovRR=0x89, MovIMM=0xb8, MovFet=0xa1, MovSto=0xa3
     , SWAPAB=0x93, ICMP=0x39
-    , JNZ=0x75, INCDX=0x42
-    , ILT=0x60, IGT, IEQ, INEQ, ILAND, ILOR, ILNOT, JMPZ, JMPNZ, IJMP
+    , JZ=0x74, JNZ=0x75, INCDX=0x42
+    , ILT=0x60, IGT, ILAND, ILNOT, JMPZ, JMPNZ //, IJMP
 };
-
-#define VM_SZ 10000
 
 byte vm[VM_SZ];
 int here;
-static long stk[128];
+static long stk[STK_SZ+1];
 static long vals[1000];
 static long EAX, EBX, ECX, EDX, ESP, EBP, ESI, EDI;
 static long EIP, t;
@@ -108,22 +109,20 @@ void runVM(int st) {
     // if (maxSp < sp) { maxSp = sp; }
     #ifdef DBG
     fprintf(trcf, "EIP:%04lX, ir:%02X, ", EIP, vm[EIP]);
-    fprintf(trcf, "ESP:%2ld, EAX:%ld, NOS:%ld, EBX:%ld\n", ESP, EAX, stk[ESP], EBX);
+    fprintf(trcf, "ESP:%2ld, EAX:%ld, TOS:%ld, EBX:%ld\n", ESP, EAX, stk[ESP], EBX);
+    if (!BTWI(ESP, 0, STK_SZ)) { return; }
     #endif
     ir = vm[EIP++];
     switch (ir) {
         case  NOP:
         // TODO: these are left to migrate to x86
-        ACASE IEQ:    if (EBX == EAX) { EAX = 1; } else { EAX = 0; }
-        ACASE ILT:    if (EBX <  EAX) { EBX = 1; } else { EBX = 0; } sPop();
-        ACASE IGT:    if (EBX >  EAX) { EBX = 1; } else { EBX = 0; } sPop();
-        ACASE INEQ:   if (EBX != EAX) { EBX = 1; } else { EBX = 0; } sPop();
-        ACASE ILAND:  if (EBX && EAX) { EBX = 1; } else { EBX = 0; } sPop();
-        ACASE ILOR:   if (EBX || EAX) { EBX = 1; } else { EBX = 0; } sPop();
-        ACASE ILNOT:  if (EAX == 0) { EAX = 1; } else { EAX = 0; }
+        ACASE ILT:    EBX = pop(); EAX = (EBX <  EAX) ? 1 : 0;
+        ACASE IGT:    EBX = pop(); EAX = (EBX >  EAX) ? 1 : 0;
+        ACASE ILAND:  EBX = pop(); EAX = (EBX && EAX) ? 1 : 0;
+        ACASE ILNOT:  EAX = (EAX == 0) ? 1 : 0;
         ACASE JMPZ:   if (EAX == 0) { EIP = f4(EIP); } else { EIP += 4; } EAX=pop();
         ACASE JMPNZ:  if (EAX != 0) { EIP = f4(EIP); } else { EIP += 4; } EAX=pop();
-        ACASE IJMP:   EIP = f4(EIP);
+        // ACASE IJMP:   EIP = f4(EIP);
         // TODO: these are left to migrate to x86
 
         ACASE 0x50:   push(EAX);
@@ -134,20 +133,21 @@ void runVM(int st) {
         ACASE 0x59:   ECX = pop();
         ACASE 0x5a:   EDX = pop();
         ACASE 0x5b:   EBX = pop();
-        ACASE IADD:   if (ip1()==0xd8) { EAX += EBX; }
-        ACASE ISUB:   if (ip1()==0xc3) { EBX -= EAX; }
-        ACASE MULDIV: ir = ip1();
+        ACASE IADD:   if (ip1()==0xd8) { EAX += EBX; }  // 0x01
+        ACASE ISUB:   if (ip1()==0xd8) { EAX -= EBX; }  // 0x29
+        ACASE MULDIV: ir = ip1();                       // 0xf7
                       if (ir==0xeb) { EAX *= EBX; }
                       else if (ir==0xfb) { EAX /= EBX; }
-        ACASE IAND:   if (ip1()==0xd8) { EAX &= EBX; }
-        ACASE IOR:    if (ip1()==0xd8) { EAX |= EBX; }
-        ACASE IXOR:   ir = ip1();
+        ACASE IAND:   if (ip1()==0xd8) { EAX &= EBX; }     // 0x21
+        ACASE IOR:    if (ip1()==0xd8) { EAX |= EBX; }     // 0x09
+        ACASE IXOR:   ir = ip1();                          // 0x31
                       if (ir==0xd8) { EAX ^= EBX; }
                       else if (ir==0xd2) { EDX ^= EDX; }
-        ACASE INCDX:  EDX++;
-        ACASE ICMP:   ir = ip1(); doCmp(ir);
-        ACASE JNZ:    ir = ip1(); if (isZero==0) { EIP += (char)ir; } 
-        ACASE IRET:   if (ESP < 1) { return; } EIP = pop();
+        ACASE INCDX:  EDX++;                               // 0x42
+        ACASE ICMP:   ir = ip1(); doCmp(ir);               // 0x39
+        ACASE JZ:     ir = ip1(); if (isZero) { EIP += (char)ir; }     // 0x74
+        ACASE JNZ:    ir = ip1(); if (isZero==0) { EIP += (char)ir; }  // 0x75
+        ACASE IRET:   if (ESP < 1) { return; } EIP = pop();  // 0xc3
         ACASE MovRR:  MOV(vm[EIP++]);
         ACASE MovIMM: EAX = ip4();
         ACASE MovFet: EAX = vals[ip4()];
@@ -201,15 +201,13 @@ void dis(FILE *toFp) {
             case  NOP:    pB(5); pS("nop");
             BCASE ILT:    pB(5); pS("lt");
             BCASE IGT:    pB(5); pS("gt");
-            BCASE IEQ:    pB(5); pS("equ");
-            BCASE INEQ:   pB(5); pS("neq");
             BCASE ILAND:  pB(5); pS("land");
-            BCASE ILOR:   pB(5); pS("lor");
             BCASE ILNOT:  pB(5); pS("lnot");
             BCASE JMPZ:   t=ip4(); pN4(t); pB(1); fprintf(outFp, "; jmpz 0x%08lx", t);
             BCASE JMPNZ:  t=ip4(); pN4(t); pB(1); fprintf(outFp, "; jmpnz 0x%08lx", t);
-            BCASE IJMP:   t=ip4(); pN4(t); pB(1); fprintf(outFp, "; jmp 0x%08lx", t);
+            // BCASE fl:   t=ip4(); pN4(t); pB(1); fprintf(outFp, "; jmp 0x%08lx", t);
 
+            BCASE 0x42:   pB(5); fprintf(outFp, "; INC EDX");
             BCASE 0x50:   pB(5); fprintf(outFp, "; PUSH EAX");
             BCASE 0x51:   pB(5); fprintf(outFp, "; PUSH ECX");
             BCASE 0x52:   pB(5); fprintf(outFp, "; PUSH EDX");
@@ -218,6 +216,9 @@ void dis(FILE *toFp) {
             BCASE 0x59:   pB(5); fprintf(outFp, "; POP ECX");
             BCASE 0x5a:   pB(5); fprintf(outFp, "; POP EDX");
             BCASE 0x5b:   pB(5); fprintf(outFp, "; POP EBX");
+            BCASE JNZ:    t=ip1(); pN1(t); pB(4); fprintf(outFp, "; JNZ %04lx", EIP+(char)t);
+            BCASE JZ:     t=ip1(); pN1(t); pB(4); fprintf(outFp, "; JZ %04lx", EIP+(char)t);
+            BCASE ICMP:   t=ip1(); pN1(t); pB(4); pS("CMP"); pRR(t);
             BCASE IADD:   t=ip1(); pN1(t); pB(4); pS("ADD"); pRR(t);
             BCASE ISUB:   t=ip1(); pN1(t); pB(4); pS("SUB"); pRR(t);
             BCASE MULDIV: t=ip1(); pN1(t); pB(4);
@@ -260,8 +261,10 @@ int main(int argc, char *argv[]) {
         fclose(fp);
         runVM(0);
         for (int i=0; i<1000; i++) {
-            if (vals[i] != 0) { printf("%d: %ld\n", i, vals[i]); }
+            if (vals[i] != 0) { printf("%3d: %ld\n", i, vals[i]); }
         }
+        printf("ESP:%ld, EAX:%ld, EBX:%ld, ECX:%ld, EDX:%ld\n",
+             ESP, EAX, EBX, ECX, EDX);
         // printf("max-sp: %ld\n", maxSp);
     }
 
