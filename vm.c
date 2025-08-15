@@ -5,8 +5,9 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#define VM_SZ 10000
-#define STK_SZ   63
+#define VM_SZ    10000
+#define STK_SZ      63
+#define VALS_SZ    256
 
 #define BTWI(n,l,h) ((l<=n)&&(n<=h))
 typedef unsigned char byte;
@@ -40,7 +41,7 @@ enum {
 byte vm[VM_SZ];
 int here;
 static long stk[STK_SZ+1];
-static long vals[1000];
+static long vals[VALS_SZ];
 static long EAX, EBX, ECX, EDX, ESP, EBP, ESI, EDI;
 static long EIP, t;
 
@@ -52,7 +53,7 @@ static long EIP, t;
 #define rBP 5
 #define rSI 6
 #define rDI 7
-#define R2R(rT, rF) ((3<<6) | (rF<<3) | rT)
+#define R2R(rT, rF) (0xc0 | (rF<<3) | rT)
 
 #define ACASE    goto again; case
 #define BCASE    break; case
@@ -266,7 +267,7 @@ int main(int argc, char *argv[]) {
         dis(fp);
         fclose(fp);
         runVM(0);
-        for (int i=0; i<1000; i++) {
+        for (int i=0; i<VALS_SZ; i++) {
             if (vals[i] != 0) { printf("%3d: %ld\n", i, vals[i]); }
         }
         printf("ESP:%ld, EAX:%ld, EBX:%ld, ECX:%ld, EDX:%ld\n",

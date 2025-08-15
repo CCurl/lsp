@@ -7,8 +7,10 @@ if [%f%] equ [] (
 	set %f=debug
 )
 
-echo f=%f%
-
+echo %f%\tc bm.tc
 %f%\tc bm.tc
+
+echo %f%\vm
 %f%\vm
+
 %f%\hex-dump tc.out >> vm.lst
