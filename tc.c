@@ -47,9 +47,10 @@ enum {
     , IRET=0xc3
     , MovRR=0x89, MovIMM=0xb8, MovFet=0xa1, MovSto=0xa3
     , SWAPAB=0x93, ICMP=0x39
-    , JNZ=0x75, INCDX=0x42
-    // These are fake
-    , ILT=0x60, IGT, ILAND, ILNOT, JMPZ, JMPNZ //, IJMP
+    , JZ=0x74, JNZ=0x75, JGE=0x7d, JLE=0x7e
+    , INCDX=0x42
+    // These are not real
+    , ILAND=0x60, ILNOT, JMPZ, JMPNZ //, IJMP
 };
 
 byte vm[CODE_SZ];
@@ -438,9 +439,10 @@ void gAdd() { gN(3, "\x5b\x01\xd8"); }
 void gSub() { gAtoB(); gN(3, "\x58\x29\xd8"); }
 void gMul() { gAtoB(); gPopA(); g(MULDIV); g(0xeb); }
 void gDiv() { gAtoB(); gPopA(); g(MULDIV); g(0xfb); }
-void gCMP() { g(ICMP); }
-void gLT() { g(ILT); }
-void gGT() { g(IGT); }
+// xor edx, edx ; pop ebx ; cmp ebx, eax ; jge +1 ; inc edx ; mov eax, edx
+void gLT() { gN(8,"\x31\xd2\x5b\x39\xc3\x7d\x01\x42"); gDtoA(); }
+// xor edx, edx ; pop ebx ; cmp ebx, eax ; jle +1 ; inc edx ; mov eax, edx
+void gGT() { gN(8,"\x31\xd2\x5b\x39\xc3\x7e\x01\x42"); gDtoA(); }
 // xor edx, edx ; pop ebx ; cmp ebx, eax ; jnz +1 ; inc edx ; mov eax, edx
 void gEQ() { gN(8,"\x31\xd2\x5b\x39\xc3\x75\x01\x42"); gDtoA(); }
 // xor edx, edx ; pop ebx ; cmp ebx, eax ; jz +1 ; inc edx ; mov eax, edx

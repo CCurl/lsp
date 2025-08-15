@@ -24,14 +24,17 @@ void stopDBG() {}
 
 // VM opcodes
 enum {
+    // These are real
     NOP=0x90, IADD=0x01
     , IAND=0x21, IOR=0x09, IXOR=0x31
     , ISUB=0x29, MULDIV=0xf7
     , IRET=0xc3
     , MovRR=0x89, MovIMM=0xb8, MovFet=0xa1, MovSto=0xa3
     , SWAPAB=0x93, ICMP=0x39
-    , JZ=0x74, JNZ=0x75, INCDX=0x42
-    , ILT=0x60, IGT, ILAND, ILNOT, JMPZ, JMPNZ //, IJMP
+    , JZ=0x74, JNZ=0x75, JGE=0x7d, JLE=0x7e
+    , INCDX=0x42
+    // These are not real
+    , ILAND=0x60, ILNOT, JMPZ, JMPNZ //, IJMP
 };
 
 byte vm[VM_SZ];
@@ -94,12 +97,15 @@ static void sPop() {
 static void push(long x) { stk[++ESP] = x;  }
 static int  pop() { return stk[ESP--]; }
 
-byte isZero, isNeg;
+byte ZF;  // Zero-Flag
+byte SF;  // Sign-Flag
+byte CF;  // Carry-Flag
 void doCmp(int ir) {
     long r = 1;
     if (ir == 0xc3) { r = EBX - EAX; }
-    isZero = (r == 0) ? 1 : 0;
-    isNeg  = (r <  0) ? 1 : 0;
+    ZF = (r == 0) ? 1 : 0;
+    SF = (r <  0) ? 1 : 0;
+    CF = SF;
 }
 
 void runVM(int st) {
@@ -116,8 +122,6 @@ void runVM(int st) {
     switch (ir) {
         case  NOP:
         // TODO: these are left to migrate to x86
-        ACASE ILT:    EBX = pop(); EAX = (EBX <  EAX) ? 1 : 0;
-        ACASE IGT:    EBX = pop(); EAX = (EBX >  EAX) ? 1 : 0;
         ACASE ILAND:  EBX = pop(); EAX = (EBX && EAX) ? 1 : 0;
         ACASE ILNOT:  EAX = (EAX == 0) ? 1 : 0;
         ACASE JMPZ:   if (EAX == 0) { EIP = f4(EIP); } else { EIP += 4; } EAX=pop();
@@ -144,9 +148,11 @@ void runVM(int st) {
                       if (ir==0xd8) { EAX ^= EBX; }
                       else if (ir==0xd2) { EDX ^= EDX; }
         ACASE INCDX:  EDX++;                               // 0x42
-        ACASE ICMP:   ir = ip1(); doCmp(ir);               // 0x39
-        ACASE JZ:     ir = ip1(); if (isZero) { EIP += (char)ir; }     // 0x74
-        ACASE JNZ:    ir = ip1(); if (isZero==0) { EIP += (char)ir; }  // 0x75
+        ACASE ICMP:   ir=ip1(); doCmp(ir);                 // 0x39
+        ACASE JZ:     ir=ip1(); if (ZF)            { EIP += (char)ir; }  // 0x74
+        ACASE JNZ:    ir=ip1(); if (!ZF)           { EIP += (char)ir; }  // 0x75
+        ACASE JGE:    ir=ip1(); if ((ZF) || (!SF)) { EIP += (char)ir; }  // 0x7d
+        ACASE JLE:    ir=ip1(); if ((ZF) || (SF))  { EIP += (char)ir; }  // 0x7e
         ACASE IRET:   if (ESP < 1) { return; } EIP = pop();  // 0xc3
         ACASE MovRR:  MOV(vm[EIP++]);
         ACASE MovIMM: EAX = ip4();
@@ -199,8 +205,6 @@ void dis(FILE *toFp) {
         fprintf(outFp, "\n%04lX: %02X ", EIP, vm[EIP]);
         switch (vm[EIP++]) {
             case  NOP:    pB(5); pS("nop");
-            BCASE ILT:    pB(5); pS("lt");
-            BCASE IGT:    pB(5); pS("gt");
             BCASE ILAND:  pB(5); pS("land");
             BCASE ILNOT:  pB(5); pS("lnot");
             BCASE JMPZ:   t=ip4(); pN4(t); pB(1); fprintf(outFp, "; jmpz 0x%08lx", t);
@@ -216,8 +220,10 @@ void dis(FILE *toFp) {
             BCASE 0x59:   pB(5); fprintf(outFp, "; POP ECX");
             BCASE 0x5a:   pB(5); fprintf(outFp, "; POP EDX");
             BCASE 0x5b:   pB(5); fprintf(outFp, "; POP EBX");
-            BCASE JNZ:    t=ip1(); pN1(t); pB(4); fprintf(outFp, "; JNZ %04lx", EIP+(char)t);
-            BCASE JZ:     t=ip1(); pN1(t); pB(4); fprintf(outFp, "; JZ %04lx", EIP+(char)t);
+            BCASE JNZ:    t=ip1(); pN1(t); pB(4); fprintf(outFp, "; JNZ %04lX", EIP+(char)t);
+            BCASE JZ:     t=ip1(); pN1(t); pB(4); fprintf(outFp, "; JZ %04lX", EIP+(char)t);
+            BCASE JGE:    t=ip1(); pN1(t); pB(4); fprintf(outFp, "; JGE %04lX", EIP+(char)t);
+            BCASE JLE:    t=ip1(); pN1(t); pB(4); fprintf(outFp, "; JLE %04lX", EIP+(char)t);
             BCASE ICMP:   t=ip1(); pN1(t); pB(4); pS("CMP"); pRR(t);
             BCASE IADD:   t=ip1(); pN1(t); pB(4); pS("ADD"); pRR(t);
             BCASE ISUB:   t=ip1(); pN1(t); pB(4); pS("SUB"); pRR(t);
