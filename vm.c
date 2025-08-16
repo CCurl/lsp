@@ -3,17 +3,17 @@
 // This is (will be) an extremely stripped down 32-bit Linux/x86 emulator.
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 
-#define VM_SZ    10000
-#define STK_SZ      63
-#define VALS_SZ    256
+#define VM_SZ      100000
+#define STK_SZ         63
+#define VALS_SZ       256
 
 #define BTWI(n,l,h) ((l<=n)&&(n<=h))
 typedef unsigned char byte;
 
 // #define DBG
-
 #ifdef DBG
 FILE *trcf;
 void startDBG() { trcf = fopen("vm.trc","wt"); }
@@ -23,7 +23,7 @@ void startDBG() {}
 void stopDBG() {}
 #endif
 
-// VM opcodes
+// VM/x86 opcodes
 enum {
     // These are real
     NOP=0x90, IADD=0x01
@@ -35,14 +35,12 @@ enum {
     , JZ=0x74, JNZ=0x75, JGE=0x7d, JLE=0x7e
     , INCDX=0x42
     // These are not real
-    , ILAND=0x60, ILNOT, JMPZ, JMPNZ //, IJMP
+    , ILAND=0x60, JMPZ, JMPNZ
 };
 
 byte vm[VM_SZ];
-int here;
-static long stk[STK_SZ+1];
-static long vals[VALS_SZ];
-static long EAX, EBX, ECX, EDX, ESP, EBP, ESI, EDI;
+static int32_t here, *vals;
+static int32_t regs[8], stk[STK_SZ+1];
 static long EIP, t;
 
 #define rAX 0
@@ -55,8 +53,18 @@ static long EIP, t;
 #define rDI 7
 #define R2R(rT, rF) (0xc0 | (rF<<3) | rT)
 
+#define EAX regs[rAX]
+#define ECX regs[rCX]
+#define EDX regs[rDX]
+#define EBX regs[rBX]
+#define ESP regs[rSP]
+#define EBP regs[rBP]
+#define ESI regs[rSI]
+#define EDI regs[rDI]
+
 #define ACASE    goto again; case
 #define BCASE    break; case
+#define RCASE    return; case
 
 static int f1(int a) { return vm[a]; }
 static int f2(int a) { return *(int16_t*)(&vm[a]); }
@@ -64,9 +72,14 @@ static int f4(int a) { return *(int32_t*)(&vm[a]); }
 static int ip1() { int t=f1(EIP); EIP += 1; return t; }
 static int ip2() { int t=f2(EIP); EIP += 2; return t; }
 static int ip4() { int t=f4(EIP); EIP += 4; return t; }
+static void s1(long a, long v) { vm[a] = (v&0xff); }
+static void s4(long a, long v) { *(int32_t*)(&vm[a]) = v; }
 
-void initVM() {
-    ESP = here = 0;
+void initVM(int sz) {
+    ESP = 0;
+    here = sz;
+    while (sz&3) { ++sz; }
+    vals = (int32_t*)&vm[sz];
 }
 
 static void MOV(int what) {
@@ -79,20 +92,6 @@ static void MOV(int what) {
         case R2R(rCX, rDX): ECX = EDX;  break;
         case R2R(rDX, rCX): EDX = ECX;  break;
     }
-}
-
-static void sPush() {
-    // EDX = ECX; ECX = EBX; EBX = EAX;
-    // MOV(R2R(rDX, rCX));
-    MOV(R2R(rCX, rBX));
-    MOV(R2R(rBX, rAX));
-}
-
-static void sPop() {
-    // EAX = EBX; EBX = ECX; ECX = EDX;
-    MOV(R2R(rAX, rBX));
-    MOV(R2R(rBX, rCX));
-    //MOV(R2R(rCX, rDX));
 }
 
 static void push(long x) { stk[++ESP] = x;  }
@@ -109,6 +108,22 @@ void doCmp(int ir) {
     CF = SF;
 }
 
+// Linux simulation
+void sys01() { stopDBG(); exit(EBX); }
+void sys02() {  }
+void sys04() { for (int i=0; i<EDX; i++ ) { putchar(vm[ECX+i]); } }
+void sys45() {  } // sys_brk
+void doInt(int num) {
+    if (num != 0x80) { return; }
+    switch (EAX) {
+        case   1: sys01();
+        RCASE  2: sys02();
+        RCASE  4: sys04();
+        RCASE 45: sys45();
+        return; default: printf("INT 80: unknown call %d", EAX);
+    }
+}
+
 void runVM(int st) {
     byte ir;
     EIP = st;
@@ -116,15 +131,15 @@ void runVM(int st) {
     // if (maxSp < sp) { maxSp = sp; }
     #ifdef DBG
     fprintf(trcf, "EIP:%04lX, ir:%02X, ", EIP, vm[EIP]);
-    fprintf(trcf, "ESP:%2ld, EAX:%ld, TOS:%ld, EBX:%ld\n", ESP, EAX, stk[ESP], EBX);
+    fprintf(trcf, "ESP:%2d, EAX:%d, TOS:%d, EBX:%d, EDX:%d\n",
+        ESP, EAX, stk[ESP], EBX, EDX);
     if (!BTWI(ESP, 0, STK_SZ)) { return; }
     #endif
     ir = vm[EIP++];
     switch (ir) {
         case  NOP:
         // TODO: these are left to migrate to x86
-        ACASE ILAND:  EBX = pop(); EAX = (EBX && EAX) ? 1 : 0;
-        ACASE ILNOT:  EAX = (EAX == 0) ? 1 : 0;
+        ACASE ILAND:  EAX = (EBX && EAX) ? 1 : 0;
         ACASE JMPZ:   if (EAX == 0) { EIP = f4(EIP); } else { EIP += 4; } EAX=pop();
         ACASE JMPNZ:  if (EAX != 0) { EIP = f4(EIP); } else { EIP += 4; } EAX=pop();
         // ACASE IJMP:   EIP = f4(EIP);
@@ -161,6 +176,7 @@ void runVM(int st) {
         ACASE MovSto: vals[ip4()] = EAX;
         ACASE SWAPAB: t=EAX; EAX=EBX; EBX=t;
         ACASE 0x8d:   ir=ip1(); t=ip4(); if (ir == 0x15) { EDX = t; }      // LEA EDX, [addr]
+        ACASE 0xcd:   doInt(ip1());                                        // INT
         ACASE 0xff:   ir=ip1();
                       if (ir == 0xd2) { push(EIP); EIP = EDX; }            // CALL EDX
                       else if (ir == 0x15) { push(EIP+4); EIP = ip4(); }   // CALL [addr]
@@ -205,13 +221,11 @@ void dis(FILE *toFp) {
     while (EIP < here) {
         fprintf(outFp, "\n%04lX: %02X ", EIP, vm[EIP]);
         switch (vm[EIP++]) {
-            case  NOP:    pB(5); pS("nop");
             BCASE ILAND:  pB(5); pS("land");
-            BCASE ILNOT:  pB(5); pS("lnot");
             BCASE JMPZ:   t=ip4(); pN4(t); pB(1); fprintf(outFp, "; jmpz 0x%08lx", t);
             BCASE JMPNZ:  t=ip4(); pN4(t); pB(1); fprintf(outFp, "; jmpnz 0x%08lx", t);
-            // BCASE fl:   t=ip4(); pN4(t); pB(1); fprintf(outFp, "; jmp 0x%08lx", t);
-
+            
+            case  NOP:    pB(5); pS("NOP");
             BCASE 0x42:   pB(5); fprintf(outFp, "; INC EDX");
             BCASE 0x50:   pB(5); fprintf(outFp, "; PUSH EAX");
             BCASE 0x51:   pB(5); fprintf(outFp, "; PUSH ECX");
@@ -241,6 +255,7 @@ void dis(FILE *toFp) {
             BCASE MovIMM: t=ip4(); pN4(t); pB(1); fprintf(outFp, "; MOV EAX, 0x%08lx (%ld)", t, t);
             BCASE SWAPAB: pB(5); pS("XCHG EAX, EBX");
             BCASE 0x8d:   ir=ip1(); t=ip4(); pN1(ir); pN4(t); if (ir == 0x15) { fprintf(outFp, "; LEA EDX, [0x%08lx]", t); }
+            BCASE 0xcd:   t=ip1(); pN1(t); pB(4); fprintf(outFp, "; INT 0x%02lx", t);
             BCASE 0xff:   ir=ip1(); pN1(ir);
                     if (ir == 0xd2) { pB(4); fprintf(outFp, "; CALL EDX"); }
                     if (ir == 0x15) { t=ip4(); pN4(t); pB(0); fprintf(outFp, "; CALL [0x%08lx]", t); }
@@ -258,21 +273,20 @@ int main(int argc, char *argv[]) {
     char *fn = (argc > 1) ? argv[1] : "tc.out";
     FILE *fp = fopen(fn, "rb");
     startDBG();
-    initVM();
     if (!fp) { printf("can't open program"); }
     else {
-        here = (int)fread(vm, 1, VM_SZ, fp);
+        int sz = (int)fread(vm, 1, VM_SZ, fp);
+        initVM(sz);
         fclose(fp);
         fp = fopen("vm.lst", "wt");
         dis(fp);
         fclose(fp);
         runVM(0);
         for (int i=0; i<VALS_SZ; i++) {
-            if (vals[i] != 0) { printf("%3d: %ld\n", i, vals[i]); }
+            if (vals[i] != 0) { printf("%3d: %d\n", i, vals[i]); }
         }
-        printf("ESP:%ld, EAX:%ld, EBX:%ld, ECX:%ld, EDX:%ld\n",
+        printf("ESP:%d, EAX:%d, EBX:%d, ECX:%d, EDX:%d\n",
              ESP, EAX, EBX, ECX, EDX);
-        // printf("max-sp: %ld\n", maxSp);
     }
 
     stopDBG();
