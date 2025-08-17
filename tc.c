@@ -406,10 +406,10 @@ void gInit() {
     addrSz = 4;
 }
 
-// Used to perform a pop
-void gAtoB() { gN(2, "\x89\xc3"); } // MOV EBX, EAX
+// Used to perform a push or pop
 void gBtoA() { gN(2, "\x89\xd8"); } // MOV EAX, EBX
 void gDtoA() { gN(2, "\x89\xd0"); } // MOV EAX, EBX
+void gAtoB() { gN(2, "\x89\xc3"); } // MOV EBX, EAX
 void gCtoB() { gN(2, "\x89\xcb"); } // MOV EBX, ECX
 void gBtoC() { gN(2, "\x89\xd9"); } // MOV ECX, EBX
 
@@ -417,7 +417,6 @@ void gNOP() { g(0x90); }
 void gPushA_XX() { g(0x50); }
 void gPushA() {
     if (vm[here-1] == 0x58) { vm[here-1]=NOP; }
-    // if (vm[here-1] == 0x58) { vm[here-1] = NOP; }
     else { g(0x50); }
 }
 void gPopA()  { g(0x58); }
