@@ -89,6 +89,7 @@ c3 - ret
 0x12356:      FF D2                    call edx
 0x12358:      C3                       ret
 
+0x1000f:      93                       xchg eax, ebx
 0x10010:      91                       xchg eax, ecx
 0x10011:      87 CB                    xchg ebx, ecx
 0x10013:      21 D8                    and eax, ebx
@@ -102,3 +103,10 @@ c3 - ret
 0x10002:      F7 D0                    not eax
 0x10004:      90                       nop
 0x10013:      C3                       ret
+
+
+
+0x10000:      55                 push ebp
+0x10001:      89 E5              mov ebp, esp
+0x10003:      89 EC              mov esp, ebp
+0x10005:      5B                 pop ebx

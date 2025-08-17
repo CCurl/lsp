@@ -31,7 +31,7 @@ enum {
     , ISUB=0x29, MULDIV=0xf7
     , IRET=0xc3
     , MovRR=0x89, MovIMM=0xb8, MovFet=0xa1, MovSto=0xa3
-    , SWAPAB=0x93, ICMP=0x39
+    , XCHGAB=0x93, ICMP=0x39
     , JZ=0x74, JNZ=0x75, JGE=0x7d, JLE=0x7e
     , INCDX=0x42
     // These are not real
@@ -51,7 +51,6 @@ static long EIP, t;
 #define rBP 5
 #define rSI 6
 #define rDI 7
-#define R2R(rT, rF) (0xc0 | (rF<<3) | rT)
 
 #define EAX regs[rAX]
 #define ECX regs[rCX]
@@ -83,15 +82,9 @@ void initVM(int sz) {
 }
 
 static void MOV(int what) {
-    switch (what) {
-        case R2R(rAX, rBX): EAX = EBX;  break;
-        case R2R(rAX, rDX): EAX = EDX;  break;
-        case R2R(rBX, rAX): EBX = EAX;  break;
-        case R2R(rBX, rCX): EBX = ECX;  break;
-        case R2R(rCX, rBX): ECX = EBX;  break;
-        case R2R(rCX, rDX): ECX = EDX;  break;
-        case R2R(rDX, rCX): EDX = ECX;  break;
-    }
+    int rT = what & 0x07;
+    int rF = (what>>3) & 0x07;
+    regs[rT] = regs[rF];
 }
 
 static void push(long x) { stk[++ESP] = x;  }
@@ -149,6 +142,10 @@ void runVM(int st) {
         ACASE 0x51:   push(ECX);
         ACASE 0x52:   push(EDX);
         ACASE 0x53:   push(EBX);
+        ACASE 0x54:   push(ESP);
+        ACASE 0x55:   push(EBP);
+        ACASE 0x56:   push(ESI);
+        ACASE 0x57:   push(EDI);
         ACASE 0x58:   EAX = pop();
         ACASE 0x59:   ECX = pop();
         ACASE 0x5a:   EDX = pop();
@@ -170,11 +167,11 @@ void runVM(int st) {
         ACASE JGE:    ir=ip1(); if ((ZF) || (!SF)) { EIP += (char)ir; }  // 0x7d
         ACASE JLE:    ir=ip1(); if ((ZF) || (SF))  { EIP += (char)ir; }  // 0x7e
         ACASE IRET:   if (ESP < 1) { return; } EIP = pop();  // 0xc3
-        ACASE MovRR:  MOV(vm[EIP++]);
+        ACASE MovRR:  MOV(ip1());
         ACASE MovIMM: EAX = ip4();
         ACASE MovFet: EAX = vals[ip4()];
         ACASE MovSto: vals[ip4()] = EAX;
-        ACASE SWAPAB: t=EAX; EAX=EBX; EBX=t;
+        ACASE XCHGAB: t=EAX; EAX=EBX; EBX=t;
         ACASE 0x8d:   ir=ip1(); t=ip4(); if (ir == 0x15) { EDX = t; }      // LEA EDX, [addr]
         ACASE 0xcd:   doInt(ip1());                                        // INT
         ACASE 0xff:   ir=ip1();
@@ -253,7 +250,7 @@ void dis(FILE *toFp) {
             BCASE MovFet: t=ip4(); pN4(t); pB(1); fprintf(outFp, "; MOV EAX, [0x%08lx]", t);
             BCASE MovSto: t=ip4(); pN4(t); pB(1); fprintf(outFp, "; MOV [0x%08lx], EAX", t);
             BCASE MovIMM: t=ip4(); pN4(t); pB(1); fprintf(outFp, "; MOV EAX, 0x%08lx (%ld)", t, t);
-            BCASE SWAPAB: pB(5); pS("XCHG EAX, EBX");
+            BCASE XCHGAB: pB(5); pS("XCHG EAX, EBX");
             BCASE 0x8d:   ir=ip1(); t=ip4(); pN1(ir); pN4(t); if (ir == 0x15) { fprintf(outFp, "; LEA EDX, [0x%08lx]", t); }
             BCASE 0xcd:   t=ip1(); pN1(t); pB(4); fprintf(outFp, "; INT 0x%02lx", t);
             BCASE 0xff:   ir=ip1(); pN1(ir);
