@@ -23,7 +23,7 @@ enum {
     , TOK_LBRA, TOK_RBRA, TOK_LPAR, TOK_RPAR, TOK_LARR, TOK_RARR
     , TOK_PLUS, TOK_MINUS, TOK_STAR, TOK_SLASH
     , TOK_LT, TOK_EQ, TOK_GT, TOK_NEQ
-    , TOK_SET, TOK_NUM, TOK_ID, TOK_FUNC
+    , TOK_SET, TOK_NUM, TOK_ID, TOK_FUNC, TOK_STR
     , TOK_OR, TOK_AND, TOK_XOR, TOK_LOR, TOK_LAND
     , TOK_SEMI, EOI
 };
@@ -67,7 +67,7 @@ char *words[] = { "do", "else", "if"
     , "return", NULL};
 
 int ch = ' ', tok, int_val;
-char id_name[64];
+char id_name[256];
 FILE *input_fp = NULL;
 char cur_line[256] = {0};
 int cur_off = 0, cur_lnum = 0, is_eof = 0;
@@ -144,6 +144,16 @@ void next_token() {
         break;
     case '&': next_ch(); tok = TOK_AND;
         if (ch == '&') { tok = TOK_LAND; next_ch(); }
+        break;
+    case '"': next_ch(); tok = TOK_STR;
+        int len = 0;
+        while (ch != '"') {
+            id_name[len++] = ch;
+            next_ch();
+            if (ch == EOF) { syntax_error(); }
+        }
+        id_name[len] = 0;
+        next_ch();
         break;
     default:
         if (isNum(ch)) {
@@ -260,6 +270,11 @@ node *term() {
     }
     else if (tok == TOK_NUM) {
         x = new_node(ND_CST); // CONSTANT
+        x->val = int_val;
+        next_token();
+    }
+    else if (tok == TOK_STR) {
+        x = new_node(ND_CST); // STRING
         x->val = int_val;
         next_token();
     }
