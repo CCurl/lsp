@@ -406,15 +406,10 @@ void gInit() {
     addrSz = 4;
 }
 
-// Used to perform a push or pop
-void gBtoA() { gN(2, "\x89\xd8"); } // MOV EAX, EBX
 void gDtoA() { gN(2, "\x89\xd0"); } // MOV EAX, EBX
 void gAtoB() { gN(2, "\x89\xc3"); } // MOV EBX, EAX
-void gCtoB() { gN(2, "\x89\xcb"); } // MOV EBX, ECX
-void gBtoC() { gN(2, "\x89\xd9"); } // MOV ECX, EBX
 
 void gNOP() { g(0x90); }
-void gPushA_XX() { g(0x50); }
 void gPushA() {
     if (vm[here-1] == 0x58) { vm[here-1]=NOP; }
     else { g(0x50); }
@@ -422,36 +417,41 @@ void gPushA() {
 void gPopA()  { g(0x58); }
 void gPopB()  { g(0x5b); }
 
-void gMovRR(int RR) { g(0x89); g(RR); }
 void gMovIMM(int val) { g(0xb8); g4(val); }
 
 void gStore(int loc) { g(0xa3); g4(loc); gPopA(); }
 void gFetch(int loc) { gPushA(); g(0xa1); g4(loc); }
 void gLit(int v) { gPushA(); gMovIMM(v); }
 
+// push ebp ; mov ebp, esp
+void gPreCall() { gN(3, "\x55\x89\xe5"); }
 void gCall(int v) { gN(2, "\xff\x15"); g4(v); }
 void gReturn() { g(IRET); }
+// mov esp, ebp ; pop ebp
+void gPostCall() { gN(3, "\x89\xec\x5d"); }
 // pop ebx ; add eax, ebx
 void gAdd() { gN(3, "\x5b\x01\xd8"); }
 // mov ebx, eax ; pop eax ; sub eax, ebx
 void gSub() { gAtoB(); gN(3, "\x58\x29\xd8"); }
 void gMul() { gAtoB(); gPopA(); g(MULDIV); g(0xeb); }
 void gDiv() { gAtoB(); gPopA(); g(MULDIV); g(0xfb); }
-// xor edx, edx ; pop ebx ; cmp ebx, eax ; jge +1 ; inc edx ; mov eax, edx
-void gLT() { gN(8,"\x31\xd2\x5b\x39\xc3\x7d\x01\x42"); gDtoA(); }
-// xor edx, edx ; pop ebx ; cmp ebx, eax ; jle +1 ; inc edx ; mov eax, edx
-void gGT() { gN(8,"\x31\xd2\x5b\x39\xc3\x7e\x01\x42"); gDtoA(); }
-// xor edx, edx ; pop ebx ; cmp ebx, eax ; jnz +1 ; inc edx ; mov eax, edx
-void gEQ() { gN(8,"\x31\xd2\x5b\x39\xc3\x75\x01\x42"); gDtoA(); }
-// xor edx, edx ; pop ebx ; cmp ebx, eax ; jz +1 ; inc edx ; mov eax, edx
-void gNEQ() { gN(8,"\x31\xd2\x5b\x39\xc3\x74\x01\x42"); gDtoA(); }
+// xor edx, edx ; pop ebx ; cmp ebx, eax ; jge +1 ; dec edx ; mov eax, edx
+void gLT() { gN(8,"\x31\xd2\x5b\x39\xc3\x7d\x01\x4a"); gDtoA(); }
+// xor edx, edx ; pop ebx ; cmp ebx, eax ; jle +1 ; dec edx ; mov eax, edx
+void gGT() { gN(8,"\x31\xd2\x5b\x39\xc3\x7e\x01\x4a"); gDtoA(); }
+// xor edx, edx ; pop ebx ; cmp ebx, eax ; jnz +1 ; dec edx ; mov eax, edx
+void gEQ() { gN(8,"\x31\xd2\x5b\x39\xc3\x75\x01\x4a"); gDtoA(); }
+// xor edx, edx ; pop ebx ; cmp ebx, eax ; jz +1 ; dec edx ; mov eax, edx
+void gNEQ() { gN(8,"\x31\xd2\x5b\x39\xc3\x74\x01\x4a"); gDtoA(); }
 void gOr()  { gN(3,"\x5b\x09\xd8"); }   // pop ebx ; or eax, ebx ;
 void gAnd() { gN(3,"\x5b\x21\xd8"); }   // pop ebx ; and eax, ebx ;
 void gXor() { gN(3,"\x5b\x31\xd8"); }   // pop ebx ; xor eax, ebx ;
-void gJmpN() { gN(2, "\xff\x25"); }
-// void gJmp()   { g(IJMP); }
-void gJmpZ()  { g(JMPZ); }
-void gJmpNZ() { g(JMPNZ); }
+// jmp (stop here)
+void gJmp() { gN(2, "\xff\x25"); }
+// test eax, eax; pop eax ; jnz +6 ; jmp (stop here)
+void gJmpZ()  { gN(7, "\x85\xc0\x58\x75\x06\xff\x25"); }
+// test eax, eax; pop eax ; jz +6 ; jmp (stop here)
+void gJmpNZ()  { gN(7, "\x85\xc0\x58\x74\x06\xff\x25"); }
 // ----------------------------------------------------------
 
 void c(node *x) {
@@ -475,15 +475,18 @@ void c(node *x) {
         case ND_SET:  c(x->o2); gStore(x->o1->val); break;
         case ND_IF1:  c(x->o1); gJmpZ(); p1 = hole(); c(x->o2); fix(p1, vmHere); break;
         case ND_IF2:  c(x->o1); gJmpZ(); p1 = hole(); c(x->o2);
-            gJmpN(); p2 = hole(); fix(p1, vmHere);
+            gJmp(); p2 = hole(); fix(p1, vmHere);
             c(x->o3); fix(p2, vmHere); break;
         case ND_WHILE: gNOP(); p1 = vmHere; c(x->o1); gJmpZ(); p2 = hole(); c(x->o2);
-            gJmpN(); g4(p1); fix(p2, vmHere); break;
+            gJmp(); g4(p1); fix(p2, vmHere); break;
         case ND_DO: gNOP(); p1 = vmHere; c(x->o1); c(x->o2); gJmpNZ(); gAddr(p1); break;
         case ND_EMPTY: break;
         case ND_SEQ: c(x->o1); c(x->o2); break;
-        case ND_FUNC_CALL: if (x->val == 0) { error("undefined function!"); }
-            gCall(x->val); break;
+        case ND_FUNC_CALL: 
+            if (x->val == 0) { error("undefined function!"); }
+            gPreCall();
+            gCall(x->val);
+            gPostCall(); break;
         case ND_FUNC_DEF: c(x->o1); break;
         case ND_RET: gReturn(); break;
     }
@@ -547,7 +550,7 @@ int main(int argc, char *argv[]) {
     if (fn) { input_fp = fopen(fn, "rt"); }
     if (!input_fp) { input_fp = stdin; }
     gInit();
-    gJmpN();
+    gJmp();
     g4(0);
     defs(NULL);
     if (input_fp != stdin) { fclose(input_fp); }

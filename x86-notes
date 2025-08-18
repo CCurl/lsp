@@ -75,6 +75,7 @@ c3 - ret
 0x10002:      39 C3                    cmp ebx, eax
 0x10004:      74/75 01                 jz/jnz FALSE
 0x10006:      42                       inc edx
+0x10006:      4A                       dec edx
    FALSE:
 0x10007:      89 D0                    mov eax, edx
 0x10009:      89 CB                    mov ebx, ecx
