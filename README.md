@@ -39,9 +39,10 @@ The grammar of language in EBNF is:
   <test-op>    ::= one of (< = > != || &&)
   <math>       ::= <term> | <math> <math_op> <term>
   <math-op>    ::= one of (+ - * / & | ^)
-  <term>       ::= <id> | <int> | <paren_expr>
+  <term>       ::= <id> | <int> | <string> | <paren_expr>
   <id>         ::= <alpha><alpha-numeric>*
   <int>        ::= [0-9]*
+  <string>     ::= '"' <chars> '"'
   <func-call>  ::= <id> "(" ")"
  ```
 

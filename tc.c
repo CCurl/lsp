@@ -6,9 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define SYMBOLS_SZ   500
-#define CODE_SZ     2500
-#define NODES_SZ   10000
+#define SYMBOLS_SZ   1000
+#define CODE_SZ     25000
+#define NODES_SZ    10000
 
 #define BTWI(n,l,h) ((l<=n)&&(n<=h))
 
@@ -40,7 +40,6 @@ enum {
 
 // VM opcodes
 enum {
-    // These are real
     NOP=0x90, IADD=0x01
     , IAND=0x21, IOR=0x09, IXOR=0x31
     , ISUB=0x29, MULDIV=0xf7
@@ -49,8 +48,6 @@ enum {
     , XCHGAB=0x93, ICMP=0x39
     , JZ=0x74, JNZ=0x75, JGE=0x7d, JLE=0x7e
     , INCDX=0x42
-    // These are not real
-    , ILAND=0x60, JMPZ, JMPNZ
 };
 
 byte vm[CODE_SZ];
@@ -63,7 +60,7 @@ extern void dumpSymbols(int details, FILE *toFP);
 // NOTE: these have to be in sync with the first <x> entries in the 
 // list of tokens
 char *words[] = { "do", "else", "if"
-    , "while", "void", "int", "byte"
+    , "while", "void", "int", "char"
     , "return", NULL};
 
 int ch = ' ', tok, int_val;

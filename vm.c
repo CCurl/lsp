@@ -25,7 +25,6 @@ void stopDBG() {}
 
 // VM/x86 opcodes
 enum {
-    // These are real
     NOP=0x90, IADD=0x01
     , IAND=0x21, IOR=0x09, IXOR=0x31
     , ISUB=0x29, MULDIV=0xf7
@@ -34,8 +33,6 @@ enum {
     , XCHGAB=0x93, ICMP=0x39
     , JZ=0x74, JNZ=0x75, JGE=0x7d, JLE=0x7e
     , INCDX=0x42, DECDX=0x4a
-    // These are not real
-    , ILAND=0x60, JMPZ, JMPNZ
 };
 
 byte vm[VM_SZ];
