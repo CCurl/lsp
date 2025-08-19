@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "heap.h"
 
 #define SYMBOLS_SZ   1000
 #define CODE_SZ     25000
@@ -30,7 +31,7 @@ enum {
 
 // Syntax tree node types
 enum {
-    ND_VAR, ND_CST, ND_ADD, ND_SUB, ND_MUL, ND_DIV
+    ND_VAR, ND_CONST, ND_STR, ND_ADD, ND_SUB, ND_MUL, ND_DIV
     , ND_LT, ND_EQ, ND_GT, ND_NEQ, ND_SET
     , ND_AND, ND_OR, ND_XOR, ND_LAND, ND_LOR
     , ND_FUNC_CALL, ND_FUNC_DEF
@@ -266,13 +267,15 @@ node *term() {
         next_token();
     }
     else if (tok == TOK_NUM) {
-        x = new_node(ND_CST); // CONSTANT
+        x = new_node(ND_CONST);
         x->val = int_val;
         next_token();
     }
     else if (tok == TOK_STR) {
-        x = new_node(ND_CST); // STRING
-        x->val = int_val;
+        char *tmp = hAlloc(strlen(id_name)+1);
+        strcpy(tmp, id_name);
+        x = new_node(ND_STR);
+        x->val = (int)tmp;
         next_token();
     }
     else x = paren_expr();
@@ -470,7 +473,8 @@ void c(node *x) {
     int p1, p2;
     switch (x->kind) {
         case ND_VAR:  gFetch(x->val); break;
-        case ND_CST:  gLit(x->val); break;
+        case ND_CONST:  gLit(x->val); break;
+        case ND_STR:  gLit(x->val); break;
         case ND_ADD:  c(x->o1); c(x->o2); gAdd();  break;
         case ND_MUL:  c(x->o1); c(x->o2); gMul();  break;
         case ND_SUB:  c(x->o1); c(x->o2); gSub();  break;
@@ -561,6 +565,7 @@ int main(int argc, char *argv[]) {
     char *fn = (argc > 1) ? argv[1] : NULL;
     if (fn) { input_fp = fopen(fn, "rt"); }
     if (!input_fp) { input_fp = stdin; }
+    hInit(0);
     gInit();
     gJmp();
     g4(0);

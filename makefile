@@ -12,10 +12,10 @@ LDLIBS   := -lm
 # Targets
 # -------------------------------------------------------------------
 
-all: tc vm hex-dump vm-lin
+all: tc vm hex-dump
 
-tc: tc.c
-	$(CXX) $(CFLAGS) $(LDFLAGS) -o tc tc.c $(LDLIBS)
+tc: tc.c heap.c heap.h
+	$(CXX) $(CFLAGS) $(LDFLAGS) -o tc tc.c heap.c $(LDLIBS)
 	ls -l tc
 
 vm: vm.c
