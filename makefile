@@ -41,10 +41,12 @@ clean:
 
 test: all
 	./tc test.tc
-	./vm
-	./hex-dump tc.out >> vm.lst
+	fasm _tc.asm test
+	chmod +x test
+	./hex-dump test > vm.lst
 
 bm: all
 	./tc bm.tc
-	./vm
-	./hex-dump tc.out >> vm.lst
+	fasm _tc.asm bm
+	chmod +x bm
+	./hex-dump test > vm.lst

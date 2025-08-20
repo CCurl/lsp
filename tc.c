@@ -94,6 +94,7 @@ void next_line() {
     if (fgets(cur_line, 256, input_fp) != cur_line) {
         is_eof = 1;
     }
+    //printf("----- %s\n", cur_line);
 }
 
 void next_ch() {
@@ -216,6 +217,7 @@ int genSymbol(char *name, char type) {
     x->type = type;
     x->sz = 4;
     strcpy(x->name, name);
+    // printf("-new symbol:%s,%d-\n", x->name, x->type);
     return i;
 }
 
@@ -415,64 +417,144 @@ void fix(int a, int v) {  s2(a, v); if (addrSz==4) { s2(a+2, v>>16); } }
 
 // ----------------------------------------------------------
 // change these to generate code for a different architecture
-void gInit() {
-    here = 0;
-    memBase = 0; // 0x08048000; // Linux 23-bit code start (134512640)
-    addrSz = 4;
+char *gLines[10000], *gCurLine;
+int gHere, gLineSz;
+
+void gNewLine(char *txt) {
+    gLineSz = strlen(txt)+1;
+    gCurLine = hAlloc(gLineSz);
+    gLines[gHere] = gCurLine;
+    strcpy(gCurLine, txt);
+    //printf("%03d: %s\n", gHere, gCurLine);
+    gHere = gHere+1;
 }
 
-void gDtoA() { gN(2, "\x89\xd0"); } // MOV EAX, EBX
-void gAtoB() { gN(2, "\x89\xc3"); } // MOV EBX, EAX
+void gAppend(char *txt, int sp) {
+    if (gLineSz < (strlen(gCurLine) + strlen(txt) + 2)) {
+        gLineSz = gLineSz + 16;
+        gCurLine = hRealloc(gCurLine, gLineSz);
+        gLines[gHere-1] = gCurLine;
+    }
+    if (sp) { strcat(gCurLine, " "); }
+    strcat(gCurLine, txt);
+    //printf(" --> %s\n", gCurLine);
+}
 
-void gNOP() { g(0x90); }
+void gInit() {
+    gHere = 0;
+    gNewLine("format ELF executable");
+    gNewLine("segment readable writable executable");
+    gNewLine("entry main");
+}
+
+void gDump() { for (int i=0; i<gHere; i++) { printf("%s\n", gLines[i]); } }
+
+void gDtoA() { gNewLine("\tMOV EAX, EBX"); }
+void gAtoB() { gNewLine("\tMOV EBX, EAX"); }
+
+void gNOP() { gNewLine("\tNOP"); }
 void gPushA() {
     if (vm[here-1] == 0x58) { vm[here-1]=NOP; }
     else { g(0x50); }
 }
-void gPopA()  { g(0x58); }
-void gPopB()  { g(0x5b); }
+void gPopA()  { gNewLine("\tPOP EAX"); }
+void gPopB()  { gNewLine("\tPOP EBX"); }
 
-void gMovIMM(int val) { g(0xb8); g4(val); }
+void gMovIMM(int val) {
+    char x[64];
+    sprintf(x, "\tMOV EAX, %d", val);
+    gNewLine(x);
+}
 
-void gStore(int loc) { g(0xa3); g4(loc); gPopA(); }
-void gFetch(int loc) { gPushA(); g(0xa1); g4(loc); }
+void gStore(int sym) {
+    SYM_T *s = &symbols[sym];
+    int off = 0, sz = s->sz;
+    char x[64];
+    char *reg = (sz==1) ? "AL" : "EAX";
+    if (off) {
+        sprintf(x, "\tMOV [%s+%d], %s", s->name, off, reg);
+    } else {
+        sprintf(x, "\tMOV [%s], %s", s->name, reg);
+    }
+    gNewLine(x);
+}
+
+void gFetch(int sym) {
+    SYM_T *s = &symbols[sym];
+    int off = 0, sz = s->sz;
+    char x[64];
+    char *reg = (sz==1) ? "AL" : "EAX";
+    if (sz == 1) { gNewLine("XOR EAX, EAX"); }
+    if (off) {
+        sprintf(x, "\tMOV %s, [%s+%d]", reg, s->name, off);
+    } else {
+        sprintf(x, "\tMOV %s, [%s]", reg, s->name);
+    }
+    gNewLine(x);
+}
+
 void gLit(int v) { gPushA(); gMovIMM(v); }
 
 // push ebp ; mov ebp, esp
-void gPreCall() { gN(3, "\x55\x89\xe5"); }
-void gCall(int v) { gN(2, "\xff\x15"); g4(v); }
-void gReturn() { g(IRET); }
+void gPreCall() { } // gNewLine("push ebp"); gNewLine("mov ebp, esp"); }
+void gCall(int fn) {
+    gNewLine("\tCALL");
+    gAppend(symbols[fn].name, 1);
+}
+void gReturn() { gNewLine("\tRET"); gNewLine(""); }
 // mov esp, ebp ; pop ebp
-void gPostCall() { gN(3, "\x89\xec\x5d"); }
+void gPostCall() { } // gN(3, "\x89\xec\x5d"); }
 // pop ebx ; add eax, ebx
-void gAdd() { gN(3, "\x5b\x01\xd8"); }
-// mov ebx, eax ; pop eax ; sub eax, ebx
-void gSub() { gAtoB(); gN(3, "\x58\x29\xd8"); }
-void gMul() { gAtoB(); gPopA(); g(MULDIV); g(0xeb); }
-void gDiv() { gAtoB(); gPopA(); g(MULDIV); g(0xfb); }
+void gAdd() {
+    gPopB();
+    gNewLine("\tadd eax, ebx");
+}
+void gSub() {
+    gAtoB();
+    gPopA();
+    gNewLine("\tsub eax, ebx");
+}
+void gMul() {
+    gPopB();
+    gNewLine("\timul eax");
+}
+void gDiv() {
+    gAtoB();
+    gPopA();
+    gNewLine("\tidiv eax");
+}
 // xor edx, edx ; pop ebx ; cmp ebx, eax ; jge +1 ; dec edx ; mov eax, edx
-void gLT() { gN(8,"\x31\xd2\x5b\x39\xc3\x7d\x01\x4a"); gDtoA(); }
+void gLT() { gN(8,"\t; less than"); gDtoA(); }
 // xor edx, edx ; pop ebx ; cmp ebx, eax ; jle +1 ; dec edx ; mov eax, edx
-void gGT() { gN(8,"\x31\xd2\x5b\x39\xc3\x7e\x01\x4a"); gDtoA(); }
+void gGT() { gN(8,"\t; greaterthan"); gDtoA(); }
 // xor edx, edx ; pop ebx ; cmp ebx, eax ; jnz +1 ; dec edx ; mov eax, edx
-void gEQ() { gN(8,"\x31\xd2\x5b\x39\xc3\x75\x01\x4a"); gDtoA(); }
+void gEQ() { gN(8,"; equals"); gDtoA(); }
 // xor edx, edx ; pop ebx ; cmp ebx, eax ; jz +1 ; dec edx ; mov eax, edx
-void gNEQ() { gN(8,"\x31\xd2\x5b\x39\xc3\x74\x01\x4a"); gDtoA(); }
-void gOr()  { gN(3,"\x5b\x09\xd8"); }   // pop ebx ; or eax, ebx ;
-void gAnd() { gN(3,"\x5b\x21\xd8"); }   // pop ebx ; and eax, ebx ;
-void gXor() { gN(3,"\x5b\x31\xd8"); }   // pop ebx ; xor eax, ebx ;
+void gNEQ() { gN(8,"\t; not equals"); gDtoA(); }
+void gAnd() { gPopB(); gNewLine("\tand eax, ebx"); }
+void gOr()  { gPopB(); gNewLine("\tor eax, ebx"); }
+void gXor() { gPopB(); gNewLine("\txor eax, ebx"); }
 // jmp (stop here)
-void gJmp() { gN(2, "\xff\x25"); }
+void gJmp(char *lbl) { gNewLine("\t; jmp"); gAppend(lbl, 1);  }
 // test eax, eax; pop eax ; jnz +6 ; jmp (stop here)
-void gJmpZ()  { gN(7, "\x85\xc0\x58\x75\x06\xff\x25"); }
-// test eax, eax; pop eax ; jz +6 ; jmp (stop here)
-void gJmpNZ()  { gN(7, "\x85\xc0\x58\x74\x06\xff\x25"); }
+void gJmpZ(char *lbl) { gNewLine("\t; jz"); gAppend(lbl, 1);  }
+void gJmpNZ(char *lbl) { gNewLine("\t; jnz"); gAppend(lbl, 1);  }
+void gNewTag(int ln) {
+    char x[64];
+    sprintf(x, ".L%d:", ln);
+    gNewLine(x);
+}
+void gJmpTo(int ln) {
+    char x[64];
+    sprintf(x, "\tJMP .L%d", ln);
+    gNewLine(x);
+}
 // ----------------------------------------------------------
 
 void c(node *x) {
     int p1, p2;
     switch (x->kind) {
-        case ND_VAR:  gFetch(x->val); break;
+        case ND_VAR:  gFetch(x->sval); break;
         case ND_CONST:  gLit(x->val); break;
         case ND_STR:  gLit(x->val); break;
         case ND_ADD:  c(x->o1); c(x->o2); gAdd();  break;
@@ -488,20 +570,20 @@ void c(node *x) {
         case ND_AND:  c(x->o1); c(x->o2); gAnd();  break;
         case ND_OR:   c(x->o1); c(x->o2); gOr();   break;
         case ND_XOR:  c(x->o1); c(x->o2); gXor();  break;
-        case ND_SET:  c(x->o2); gStore(x->o1->val); break;
-        case ND_IF1:  c(x->o1); gJmpZ(); p1 = hole(); c(x->o2); fix(p1, vmHere); break;
-        case ND_IF2:  c(x->o1); gJmpZ(); p1 = hole(); c(x->o2);
-            gJmp(); p2 = hole(); fix(p1, vmHere);
+        case ND_SET:  c(x->o2); gStore(x->o1->sval); break;
+        case ND_IF1:  c(x->o1); gJmpZ(".jz"); p1 = hole(); c(x->o2); fix(p1, vmHere); break;
+        case ND_IF2:  c(x->o1); gJmpZ(".jz"); p1 = hole(); c(x->o2);
+           gJmp(".jj"); p2 = hole(); fix(p1, vmHere);
             c(x->o3); fix(p2, vmHere); break;
-        case ND_WHILE: gNOP(); p1 = vmHere; c(x->o1); gJmpZ(); p2 = hole(); c(x->o2);
-            gJmp(); g4(p1); fix(p2, vmHere); break;
-        case ND_DO: gNOP(); p1 = vmHere; c(x->o1); c(x->o2); gJmpNZ(); gAddr(p1); break;
+        case ND_WHILE: p1 = gHere; gNewTag(p1);
+            c(x->o1); gJmpZ(".jz"); p2 = hole(); c(x->o2);
+            gJmpTo(p1); break;
+        case ND_DO: p1 = gHere; c(x->o1); c(x->o2); gJmpNZ(".jnz"); gAddr(p1); break;
         case ND_EMPTY: break;
         case ND_SEQ: c(x->o1); c(x->o2); break;
         case ND_FUNC_CALL: 
-            if (x->val == 0) { error("undefined function!"); }
             gPreCall();
-            gCall(x->val);
+            gCall(x->sval);
             gPostCall(); break;
         case ND_FUNC_DEF: c(x->o1); break;
         case ND_RET: gReturn(); break;
@@ -532,7 +614,9 @@ node *defs(node *st) {
             int seqNo = 1;
             next_token(); expect_token(TOK_FUNC);
             int sym = genSymbol(id_name, TOK_FUNC);
-            symbols[sym].val = vmHere;
+            symbols[sym].val = sym;
+            gNewLine(id_name);
+            gAppend(":", 0);
             x = gen(ND_FUNC_DEF, NULL, NULL);
             x->sval = sym;
             if (tok != TOK_LBRA) error("'{' expected.");
@@ -567,17 +651,24 @@ int main(int argc, char *argv[]) {
     if (!input_fp) { input_fp = stdin; }
     hInit(0);
     gInit();
-    gJmp();
-    g4(0);
+    gNewLine("; source: ");
+    gAppend(fn ? fn : "stdin", 0);
     defs(NULL);
     if (input_fp != stdin) { fclose(input_fp); }
-    printf("%d code bytes (%d nodes)\n", here, num_nodes);
+    // printf("%d code bytes (%d nodes)\n", here, num_nodes);
 
-    int mainSym = findSymbol("main", TOK_FUNC);
-    if (mainSym < 0) { printf("no main() function!"); }
-    else { s4(2, symbols[mainSym].val); }
-    FILE *fp = fopen("tc.out", "wb");
-    if (fp) { fwrite(vm, 1, here, fp); fclose(fp); }
+    //int mainSym = findSymbol("main", TOK_FUNC);
+    //if (mainSym < 0) { printf("no main() function!"); }
+    // else { s4(2, symbols[mainSym].val); }
+    for (int i=0; i<numSymbols; i++) {
+        SYM_T *s = &symbols[i];
+        if (s->type == 0) { gNewLine(s->name); gAppend(":\tdd 0",0); }
+    }
+    FILE *fp = fopen("_tc.asm", "wt");
+    if (fp) {
+        for (int i=0; i<gHere; i++) { fprintf(fp, "%s\n", gLines[i]); }
+        fclose(fp);
+    }
 
     fp = fopen("tc.sym", "wt");
     dumpSymbols(1, fp);

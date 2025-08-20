@@ -7,7 +7,6 @@
 tc
 pgm.vm
 tc.out
-tc.sym
 hex-dump
 xx
 a.out
@@ -15,3 +14,5 @@ xxc
 vm
 vm-lin
 vm.trc
+test
+bm
