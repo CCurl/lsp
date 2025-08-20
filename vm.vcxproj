@@ -152,9 +152,14 @@
     <None Include="makefile" />
     <None Include="README.md" />
     <None Include="x86-notes" />
+    <None Include="_tc.asm" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="heap.c" />
     <ClCompile Include="tc.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="heap.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

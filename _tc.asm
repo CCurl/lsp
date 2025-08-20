@@ -1,216 +1,373 @@
-format ELF executable
-segment readable writable executable
+format PE console
+include 'win32ax.inc'
+.code
 entry main
 ; source: test.tc
 T1:
+	PUSH EAX
 	MOV EAX, 11111
 	MOV [_t1], EAX
+	PUSH EAX
 	MOV EAX, 1
 	MOV [t13], EAX
+	; IF ...
+	PUSH EAX
 	MOV EAX, 17
+	PUSH EAX
 	MOV EAX, 8
 	MOV EBX, EAX
 	POP EAX
-	idiv eax
+	IDIV EAX
+	PUSH EAX
 	MOV EAX, 2
+	; equals
 	MOV EAX, EBX
-	; jz .jz
+	TEST EAX, EAX
+	POP EAX
+	JZ .END34
+	; THEN ...
 	MOV EAX, [t13]
+	PUSH EAX
 	MOV EAX, 1
 	POP EBX
-	add eax, ebx
+	ADD EAX, EBX
 	MOV [t13], EAX
+.END34:
+	PUSH EAX
 	MOV EAX, 1
 	MOV [t11], EAX
+	; IF ...
+	PUSH EAX
 	MOV EAX, 2
+	PUSH EAX
 	MOV EAX, 3
+	; greaterthan
 	MOV EAX, EBX
+	PUSH EAX
 	MOV EAX, 3
+	PUSH EAX
 	MOV EAX, 4
+	; not equals
 	MOV EAX, EBX
 	POP EBX
-	and eax, ebx
+	AND EAX, EBX
+	PUSH EAX
 	MOV EAX, 0
+	; equals
 	MOV EAX, EBX
-	; jz .jz
+	TEST EAX, EAX
+	POP EAX
+	JZ .END64
+	; THEN ...
+	PUSH EAX
 	MOV EAX, 2
 	MOV [t11], EAX
+.END64:
+	PUSH EAX
 	MOV EAX, 1
 	MOV [t12], EAX
+	; IF ...
+	PUSH EAX
 	MOV EAX, 2
+	PUSH EAX
 	MOV EAX, 3
+	; greaterthan
 	MOV EAX, EBX
+	PUSH EAX
 	MOV EAX, 3
+	PUSH EAX
 	MOV EAX, 4
+	; not equals
 	MOV EAX, EBX
 	POP EBX
-	or eax, ebx
+	OR EAX, EBX
+	PUSH EAX
 	MOV EAX, 0
+	; not equals
 	MOV EAX, EBX
-	; jz .jz
+	TEST EAX, EAX
+	POP EAX
+	JZ .END94
+	; THEN ...
+	PUSH EAX
 	MOV EAX, 2
 	MOV [t12], EAX
+.END94:
 	RET
 
 T2:
 	CALL T1
+	PUSH EAX
 	MOV EAX, 22222
 	MOV [_t2], EAX
+	PUSH EAX
 	MOV EAX, 1
 	MOV [t2], EAX
+	PUSH EAX
 	MOV EAX, 0
 	MOV [c], EAX
-.L62:
+.WS108:
 	MOV EAX, [t2]
+	PUSH EAX
 	MOV EAX, 1025
+	; less than
 	MOV EAX, EBX
-	; jz .jz
+	TEST EAX, EAX
+	POP EAX
+	JZ .WE130
 	MOV EAX, [c]
+	PUSH EAX
 	MOV EAX, 1
 	POP EBX
-	add eax, ebx
+	ADD EAX, EBX
 	MOV [c], EAX
 	MOV EAX, [t2]
+	PUSH EAX
 	MOV EAX, 2
 	POP EBX
-	imul eax
+	IMUL EAX
 	MOV [t2], EAX
-	JMP .L62
+	JMP .WS108
+.WE130: 
+	PUSH EAX
 	MOV EAX, 1
 	MOV [t21], EAX
+	; IF ...
 	MOV EAX, [t2]
+	PUSH EAX
 	MOV EAX, 2047
 	MOV EAX, [t21]
 	POP EBX
-	add eax, ebx
+	ADD EAX, EBX
+	; equals
 	MOV EAX, EBX
-	; jz .jz
+	TEST EAX, EAX
+	POP EAX
+	JZ .END150
+	; THEN ...
+	PUSH EAX
 	MOV EAX, 2
 	MOV [t21], EAX
+.END150:
+	PUSH EAX
 	MOV EAX, 1
 	MOV [t22], EAX
+	; IF ...
 	MOV EAX, [c]
+	PUSH EAX
 	MOV EAX, 11
+	; equals
 	MOV EAX, EBX
-	; jz .jz
+	TEST EAX, EAX
+	POP EAX
+	JZ .END167
+	; THEN ...
+	PUSH EAX
 	MOV EAX, 2
 	MOV [t22], EAX
+.END167:
 	RET
 
 T3:
 	CALL T2
+	PUSH EAX
 	MOV EAX, 33333
 	MOV [_t3], EAX
+	PUSH EAX
 	MOV EAX, 1
 	MOV [t30], EAX
+	; IF ... ELSE ...
+	PUSH EAX
 	MOV EAX, 8
+	PUSH EAX
 	MOV EAX, 1
 	POP EBX
-	add eax, ebx
+	ADD EAX, EBX
+	PUSH EAX
 	MOV EAX, 12
+	PUSH EAX
 	MOV EAX, 1
 	MOV EBX, EAX
 	POP EAX
-	sub eax, ebx
+	SUB EAX, EBX
 	POP EBX
-	imul eax
+	IMUL EAX
+	PUSH EAX
 	MOV EAX, 100
+	PUSH EAX
 	MOV EAX, 1
 	MOV EBX, EAX
 	POP EAX
-	sub eax, ebx
+	SUB EAX, EBX
+	; equals
 	MOV EAX, EBX
-	; jz .jz
+	TEST EAX, EAX
+	POP EAX
+	JZ .ELSE211
+	; THEN ...
+	PUSH EAX
 	MOV EAX, 2
 	MOV [t30], EAX
+	JMP .END216
+	; ELSE ...
+.ELSE212:
+	PUSH EAX
+	MOV EAX, 4
+	MOV [t30], EAX
+.END216:
 	RET
 
 T4:
 	CALL T3
+	PUSH EAX
 	MOV EAX, 44444
 	MOV [_t4], EAX
+	PUSH EAX
 	MOV EAX, 0
 	MOV [t40], EAX
-.L133:
+.WS227:
 	MOV EAX, [t40]
+	PUSH EAX
 	MOV EAX, 10
+	; less than
 	MOV EAX, EBX
-	; jz .jz
+	TEST EAX, EAX
+	POP EAX
+	JZ .WE243
 	MOV EAX, [t40]
+	PUSH EAX
 	MOV EAX, 1
 	POP EBX
-	add eax, ebx
+	ADD EAX, EBX
 	MOV [t40], EAX
-	JMP .L133
+	JMP .WS227
+.WE243: 
+.DS244:
 	MOV EAX, [t40]
+	PUSH EAX
 	MOV EAX, 1
 	MOV EBX, EAX
 	POP EAX
-	sub eax, ebx
+	SUB EAX, EBX
 	MOV [t40], EAX
 	MOV EAX, [t40]
+	PUSH EAX
 	MOV EAX, 5
+	; greaterthan
 	MOV EAX, EBX
-	; jnz .jnz
+	TEST EAX, EAX
+	POP EAX
+	JNZ .DS244
+	; IF ...
 	MOV EAX, [t40]
+	PUSH EAX
 	MOV EAX, 5
+	; equals
 	MOV EAX, EBX
-	; jz .jz
+	TEST EAX, EAX
+	POP EAX
+	JZ .END273
+	; THEN ...
+	PUSH EAX
 	MOV EAX, 2
 	MOV [t40], EAX
+.END273:
 	RET
 
 T5:
 	CALL T4
+	PUSH EAX
 	MOV EAX, 55555
 	MOV [_t5], EAX
+	PUSH EAX
 	MOV EAX, 1
 	MOV [t50], EAX
+	; IF ...
+	PUSH EAX
 	MOV EAX, 1
+	PUSH EAX
 	MOV EAX, 2
 	POP EBX
-	and eax, ebx
+	AND EAX, EBX
+	PUSH EAX
 	MOV EAX, 0
+	; equals
 	MOV EAX, EBX
-	; jz .jz
+	TEST EAX, EAX
+	POP EAX
+	JZ .END302
+	; THEN ...
+	PUSH EAX
 	MOV EAX, 2
 	MOV [t50], EAX
+.END302:
+	PUSH EAX
 	MOV EAX, 1
 	MOV [t51], EAX
+	; IF ...
+	PUSH EAX
 	MOV EAX, 1
+	PUSH EAX
 	MOV EAX, 2
 	POP EBX
-	or eax, ebx
+	OR EAX, EBX
+	PUSH EAX
 	MOV EAX, 3
+	; equals
 	MOV EAX, EBX
-	; jz .jz
+	TEST EAX, EAX
+	POP EAX
+	JZ .END324
+	; THEN ...
+	PUSH EAX
 	MOV EAX, 2
 	MOV [t51], EAX
+.END324:
+	PUSH EAX
 	MOV EAX, 1
 	MOV [t52], EAX
+	; IF ...
+	PUSH EAX
 	MOV EAX, 3
+	PUSH EAX
 	MOV EAX, 1
 	POP EBX
-	xor eax, ebx
+	XOR EAX, EBX
+	PUSH EAX
 	MOV EAX, 2
+	; equals
 	MOV EAX, EBX
-	; jz .jz
+	TEST EAX, EAX
+	POP EAX
+	JZ .END346
+	; THEN ...
+	PUSH EAX
 	MOV EAX, 2
 	MOV [t52], EAX
+.END346:
+	PUSH EAX
 	MOV EAX, 1
 	MOV [t53], EAX
+	; IF ...
 	MOV EAX, [t53]
-	; jz .jz
+	TEST EAX, EAX
+	POP EAX
+	JZ .END359
+	; THEN ...
+	PUSH EAX
 	MOV EAX, 2
 	MOV [t53], EAX
+.END359:
 	RET
 
 main:
 	CALL T5
-	MOV EAX, 1448939988
+	PUSH EAX
+	MOV EAX, 15836192
 	MOV [ff], EAX
 	RET
 
+.data
 _t1:	dd 0
 t13:	dd 0
 t11:	dd 0

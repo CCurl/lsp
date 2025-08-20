@@ -4,7 +4,8 @@ int x;
 void main() {
 	num = 200000000;
 	x = num;
-	while (x) {
-        x = x - 1;
-    }
+	while (x) { x = x - 1; }
+
+	x = num;
+	do { x = x-1; } while (x);
 }

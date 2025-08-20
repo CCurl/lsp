@@ -10,7 +10,9 @@ if [%f%] equ [] (
 echo %f%\tc bm.tc
 %f%\tc bm.tc
 
-echo %f%\vm
-%f%\vm
+echo fasm _tc.asm
+fasm _tc.asm
+ren _tc.exe bm.exe
+dir bm.exe
 
-%f%\hex-dump tc.out >> vm.lst
+%f%\hex-dump tc.out > vm.lst

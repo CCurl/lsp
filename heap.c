@@ -78,8 +78,8 @@ static int hFindIndex(char *data) {
 	if (data < &heap[0]) { return -1; }
 	uint off = data - &heap[0];
 	if (hHere <= off) { return -1; }
-	for (int i = 0; i < iHere; i++) {
-		if (index[i].off == off) { return i; }
+	for (uint32_t i = 0; i < iHere; i++) {
+		if (index[i].off == off) { return (int)i; }
 	}
 	return -1;
 }
