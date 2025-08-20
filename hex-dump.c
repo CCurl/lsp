@@ -35,10 +35,10 @@ byte buf[65536];
 int main(int argc, char *argv[]) {
     int fni = 1;
     int dets = 1;
-    if ((argc > 1) && (argv[1][0] == '_')) { dets = 0; ++fni; }
-    char *fn = (argc > fni) ? argv[fni] : "tc.out";
+    char* fn = (argc > 1) ? argv[1] : "undefined";
+    if ((argc > 2) && (fn[0]=='_') && (fn[1]==0)) { dets = 0; fn = argv[2]; }
     FILE *fp = fopen(fn, "rb");
-    if (!fp) { printf("can't open file"); }
+    if (!fp) { printf("can't open file (%s)", fn); }
     else {
         int sz = (int)fread(buf, 1, sizeof(buf), fp);
         fclose(fp);

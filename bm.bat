@@ -1,18 +1,11 @@
-@echo off
+@echo on
 rem this is a stupid little batch file to help test the code on windows machines
-
 set f=%1%
-
 if [%f%] equ [] (
-	set %f=debug
+	set %f=Debug
 )
-
-echo %f%\tc bm.tc
+del _tc.exe bm.exe 2>nul
 %f%\tc bm.tc
-
-echo fasm _tc.asm
 fasm _tc.asm
 ren _tc.exe bm.exe
-dir bm.exe
-
 %f%\hex-dump tc.out > vm.lst

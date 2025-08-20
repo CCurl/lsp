@@ -478,13 +478,13 @@ void gStore(int sym) {
     int off = 0, sz = s->sz;
     char x[64];
     char *reg = (sz==1) ? "AL" : "EAX";
+    gN("\t; store");
     if (off) {
-        sprintf(x, "\tMOV [%s+%d], %s ; store", s->name, off, reg);
+        sprintf(x, "\tMOV [%s+%d], %s", s->name, off, reg);
     } else {
-        sprintf(x, "\tMOV [%s], %s ; store", s->name, reg);
+        sprintf(x, "\tMOV [%s], %s", s->name, reg);
     }
     gN(x);
-    gN("\tPOP EAX ; store");
 }
 
 void gFetch(int sym) {
@@ -492,7 +492,9 @@ void gFetch(int sym) {
     int off = 0, sz = s->sz;
     char x[64];
     char *reg = (sz==1) ? "AL" : "EAX";
-    if (sz == 1) { gN("XOR EAX, EAX ; store"); }
+    gN("\t; fetch");
+    gN("\tPUSH EAX");
+    if (sz == 1) { gN("XOR EAX, EAX"); }
     if (off) {
         sprintf(x, "\tMOV %s, [%s+%d]", reg, s->name, off);
     } else {
@@ -524,7 +526,7 @@ void gSub() {
 }
 void gMul() {
     gPopB();
-    gN("\tIMUL EAX");
+    gN("\tIMUL EBX");
 }
 void gDiv() {
     gAtoB();
@@ -579,7 +581,8 @@ void c(node *x) {
         case ND_AND:  c(x->o1); c(x->o2); gAnd();  break;
         case ND_OR:   c(x->o1); c(x->o2); gOr();   break;
         case ND_XOR:  c(x->o1); c(x->o2); gXor();  break;
-        case ND_SET:  c(x->o2); gStore(x->o1->sval); break;
+        case ND_SET:  c(x->o2); gStore(x->o1->sval); gN("\tPOP EAX");
+            break;
         case ND_IF1:  gN("\t; IF ..."); c(x->o1);
             gCmp(); p1 = gHere; gN("\tJZ");
             gN("\t; THEN ..."); c(x->o2);

@@ -2,10 +2,10 @@ int num;
 int x;
 
 void main() {
-	num = 200000000;
+	num = 1000*1000*1000;
 	x = num;
 	while (x) { x = x - 1; }
 
-	x = num;
-	do { x = x-1; } while (x);
+	// x = num;
+	// do { x = x-1; } while (x);
 }
