@@ -479,11 +479,12 @@ void gStore(int sym) {
     char x[64];
     char *reg = (sz==1) ? "AL" : "EAX";
     if (off) {
-        sprintf(x, "\tMOV [%s+%d], %s", s->name, off, reg);
+        sprintf(x, "\tMOV [%s+%d], %s ; store", s->name, off, reg);
     } else {
-        sprintf(x, "\tMOV [%s], %s", s->name, reg);
+        sprintf(x, "\tMOV [%s], %s ; store", s->name, reg);
     }
     gN(x);
+    gN("\tPOP EAX ; store");
 }
 
 void gFetch(int sym) {
@@ -491,7 +492,7 @@ void gFetch(int sym) {
     int off = 0, sz = s->sz;
     char x[64];
     char *reg = (sz==1) ? "AL" : "EAX";
-    if (sz == 1) { gN("XOR EAX, EAX"); }
+    if (sz == 1) { gN("XOR EAX, EAX ; store"); }
     if (off) {
         sprintf(x, "\tMOV %s, [%s+%d]", reg, s->name, off);
     } else {
@@ -590,8 +591,8 @@ void c(node *x) {
             gN("\t; THEN ..."); c(x->o2);
             p2 = gHere; gN("\tJMP");
             fix(p1, gHere, "ELSE");
-            gN("\t; ELSE ...");
             gNewTag(gHere, "ELSE");
+            gN("\t; ELSE ...");
             c(x->o3);
             fix(p2, gHere, "END");
             gNewTag(gHere, "END");

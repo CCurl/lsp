@@ -6,10 +6,12 @@ entry main
 T1:
 	PUSH EAX
 	MOV EAX, 11111
-	MOV [_t1], EAX
+	MOV [_t1], EAX ; store
+	POP EAX ; store
 	PUSH EAX
 	MOV EAX, 1
-	MOV [t13], EAX
+	MOV [t13], EAX ; store
+	POP EAX ; store
 	; IF ...
 	PUSH EAX
 	MOV EAX, 17
@@ -24,18 +26,20 @@ T1:
 	MOV EAX, EBX
 	TEST EAX, EAX
 	POP EAX
-	JZ .END34
+	JZ .END37
 	; THEN ...
 	MOV EAX, [t13]
 	PUSH EAX
 	MOV EAX, 1
 	POP EBX
 	ADD EAX, EBX
-	MOV [t13], EAX
-.END34:
+	MOV [t13], EAX ; store
+	POP EAX ; store
+.END37:
 	PUSH EAX
 	MOV EAX, 1
-	MOV [t11], EAX
+	MOV [t11], EAX ; store
+	POP EAX ; store
 	; IF ...
 	PUSH EAX
 	MOV EAX, 2
@@ -57,15 +61,17 @@ T1:
 	MOV EAX, EBX
 	TEST EAX, EAX
 	POP EAX
-	JZ .END64
+	JZ .END69
 	; THEN ...
 	PUSH EAX
 	MOV EAX, 2
-	MOV [t11], EAX
-.END64:
+	MOV [t11], EAX ; store
+	POP EAX ; store
+.END69:
 	PUSH EAX
 	MOV EAX, 1
-	MOV [t12], EAX
+	MOV [t12], EAX ; store
+	POP EAX ; store
 	; IF ...
 	PUSH EAX
 	MOV EAX, 2
@@ -87,26 +93,30 @@ T1:
 	MOV EAX, EBX
 	TEST EAX, EAX
 	POP EAX
-	JZ .END94
+	JZ .END101
 	; THEN ...
 	PUSH EAX
 	MOV EAX, 2
-	MOV [t12], EAX
-.END94:
+	MOV [t12], EAX ; store
+	POP EAX ; store
+.END101:
 	RET
 
 T2:
 	CALL T1
 	PUSH EAX
 	MOV EAX, 22222
-	MOV [_t2], EAX
+	MOV [_t2], EAX ; store
+	POP EAX ; store
 	PUSH EAX
 	MOV EAX, 1
-	MOV [t2], EAX
+	MOV [t2], EAX ; store
+	POP EAX ; store
 	PUSH EAX
 	MOV EAX, 0
-	MOV [c], EAX
-.WS108:
+	MOV [c], EAX ; store
+	POP EAX ; store
+.WS118:
 	MOV EAX, [t2]
 	PUSH EAX
 	MOV EAX, 1025
@@ -114,24 +124,27 @@ T2:
 	MOV EAX, EBX
 	TEST EAX, EAX
 	POP EAX
-	JZ .WE130
+	JZ .WE142
 	MOV EAX, [c]
 	PUSH EAX
 	MOV EAX, 1
 	POP EBX
 	ADD EAX, EBX
-	MOV [c], EAX
+	MOV [c], EAX ; store
+	POP EAX ; store
 	MOV EAX, [t2]
 	PUSH EAX
 	MOV EAX, 2
 	POP EBX
 	IMUL EAX
-	MOV [t2], EAX
-	JMP .WS108
-.WE130: 
+	MOV [t2], EAX ; store
+	POP EAX ; store
+	JMP .WS118
+.WE142: 
 	PUSH EAX
 	MOV EAX, 1
-	MOV [t21], EAX
+	MOV [t21], EAX ; store
+	POP EAX ; store
 	; IF ...
 	MOV EAX, [t2]
 	PUSH EAX
@@ -143,15 +156,17 @@ T2:
 	MOV EAX, EBX
 	TEST EAX, EAX
 	POP EAX
-	JZ .END150
+	JZ .END164
 	; THEN ...
 	PUSH EAX
 	MOV EAX, 2
-	MOV [t21], EAX
-.END150:
+	MOV [t21], EAX ; store
+	POP EAX ; store
+.END164:
 	PUSH EAX
 	MOV EAX, 1
-	MOV [t22], EAX
+	MOV [t22], EAX ; store
+	POP EAX ; store
 	; IF ...
 	MOV EAX, [c]
 	PUSH EAX
@@ -160,22 +175,25 @@ T2:
 	MOV EAX, EBX
 	TEST EAX, EAX
 	POP EAX
-	JZ .END167
+	JZ .END183
 	; THEN ...
 	PUSH EAX
 	MOV EAX, 2
-	MOV [t22], EAX
-.END167:
+	MOV [t22], EAX ; store
+	POP EAX ; store
+.END183:
 	RET
 
 T3:
 	CALL T2
 	PUSH EAX
 	MOV EAX, 33333
-	MOV [_t3], EAX
+	MOV [_t3], EAX ; store
+	POP EAX ; store
 	PUSH EAX
 	MOV EAX, 1
-	MOV [t30], EAX
+	MOV [t30], EAX ; store
+	POP EAX ; store
 	; IF ... ELSE ...
 	PUSH EAX
 	MOV EAX, 8
@@ -203,29 +221,33 @@ T3:
 	MOV EAX, EBX
 	TEST EAX, EAX
 	POP EAX
-	JZ .ELSE211
+	JZ .ELSE230
 	; THEN ...
 	PUSH EAX
 	MOV EAX, 2
-	MOV [t30], EAX
-	JMP .END216
+	MOV [t30], EAX ; store
+	POP EAX ; store
+	JMP .END236
+.ELSE230:
 	; ELSE ...
-.ELSE212:
 	PUSH EAX
 	MOV EAX, 4
-	MOV [t30], EAX
-.END216:
+	MOV [t30], EAX ; store
+	POP EAX ; store
+.END236:
 	RET
 
 T4:
 	CALL T3
 	PUSH EAX
 	MOV EAX, 44444
-	MOV [_t4], EAX
+	MOV [_t4], EAX ; store
+	POP EAX ; store
 	PUSH EAX
 	MOV EAX, 0
-	MOV [t40], EAX
-.WS227:
+	MOV [t40], EAX ; store
+	POP EAX ; store
+.WS249:
 	MOV EAX, [t40]
 	PUSH EAX
 	MOV EAX, 10
@@ -233,23 +255,25 @@ T4:
 	MOV EAX, EBX
 	TEST EAX, EAX
 	POP EAX
-	JZ .WE243
+	JZ .WE266
 	MOV EAX, [t40]
 	PUSH EAX
 	MOV EAX, 1
 	POP EBX
 	ADD EAX, EBX
-	MOV [t40], EAX
-	JMP .WS227
-.WE243: 
-.DS244:
+	MOV [t40], EAX ; store
+	POP EAX ; store
+	JMP .WS249
+.WE266: 
+.DS267:
 	MOV EAX, [t40]
 	PUSH EAX
 	MOV EAX, 1
 	MOV EBX, EAX
 	POP EAX
 	SUB EAX, EBX
-	MOV [t40], EAX
+	MOV [t40], EAX ; store
+	POP EAX ; store
 	MOV EAX, [t40]
 	PUSH EAX
 	MOV EAX, 5
@@ -257,7 +281,7 @@ T4:
 	MOV EAX, EBX
 	TEST EAX, EAX
 	POP EAX
-	JNZ .DS244
+	JNZ .DS267
 	; IF ...
 	MOV EAX, [t40]
 	PUSH EAX
@@ -266,22 +290,25 @@ T4:
 	MOV EAX, EBX
 	TEST EAX, EAX
 	POP EAX
-	JZ .END273
+	JZ .END298
 	; THEN ...
 	PUSH EAX
 	MOV EAX, 2
-	MOV [t40], EAX
-.END273:
+	MOV [t40], EAX ; store
+	POP EAX ; store
+.END298:
 	RET
 
 T5:
 	CALL T4
 	PUSH EAX
 	MOV EAX, 55555
-	MOV [_t5], EAX
+	MOV [_t5], EAX ; store
+	POP EAX ; store
 	PUSH EAX
 	MOV EAX, 1
-	MOV [t50], EAX
+	MOV [t50], EAX ; store
+	POP EAX ; store
 	; IF ...
 	PUSH EAX
 	MOV EAX, 1
@@ -295,15 +322,17 @@ T5:
 	MOV EAX, EBX
 	TEST EAX, EAX
 	POP EAX
-	JZ .END302
+	JZ .END330
 	; THEN ...
 	PUSH EAX
 	MOV EAX, 2
-	MOV [t50], EAX
-.END302:
+	MOV [t50], EAX ; store
+	POP EAX ; store
+.END330:
 	PUSH EAX
 	MOV EAX, 1
-	MOV [t51], EAX
+	MOV [t51], EAX ; store
+	POP EAX ; store
 	; IF ...
 	PUSH EAX
 	MOV EAX, 1
@@ -317,15 +346,17 @@ T5:
 	MOV EAX, EBX
 	TEST EAX, EAX
 	POP EAX
-	JZ .END324
+	JZ .END354
 	; THEN ...
 	PUSH EAX
 	MOV EAX, 2
-	MOV [t51], EAX
-.END324:
+	MOV [t51], EAX ; store
+	POP EAX ; store
+.END354:
 	PUSH EAX
 	MOV EAX, 1
-	MOV [t52], EAX
+	MOV [t52], EAX ; store
+	POP EAX ; store
 	; IF ...
 	PUSH EAX
 	MOV EAX, 3
@@ -339,32 +370,36 @@ T5:
 	MOV EAX, EBX
 	TEST EAX, EAX
 	POP EAX
-	JZ .END346
+	JZ .END378
 	; THEN ...
 	PUSH EAX
 	MOV EAX, 2
-	MOV [t52], EAX
-.END346:
+	MOV [t52], EAX ; store
+	POP EAX ; store
+.END378:
 	PUSH EAX
 	MOV EAX, 1
-	MOV [t53], EAX
+	MOV [t53], EAX ; store
+	POP EAX ; store
 	; IF ...
 	MOV EAX, [t53]
 	TEST EAX, EAX
 	POP EAX
-	JZ .END359
+	JZ .END393
 	; THEN ...
 	PUSH EAX
 	MOV EAX, 2
-	MOV [t53], EAX
-.END359:
+	MOV [t53], EAX ; store
+	POP EAX ; store
+.END393:
 	RET
 
 main:
 	CALL T5
 	PUSH EAX
-	MOV EAX, 15836192
-	MOV [ff], EAX
+	MOV EAX, 5416924
+	MOV [ff], EAX ; store
+	POP EAX ; store
 	RET
 
 .data
