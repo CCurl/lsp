@@ -1,38 +1,45 @@
-int  nXYZ[10];
-byte bABC[20];
-
-void Abc01_X() {
-	r = 5;
-	t = r*r;
-	q = (t * t);
-	if (r == t) { rr=1; }
-	else { dd = 255; }
-	tt = 2345;
-	// nXYZ[r] = q;
+void T1() {
+	_t1 = 11111;
+	t13 = 1; if ((17/8) == 2) { t13 = t13+1; }
+	t11 = 1; if (((2>3) && (3!=4)) == 0) { t11 = 2; }
+	t12 = 1; if (((2>3) || (3!=4)) != 0) { t12 = 2; }
 }
 
-void sub() { // This def is ignored/replaced by the next
-	count = 0;
-	while (count < 100) { count = count * 2; }
+void T2() {
+	T1();
+	_t2 = 22222;
+	t2 = 1; c = 0;
+	while (t2 < 1025) { c = c+1; t2 = t2*2; }
+	t21 = 1; if (t2 == (2047+t21)) { t21 = 2; }
+	t22 = 1; if (c == 11) { t22 = 2; }
 }
 
-void sub() {
-	cc = 1; c = 0;
-	while (cc < 1025) { c=c+1; cc=cc*2; }
+void T3() {
+	T2();
+	_t3 = 33333;
+	t30 = 1;
+	if (((8+1)*(12-1)) == (100-1)) { t30 = 2; } else { t30=4; }
+}
+
+void T4() {
+	T3();
+	_t4 = 44444;
+	t40 = 0;
+	while (t40 < 10) { t40 = t40+1; }
+	do { t40 = t40-1; } while (t40 > 5);
+	if (t40 == 5) { t40 = 2; }
+}
+
+void T5() {
+	T4();
+	_t5 = 55555;
+	t50 = 1; if ((1&2) == 0)  { t50 = 2; }
+	t51 = 1; if ((1|2) == 3)  { t51 = 2; }
+	t52 = 1; if ((3^1) == 2)  { t52 = 2; }
+	t53 = 1; if (t53)  { t53 = 2; }
 }
 
 void main() {
-	Abc01_X();
-	a = 11; b = a+2; z=667788;
-	if (a < 1) { c=a+b; }
-	else { d = a*(b+1); }
-	if (a > 1) { g=a*a; }
-	e = b*7;
-	f = e/3;
-	i = 1*1000*1000;
-	s=1;
-	while (i) { i=i-1; }
-	i=0; n=0;
-	do { n=n+1; i=i+n; } while (n<50);
-	sub();
+	T5();
+	ff = "hi there";
 }

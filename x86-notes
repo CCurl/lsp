@@ -6,7 +6,7 @@ Linux - x86 system calls
 Online Assembler -
 - https://yozan233.github.io/Online-Assembler-Disassembler/
 
-linux - execution start address: 0x08048000
+Linux - execution start address: 0x08048000
 
 sys_brk (syscall #45)
 - Put the requested new end address into EBX
@@ -45,6 +45,9 @@ ba 55 66 77 88 - mov edx, 0x88776655
 59 - pop ecx
 5a - pop edx
 
+68 78 56 34 12             push 0x12345678
+FF 35 78 56 34 12          push [0x12345678]
+
 31 c0 - xor eax, eax
 31 db - xor ebx, ebx
 31 c9 - xor ecx, ecx
@@ -58,3 +61,53 @@ cd 80 -  int 0x80
 39 c3 - cmp eax, ebx
 
 c3 - ret
+
+  push:
+0x10006:      89 D9                    mov ecx, ebx
+0x10002:      89 C3                    mov ebx, eax
+
+    pop:
+0x10000:      89 D8                    mov eax, ebx
+0x10004:      89 CB                    mov ebx, ecx
+
+   zz:
+0x10000:      31 D2                    xor edx, edx
+0x10002:      39 C3                    cmp ebx, eax
+0x10004:      74/75 01                 jz/jnz FALSE
+0x10006:      42                       inc edx
+0x10006:      4A                       dec edx
+   FALSE:
+0x10007:      89 D0                    mov eax, edx
+0x10009:      89 CB                    mov ebx, ecx
+
+; Calling
+   test:
+0x12345:      29 D8                    sub eax, ebx
+0x12347:      F7 D0                    not eax
+0x12349:      C3                       ret
+0x1234a:      8D 15 45 23 01 00        lea edx, [0x00012345]
+0x12350:      8D 15 45 23 01 00        lea edx, [test]
+0x12356:      FF D2                    call edx
+0x12358:      C3                       ret
+
+0x1000f:      93                       xchg eax, ebx
+0x10010:      91                       xchg eax, ecx
+0x10011:      87 CB                    xchg ebx, ecx
+0x10013:      21 D8                    and eax, ebx
+0x10015:      09 D8                    or  eax, ebx
+0x10017:      31 D8                    xor eax, ebx
+0x10019:      F7 EB                    imul ebx
+0x1001b:      F7 FB                    idiv ebx
+0x1001d:      C3                       ret
+
+0x10000:      29 D8                    sub eax, ebx
+0x10002:      F7 D0                    not eax
+0x10004:      90                       nop
+0x10013:      C3                       ret
+
+
+
+0x10000:      55                 push ebp
+0x10001:      89 E5              mov ebp, esp
+0x10003:      89 EC              mov esp, ebp
+0x10005:      5B                 pop ebx

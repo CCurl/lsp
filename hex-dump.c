@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------*/
-/* Virtual machine. */
+/* hex-dump. */
 
 #include <stdio.h>
 
@@ -8,23 +8,24 @@ typedef unsigned char byte;
 
 /*---------------------------------------------------------------------------*/
 /* HEX dump. */
-void hexDump(byte *start, int count, FILE *fpOut) {
+void hexDump(byte *start, int count, int dets) {
     int n = 0;
-    FILE *fp = fpOut ? fpOut : stdout;
-    fprintf(fp, "\nHEX dump - %d bytes", count);
-    fprintf(fp, "\n-------------------------------------------------------");
+    printf( "\nHEX dump - %d bytes", count);
+    printf( "\n-------------------------------------------------------");
     for (int i=0; i<count; i=i+16) {
-        fprintf(fp, "\n%04X: ", i);
-        for (int j=0; j<8; j++) { fprintf(fp, "%02X ", start[i+j]); }
-        fprintf(fp, " ");
-        for (int j=8; j<16; j++) { fprintf(fp, "%02X ", start[i+j]); }
-        fprintf(fp, "  ; ");
+        printf( "\n");
+        if (dets) { printf( "%04X: ", i); }
+        for (int j=0; j<8; j++) { printf( "%02X ", start[i+j]); }
+        printf( " ");
+        for (int j=8; j<16; j++) { printf( "%02X ", start[i+j]); }
+        if (dets == 0) { continue; }
+        printf( "  ; ");
         for (int j=0; j<16; j++) {
-            byte x = start[i+j];
-            fprintf(fp, "%c", BTWI(x,32,126) ? x : '.');
+            char x = start[i+j];
+            printf( "%c", BTWI(x,32,126) ? x : '.');
         }
     }
-    fprintf(fp, "\n");
+    printf( "\n");
 }
 
 /*---------------------------------------------------------------------------*/
@@ -32,13 +33,16 @@ void hexDump(byte *start, int count, FILE *fpOut) {
 byte buf[65536];
 
 int main(int argc, char *argv[]) {
-    char *fn = (argc > 1) ? argv[1] : "tc.out";
+    int fni = 1;
+    int dets = 1;
+    char* fn = (argc > 1) ? argv[1] : "undefined";
+    if ((argc > 2) && (fn[0]=='_') && (fn[1]==0)) { dets = 0; fn = argv[2]; }
     FILE *fp = fopen(fn, "rb");
-    if (!fp) { printf("can't open file"); }
+    if (!fp) { printf("can't open file (%s)", fn); }
     else {
         int sz = (int)fread(buf, 1, sizeof(buf), fp);
         fclose(fp);
-        hexDump(buf, sz, 0);
+        hexDump(buf, sz, dets);
     }
     return 0;
 }

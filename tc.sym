@@ -1,0 +1,6 @@
+symbols: 1000 entries, 3 used
+num type size val       name
+--- ---- ---- --------- -----------------
+0   0    4    $0        num
+1   0    4    $0        x
+2   25   4    $2        main
