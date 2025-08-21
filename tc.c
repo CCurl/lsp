@@ -221,7 +221,14 @@ int genSymbol(char *name, char type) {
     return i;
 }
 
-void dumpSymbols(int details, FILE *toFP) {
+char *genStringSymbolName() {
+    static char name[32];
+    static int strNum = 0;
+    sprintf(name, "_s%03d_", ++strNum);
+    return name;
+}
+
+void dumpSymbols(int details, FILE* toFP) {
     FILE *fp = toFP ? toFP : stdout;
     fprintf(fp, "\n; symbols: %d entries, %d used\n", SYMBOLS_SZ, numSymbols);
     fprintf(fp, "; num type size val       name\n");
@@ -277,7 +284,8 @@ node *term() {
         char *tmp = hAlloc(strlen(id_name)+1);
         strcpy(tmp, id_name);
         x = new_node(ND_STR);
-        x->val = (int)tmp;
+        x->sval = genSymbol(genStringSymbolName(), ND_STR);
+        symbols[x->sval].val = (long)tmp;
         next_token();
     }
     else x = paren_expr();
@@ -571,7 +579,10 @@ void c(node *x) {
     switch (x->kind) {
         case ND_VAR:   gFetch(x->sval); break;
         case ND_CONST: gLit(x->val); break;
-        case ND_STR:   gLit(x->val); break;
+        case ND_STR:   gN("\tPUSH EAX\n\tLEA EAX, [");
+            gAppend(symbols[x->sval].name, 0);
+            gAppend("]", 0);
+            break;
         case ND_ADD:   c(x->o1); c(x->o2); gAdd();  break;
         case ND_MUL:   c(x->o1); c(x->o2); gMul();  break;
         case ND_SUB:   c(x->o1); c(x->o2); gSub();  break;
@@ -700,12 +711,13 @@ int main(int argc, char *argv[]) {
     // printf("; %d lines, %d nodes\n", gHere, num_nodes);
 
     gWinLin('D');
+    for (int i=0; i<gHere; i++) { fprintf(stdout, "%s\n", gLines[i]); }
+
     for (int i=0; i<numSymbols; i++) {
         SYM_T *s = &symbols[i];
-        if (s->type == 0) { gN(s->name); gAppend(":\tdd 0",0); }
+        if (s->type == ND_VAR) { printf("%s:\tdd 0\n", s->name); }
+        if (s->type == ND_STR) { printf("%s:\tdb \"%s\", 0\n",s->name, (char*)s->val); }
     }
-
-    for (int i=0; i<gHere; i++) { fprintf(stdout, "%s\n", gLines[i]); }
 
     dumpSymbols(1, 0);
 

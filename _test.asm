@@ -534,7 +534,7 @@ main:
 	mov esp, ebp
 	pop ebp
 	PUSH EAX
-	MOV EAX, 9678308
+	LEA EAX, [_s001_]
 	MOV [ff], EAX
 	POP EAX
 	RET
@@ -562,8 +562,9 @@ t51:	dd 0
 t52:	dd 0
 t53:	dd 0
 ff:	dd 0
+_s001_:	db "hi there", 0
 
-; symbols: 1000 entries, 28 used
+; symbols: 1000 entries, 29 used
 ; num type size val       name
 ; --- ---- ---- --------- -----------------
 ; 0   25   4    $0        exit
@@ -594,3 +595,4 @@ ff:	dd 0
 ; 25  0    4    $0        t53
 ; 26  25   4    $1A       main
 ; 27  0    4    $0        ff
+; 28  2    4    $B4ADE4   _s001_
