@@ -2,6 +2,7 @@ int num;
 int x;
 
 void main() {
+	// putc(65);
 	num = 1000*1000*1000;
 	x = num;
 	while (x) { x = x - 1; }

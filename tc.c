@@ -485,15 +485,13 @@ void gFetch(int sym) {
 
 void gLit(int v) { gPushA(); gMovIMM(v); }
 
-// push ebp ; mov ebp, esp
-void gPreCall() { } // gN("push ebp"); gN("mov ebp, esp"); }
+void gPreCall() { gN("\tpush ebp"); gN("\tmov ebp, esp"); }
 void gCall(int fn) {
     gN("\tCALL");
     gAppend(symbols[fn].name, 1);
 }
 void gReturn() { gN("\tRET"); gN(""); }
-// mov esp, ebp ; pop ebp
-void gPostCall() { } // gN(3, "\x89\xec\x5d"); }
+void gPostCall() { gN("\tmov esp, ebp"); gN("\tpop ebp"); }
 void gAdd() { gPopB(); gN("\tADD EAX, EBX"); }
 void gSub() { gAtoB(); gPopA(); gN("\tSUB EAX, EBX"); }
 void gMul() { gPopB(); gN("\tIMUL EBX"); }
@@ -551,11 +549,17 @@ void gWinLin(int seg) {
         gN("segment readable writeable");
         gN(";=============================================");
     } else if (seg == 'L') {
+        // Library code
         int sym = genSymbol("exit", TOK_FUNC);
-        gN("exit:");
-        gN("\tMOV EAX, 1");
-        gN("\tXOR EBX, EBX");
-        gN("\tINT 0x80");
+        sym = genSymbol("_pc_buf", 0);
+        gN("exit:\n\tMOV EAX, 1\n\tXOR EBX, EBX\n\tINT 0x80");
+        gN("putc:\n\tMOV [_pc_buf], EAX");
+        gN("MOV EAX, 4");
+        gN("MOV EBX, 0");
+        gN("LEA ECX, [_pc_buf]");
+        gN("MOV EDX, 1");
+        gN("INT 0x80\n");
+        // gN("");
     }
 #endif
 }
