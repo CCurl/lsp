@@ -380,7 +380,7 @@ node *statement() {
         x = new_node(ND_EMPTY);
         next_token();
     }
-    else if (tok == TOK_LBRA) { /* "{" <statement> "}" */
+    else if (tok == TOK_LBRA) { /* "{" <statements> "}" */
         int seqNo = 1;
         x = new_node(ND_EMPTY);
         next_token();
@@ -401,17 +401,6 @@ node *statement() {
 // change this to generate code for a different architecture
 char *gLines[10000], * gCurLine;
 int gHere, gLineSz;
-//void s1(int a, int v) { vm[a] = (v & 255); }
-//void s2(int a, int v) { s1(a,v); s1(a+1,v>>8); }
-//void s4(int a, int v) { s2(a,v); s1(a+2,v>>16); }
-
-//void g(int c) { s1(here, c); here=here+1; vmHere=vmHere+1; }
-//void g2(int n) { g(n); g(n>>8); }
-//void g4(int n) { g2(n); g2(n>>16); }
-//void gAddr(int a) { g2(a); if (addrSz==4) { g2(a>>16); } }
-//void gN(int n, char *bytes) {
-    //for (int i=0; i<n; i++) { g(bytes[i]); }
-//}
 
 // ----------------------------------------------------------
 
@@ -450,13 +439,15 @@ void fix(int tgtLn, int tgt, char *pfx) {
 
 void gDump() { for (int i=0; i<gHere; i++) { printf("%s\n", gLines[i]); } }
 
-void gDtoA() { gN("\tMOV EAX, EBX"); }
+void gBtoA() { gN("\tMOV EAX, EBX"); }
+void gDtoA() { gN("\tMOV EAX, EDX"); }
 void gAtoB() { gN("\tMOV EBX, EAX"); }
 
 void gNOP() { gN("\tNOP"); }
 void gPushA() { gN("\tPUSH EAX"); }
 void gPopA()  { gN("\tPOP EAX"); }
 void gPopB()  { gN("\tPOP EBX"); }
+void gXorDD() { gN("\tXOR EDX, EDX"); }
 
 void gMovIMM(int val) {
     char x[64];
@@ -469,7 +460,6 @@ void gStore(int sym) {
     int off = 0, sz = s->sz;
     char x[64];
     char *reg = (sz==1) ? "AL" : "EAX";
-    gN("\t; store");
     if (off) {
         sprintf(x, "\tMOV [%s+%d], %s", s->name, off, reg);
     } else {
@@ -483,7 +473,6 @@ void gFetch(int sym) {
     int off = 0, sz = s->sz;
     char x[64];
     char *reg = (sz==1) ? "AL" : "EAX";
-    gN("\t; fetch");
     gN("\tPUSH EAX");
     if (sz == 1) { gN("XOR EAX, EAX"); }
     if (off) {
@@ -505,41 +494,25 @@ void gCall(int fn) {
 void gReturn() { gN("\tRET"); gN(""); }
 // mov esp, ebp ; pop ebp
 void gPostCall() { } // gN(3, "\x89\xec\x5d"); }
-// pop ebx ; add eax, ebx
-void gAdd() {
-    gPopB();
-    gN("\tADD EAX, EBX");
+void gAdd() { gPopB(); gN("\tADD EAX, EBX"); }
+void gSub() { gAtoB(); gPopA(); gN("\tSUB EAX, EBX"); }
+void gMul() { gPopB(); gN("\tIMUL EBX"); }
+void gDiv() { gAtoB(); gPopA(); gN("\tIDIV EAX"); }
+void gTestA() { gN("\tTEST EAX, EAX"); gN("\tPOP EAX"); }
+void gCC(char *op)  {
+    gN("\tXOR EDX, EDX");
+    gPopB(); gN("\tCMP EAX, EBX");
+    gN("\t"); gAppend(op, 0); gAppend("@f", 1);
+    gN("\tINC DX");
+    gN("@@:\tMOV EAX, EDX");
 }
-void gSub() {
-    gAtoB();
-    gPopA();
-    gN("\tSUB EAX, EBX");
-}
-void gMul() {
-    gPopB();
-    gN("\tIMUL EBX");
-}
-void gDiv() {
-    gAtoB();
-    gPopA();
-    gN("\tIDIV EAX");
-}
-// xor edx, edx ; pop ebx ; cmp ebx, eax ; jge +1 ; dec edx ; mov eax, edx
-void gLT() { gN("\t; less than"); gDtoA(); }
-// xor edx, edx ; pop ebx ; cmp ebx, eax ; jle +1 ; dec edx ; mov eax, edx
-void gGT() { gN("\t; greaterthan"); gDtoA(); }
-// xor edx, edx ; pop ebx ; cmp ebx, eax ; jnz +1 ; dec edx ; mov eax, edx
-void gEQ() { gN("\t; equals"); gDtoA(); }
-// xor edx, edx ; pop ebx ; cmp ebx, eax ; jz +1 ; dec edx ; mov eax, edx
-void gNEQ() { gN("\t; not equals"); gDtoA(); }
+void gLT()  { gCC("JGE"); }
+void gGT()  { gCC("JLE"); }
+void gEQ()  { gCC("JNE"); }
+void gNEQ() { gCC("JE"); }
 void gAnd() { gPopB(); gN("\tAND EAX, EBX"); }
 void gOr()  { gPopB(); gN("\tOR EAX, EBX"); }
 void gXor() { gPopB(); gN("\tXOR EAX, EBX"); }
-// jmp (stop here)
-void gJmp(char *lbl) { gN("\t; jmp"); gAppend(lbl, 1);  }
-void gCmp()   { gN("\tTEST EAX, EAX"); gN("\tPOP EAX"); }
-void gJmpZ()  { gN("\ttest eax, eax;\n\tpop eax\n\tjz"); }
-void gJmpNZ() { gN("\ttest eax, eax;\n\tpop eax\n\tjnz"); }
 int gNewTag(int ln, char *pfx) {
     char x[64];
     sprintf(x, ".%s%d:", pfx, ln);
@@ -554,14 +527,20 @@ void gJmpTo(int ln, char *op, char *pfx) {
 
 void gWinLin(int seg) {
 #ifdef _WIN32
+    // Windows (32-bit)
     if (seg == 'C') {
         gN("format PE console");
         gN("include 'win32ax.inc'");
+        gN(";================== code =====================");
         gN(".code");
+        gN(";=============================================");
     } else if (seg == 'D') {
+        gN(";================== data =====================");
         gN(".data");
+        gN(";=============================================");
     }
 #else
+    // Linux (32-bit)
     if (seg == 'C') {
         gN("format ELF executable");
         gN(";================== code =====================");
@@ -585,32 +564,32 @@ void gWinLin(int seg) {
 void c(node *x) {
     int p1, p2, p3;
     switch (x->kind) {
-        case ND_VAR:  gFetch(x->sval); break;
-        case ND_CONST:  gLit(x->val); break;
-        case ND_STR:  gLit(x->val); break;
-        case ND_ADD:  c(x->o1); c(x->o2); gAdd();  break;
-        case ND_MUL:  c(x->o1); c(x->o2); gMul();  break;
-        case ND_SUB:  c(x->o1); c(x->o2); gSub();  break;
-        case ND_DIV:  c(x->o1); c(x->o2); gDiv();  break;
-        case ND_LT:   c(x->o1); c(x->o2); gLT();   break;
-        case ND_GT:   c(x->o1); c(x->o2); gGT();   break;
-        case ND_EQ:   c(x->o1); c(x->o2); gEQ();   break;
-        case ND_NEQ:  c(x->o1); c(x->o2); gNEQ();  break;
-        case ND_LAND: c(x->o1); c(x->o2); gAnd();  break;
-        case ND_LOR:  c(x->o1); c(x->o2); gOr();   break;
-        case ND_AND:  c(x->o1); c(x->o2); gAnd();  break;
-        case ND_OR:   c(x->o1); c(x->o2); gOr();   break;
-        case ND_XOR:  c(x->o1); c(x->o2); gXor();  break;
-        case ND_SET:  c(x->o2); gStore(x->o1->sval); gN("\tPOP EAX");
+        case ND_VAR:   gFetch(x->sval); break;
+        case ND_CONST: gLit(x->val); break;
+        case ND_STR:   gLit(x->val); break;
+        case ND_ADD:   c(x->o1); c(x->o2); gAdd();  break;
+        case ND_MUL:   c(x->o1); c(x->o2); gMul();  break;
+        case ND_SUB:   c(x->o1); c(x->o2); gSub();  break;
+        case ND_DIV:   c(x->o1); c(x->o2); gDiv();  break;
+        case ND_LT:    c(x->o1); c(x->o2); gLT();   break;
+        case ND_GT:    c(x->o1); c(x->o2); gGT();   break;
+        case ND_EQ:    c(x->o1); c(x->o2); gEQ();   break;
+        case ND_NEQ:   c(x->o1); c(x->o2); gNEQ();  break;
+        case ND_LAND:  c(x->o1); c(x->o2); gAnd();  break;
+        case ND_LOR:   c(x->o1); c(x->o2); gOr();   break;
+        case ND_AND:   c(x->o1); c(x->o2); gAnd();  break;
+        case ND_OR:    c(x->o1); c(x->o2); gOr();   break;
+        case ND_XOR:   c(x->o1); c(x->o2); gXor();  break;
+        case ND_SET:   c(x->o2); gStore(x->o1->sval); gN("\tPOP EAX");
             break;
         case ND_IF1:  gN("\t; IF ..."); c(x->o1);
-            gCmp(); p1 = gHere; gN("\tJZ");
+            gTestA(); p1 = gHere; gN("\tJZ");
             gN("\t; THEN ..."); c(x->o2);
             fix(p1, gHere, "END");
             gNewTag(gHere, "END");
             break;
         case ND_IF2:  gN("\t; IF ... ELSE ..."); c(x->o1);
-            gCmp(); p1 = gHere; gN("\tJZ");
+            gTestA(); p1 = gHere; gN("\tJZ");
             gN("\t; THEN ..."); c(x->o2);
             p2 = gHere; gN("\tJMP");
             fix(p1, gHere, "ELSE");
@@ -622,7 +601,7 @@ void c(node *x) {
             break;
         case ND_WHILE: p1 = gNewTag(gHere, "WS");
             c(x->o1);
-            gCmp();
+            gTestA();
             p2 = gHere;
             gN("\tJZ");
             c(x->o2);
@@ -634,7 +613,7 @@ void c(node *x) {
         case ND_DO: p1 = gHere; gNewTag(p1, "DS");
             c(x->o1);
             c(x->o2);
-            gCmp();
+            gTestA();
             gJmpTo(p1, "JNZ", "DS"); break;
         case ND_EMPTY: break;
         case ND_SEQ: c(x->o1); c(x->o2); break;

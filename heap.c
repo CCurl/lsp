@@ -103,6 +103,7 @@ char *hRealloc(char *data, int newSz) {
 	if (hi == -1) { return data; }
 	PHEAP x = &index[hi];
 	uint sz = x->sz;
+	if (newSz <= sz) { return data; }
 	hFree(data);
 	char *y = hAlloc(newSz);
 	if ((y) && (y != data)) {

@@ -18,34 +18,37 @@ I should be able to also run it using 'vm'.<br/>
 The grammar of language in EBNF is:
 
 ```
-  <program>   ::= <defs>
-  <defs>      ::= <def> | <def> <def>
-  <def>       ::= <func_def> | <int-def> | <byte-def>
-  <func-def>  ::= "void" <id> "()" "{" <statement> "}" |
-  <int-def>   ::= "int"  <id> ";" | "int" <id>  "[" <int> "]" ";"
-  <byte-def>  ::= "byte" <id> ";" | "byte" <id> "[" <int> "]" ";"
-  <statement> ::= "if" <paren_expr> <statement> |
+  <program>    ::= <defs>
+  <defs>       ::= <def> | <defs> <def>
+  <def>        ::= <func_def> | <int-def> | <byte-def>
+  <func-def>   ::= "void" <id> "()" "{" <statement> "}" |
+  <int-def>    ::= "int"  <id> ";" | "int" <id>  "[" <int> "]" ";"
+  <byte-def>   ::= "byte" <id> ";" | "byte" <id> "[" <int> "]" ";"
+  <statements> ::= <statement> <statements> | <nothing>
+  <statement>  ::= "if" <paren_expr> <statement> |
                   "if" <paren_expr> <statement> "else" <statement> |
                   "while" <paren_expr> <statement> |
                   "do" <statement> "while" <paren_expr> ";" |
-                  "{" <statement> "}" |
+                  "{" <statements> "}" |
                   <func-call> ";" |
                   <expr> ";" |
                   <id> "=" <expr> ";" |
                   <id> "[" <expr> "]" "=" <expr> ";" | (future)
                   "//" |
-                  ";"
-  <paren_expr> ::= "(" <expr> ")"
-  <expr>       ::= <math> | <math> <test-op> <math>
-  <test-op>    ::= one of (< = > != || &&)
-  <math>       ::= <term> | <math> <math_op> <term>
-  <math-op>    ::= one of (+ - * / & | ^)
+                  ";" |
+                  <nothing>
+  <paren_expr>  ::= "(" <expr> ")"
+  <expr>        ::= <math> | <math> <test-op> <math>
+  <test-op>     ::= one of (< = > != || &&)
+  <math>        ::= <term> | <math> <math_op> <term>
+  <math-op>     ::= one of (+ - * / & | ^)
 
-  <term>       ::= <id> | <int> | <string> | <paren_expr>
-  <id>         ::= <alpha><alpha-numeric>*
-  <int>        ::= [0-9]*
-  <string>     ::= '"' <chars> '"'
-  <func-call>  ::= <id> "(" ")"
+  <term>        ::= <id> | <int> | <string> | <paren_expr>
+  <id>          ::= <alpha><alpha-numeric>*
+  <int>         ::= [0-9]*
+  <string>      ::= '"' <chars> '"'
+  <func-call>   ::= <id> "(" ")"
+  <nothing>     ::= 
  ```
 
 It is broken into multiple parts
