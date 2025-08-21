@@ -437,15 +437,6 @@ void gAppend(char *txt, int sp) {
 
 void gInit() {
     gHere = 0;
-#ifdef _WIN32
-    gN("format PE console");
-    gN("include 'win32ax.inc'");
-    gN(".code");
-#else
-    gN("format ELF executable");
-    gN("segment readable writable executable");
-#endif
-    gN("entry main");
 }
 
 int hole() { return gHere; }
@@ -559,6 +550,35 @@ void gJmpTo(int ln, char *op, char *pfx) {
     char x[64];
     sprintf(x, "\t%s .%s%d", op, pfx, ln);
     gN(x);
+}
+
+void gWinLin(int seg) {
+#ifdef _WIN32
+    if (seg == 'C') {
+        gN("format PE console");
+        gN("include 'win32ax.inc'");
+        gN(".code");
+    } else if (seg == 'D') {
+        gN(".data");
+    }
+#else
+    if (seg == 'C') {
+        gN("format ELF executable");
+        gN(";================== code =====================");
+        gN("segment readable executable");
+        gN(";=============================================");
+    } else if (seg == 'D') {
+        gN(";================== data =====================");
+        gN("segment readable writeable");
+        gN(";=============================================");
+    } else if (seg == 'L') {
+        int sym = genSymbol("exit", TOK_FUNC);
+        gN("exit:");
+        gN("\tMOV EAX, 1");
+        gN("\tXOR EBX, EBX");
+        gN("\tINT 0x80");
+    }
+#endif
 }
 // ----------------------------------------------------------
 
@@ -688,13 +708,16 @@ int main(int argc, char *argv[]) {
     if (!input_fp) { input_fp = stdin; }
     hInit(0);
     gInit();
-    gN("; source: ");
+    gN("; TC source file: ");
     gAppend(fn ? fn : "stdin", 0);
+    gWinLin('C');
+    gN("entry main");
+    gWinLin('L');
     defs(NULL);
     if (input_fp != stdin) { fclose(input_fp); }
     printf("%d lines, %d nodes\n", gHere, num_nodes);
 
-    gN(".data");
+    gWinLin('D');
     for (int i=0; i<numSymbols; i++) {
         SYM_T *s = &symbols[i];
         if (s->type == 0) { gN(s->name); gAppend(":\tdd 0",0); }

@@ -1,10 +1,14 @@
-format PE console
-include 'win32ax.inc'
-.code
+; TC source file: bm.tc
+format ELF executable
+;================== code =====================
+segment readable executable
+;=============================================
 entry main
-; source: bm.tc
+exit:
+	MOV EAX, 1
+	XOR EBX, EBX
+	INT 0x80
 main:
-	mov ebx, 0x2a2a2a2a
 	PUSH EAX
 	MOV EAX, 1000
 	PUSH EAX
@@ -23,32 +27,32 @@ main:
 	MOV EAX, [num]
 	; store
 	MOV [x], EAX
-	; POP EAX
-	mov ebx, 0x2a2a2a2a
-.WS25:
+	POP EAX
+.WS30:
 	; fetch
-	;PUSH EAX
-	;MOV EAX, [x]
+	PUSH EAX
+	MOV EAX, [x]
 	TEST EAX, EAX
-	;POP EAX
-	JZ .WE44
-	DEC EAX
+	POP EAX
+	JZ .WE49
 	; fetch
-	;PUSH EAX
-	;MOV EAX, [x]
-	;PUSH EAX
-	;MOV EAX, 1
-	;MOV EBX, EAX
-	;POP EAX
-	;SUB EAX, EBX
+	PUSH EAX
+	MOV EAX, [x]
+	PUSH EAX
+	MOV EAX, 1
+	MOV EBX, EAX
+	POP EAX
+	SUB EAX, EBX
 	; store
-	;MOV [x], EAX
-	;POP EAX
-	JMP .WS25
-.WE44: 
+	MOV [x], EAX
+	POP EAX
+	JMP .WS30
+.WE49: 
+	CALL exit
 	RET
-	mov ebx, 0x2a2a2a2a
 
-.data
+;================== data =====================
+segment readable writeable
+;=============================================
 num:	dd 0
 x:	dd 0
