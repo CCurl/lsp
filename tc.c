@@ -530,7 +530,10 @@ void gWinLin(int seg) {
         gN("format PE console");
         gN("include 'win32ax.inc'");
         gN(";================== code =====================");
-        gN(".code");
+        gN(".code\nentry main");
+        gN(";================== library ==================");
+        int sym = genSymbol("exit", TOK_FUNC);
+        gN("exit:\tret");
         gN(";=============================================");
     } else if (seg == 'D') {
         gN(";================== data =====================");
@@ -542,14 +545,8 @@ void gWinLin(int seg) {
     if (seg == 'C') {
         gN("format ELF executable");
         gN(";================== code =====================");
-        gN("segment readable executable");
-        gN(";=============================================");
-    } else if (seg == 'D') {
-        gN(";================== data =====================");
-        gN("segment readable writeable");
-        gN(";=============================================");
-    } else if (seg == 'L') {
-        // Library code
+        gN("segment readable executable\nentry main");
+        gN(";================== library ==================");
         int sym = genSymbol("exit", TOK_FUNC);
         sym = genSymbol("_pc_buf", 0);
         gN("exit:\n\tMOV EAX, 1\n\tXOR EBX, EBX\n\tINT 0x80");
@@ -559,7 +556,11 @@ void gWinLin(int seg) {
         gN("LEA ECX, [_pc_buf]");
         gN("MOV EDX, 1");
         gN("INT 0x80\n");
-        // gN("");
+        gN(";=============================================");
+    } else if (seg == 'D') {
+        gN(";================== data =====================");
+        gN("segment readable writeable");
+        gN(";=============================================");
     }
 #endif
 }
@@ -694,8 +695,6 @@ int main(int argc, char *argv[]) {
     gN("; TC source file: ");
     gAppend(fn ? fn : "stdin", 0);
     gWinLin('C');
-    gN("entry main");
-    gWinLin('L');
     defs(NULL);
     if (input_fp != stdin) { fclose(input_fp); }
     printf("%d lines, %d nodes\n", gHere, num_nodes);

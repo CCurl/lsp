@@ -146,7 +146,6 @@
   <ItemGroup>
     <None Include="test.bat" />
     <None Include="test.tc" />
-    <None Include="README.md" />
     <None Include="vm.lst" />
     <None Include="xx.asm" />
   </ItemGroup>

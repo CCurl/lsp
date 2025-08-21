@@ -146,13 +146,15 @@
   <ItemGroup>
     <None Include="bm.bat" />
     <None Include="bm.tc" />
+    <None Include="make.bat" />
     <None Include="tc.sym" />
     <None Include="test.bat" />
     <None Include="test.tc" />
-    <None Include="makefile" />
     <None Include="README.md" />
     <None Include="x86-notes" />
+    <None Include="_bm.asm" />
     <None Include="_tc.asm" />
+    <None Include="_test.asm" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="heap.c" />

@@ -1,8 +1,0 @@
-symbols: 1000 entries, 5 used
-num type size val       name
---- ---- ---- --------- -----------------
-0   25   4    $0        exit
-1   0    4    $0        _pc_buf
-2   0    4    $0        num
-3   0    4    $0        x
-4   25   4    $4        main

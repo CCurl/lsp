@@ -1,21 +1,12 @@
 ; TC source file: bm.tc
-format ELF executable
+format PE console
+include 'win32ax.inc'
 ;================== code =====================
-segment readable executable
-;=============================================
+.code
 entry main
-exit:
-	MOV EAX, 1
-	XOR EBX, EBX
-	INT 0x80
-putc:
-	MOV [_pc_buf], EAX
-MOV EAX, 4
-MOV EBX, 0
-LEA ECX, [_pc_buf]
-MOV EDX, 1
-INT 0x80
-
+;================== library ==================
+exit:	ret
+;=============================================
 main:
 	PUSH EAX
 	MOV EAX, 1000
@@ -33,12 +24,12 @@ main:
 	MOV EAX, [num]
 	MOV [x], EAX
 	POP EAX
-.WS30:
+.WS25:
 	PUSH EAX
 	MOV EAX, [x]
 	TEST EAX, EAX
 	POP EAX
-	JZ .WE46
+	JZ .WE41
 	PUSH EAX
 	MOV EAX, [x]
 	PUSH EAX
@@ -48,8 +39,8 @@ main:
 	SUB EAX, EBX
 	MOV [x], EAX
 	POP EAX
-	JMP .WS30
-.WE46: 
+	JMP .WS25
+.WE41: 
 	push ebp
 	mov ebp, esp
 	CALL exit
@@ -58,8 +49,7 @@ main:
 	RET
 
 ;================== data =====================
-segment readable writeable
+.data
 ;=============================================
-_pc_buf:	dd 0
 num:	dd 0
 x:	dd 0
