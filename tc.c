@@ -223,13 +223,13 @@ int genSymbol(char *name, char type) {
 
 void dumpSymbols(int details, FILE *toFP) {
     FILE *fp = toFP ? toFP : stdout;
-    fprintf(fp, "symbols: %d entries, %d used\n", SYMBOLS_SZ, numSymbols);
-    fprintf(fp, "num type size val       name\n");
-    fprintf(fp, "--- ---- ---- --------- -----------------\n");
+    fprintf(fp, "\n; symbols: %d entries, %d used\n", SYMBOLS_SZ, numSymbols);
+    fprintf(fp, "; num type size val       name\n");
+    fprintf(fp, "; --- ---- ---- --------- -----------------\n");
     if (details) {
         for (int i = 0; i < numSymbols; i++) {
             SYM_T *x = &symbols[i];
-            fprintf(fp, "%-3d %-4d %-4d $%-8lX %s\n", 
+            fprintf(fp, "; %-3d %-4d %-4d $%-8lX %s\n", 
                 i, x->type, x->sz, x->val, x->name);
         }
     }
@@ -697,22 +697,17 @@ int main(int argc, char *argv[]) {
     gWinLin('C');
     defs(NULL);
     if (input_fp != stdin) { fclose(input_fp); }
-    printf("%d lines, %d nodes\n", gHere, num_nodes);
+    // printf("; %d lines, %d nodes\n", gHere, num_nodes);
 
     gWinLin('D');
     for (int i=0; i<numSymbols; i++) {
         SYM_T *s = &symbols[i];
         if (s->type == 0) { gN(s->name); gAppend(":\tdd 0",0); }
     }
-    FILE *fp = fopen("_tc.asm", "wt");
-    if (fp) {
-        for (int i=0; i<gHere; i++) { fprintf(fp, "%s\n", gLines[i]); }
-        fclose(fp);
-    }
 
-    fp = fopen("tc.sym", "wt");
-    dumpSymbols(1, fp);
-    fclose(fp);
+    for (int i=0; i<gHere; i++) { fprintf(stdout, "%s\n", gLines[i]); }
+
+    dumpSymbols(1, 0);
 
     return 0;
 }

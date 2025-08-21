@@ -144,11 +144,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <None Include=".gitignore" />
     <None Include="bm.bat" />
     <None Include="bm.tc" />
     <None Include="make.bat" />
     <None Include="tc.sym" />
-    <None Include="test.bat" />
     <None Include="test.tc" />
     <None Include="README.md" />
     <None Include="x86-notes" />
