@@ -274,6 +274,46 @@ node *gen(int k, node *o1, node *o2) {
     return x;
 }
 
+#define BCASE break; case
+#define X(Y)  dumpNode(n->o1, lvl+1); dumpNode(n->o2, lvl+1); printf("\n; %d: %s",lvl, Y);
+#define PN(n) printf(" %d",n);
+#define PS(s) printf(" %s",s);
+
+void dumpNode(node *n, int lvl) {
+    if (n==NULL) { return; }
+    // printf("\n"); for (int i=0; i<lvl; i++) printf("  ");
+    switch (n->kind) {
+    case ND_ADD: X("ADD");
+    BCASE ND_AND: X("AND");
+    BCASE ND_CONST: X("CONST"); PN(n->val);
+    BCASE ND_DIV: X("DIV");
+    BCASE ND_DO: X("DO");
+    BCASE ND_EMPTY: X("EMPTY");
+    BCASE ND_EQ: X("EQ");
+    BCASE ND_FUNC_CALL: X("CALL");
+    BCASE ND_FUNC_DEF: X("DEF");
+    BCASE ND_GT: X("GT");
+    BCASE ND_IF1: X("IF");
+    BCASE ND_IF2: X("IF2"); printf("ELSE"); dumpNode(n->o3, lvl+1);
+    BCASE ND_LAND: X("LAND");
+    BCASE ND_LOR: X("LOR");
+    BCASE ND_LT: X("LT");
+    BCASE ND_MUL: X("MUL");
+    BCASE ND_NEQ: X("NEQ");
+    BCASE ND_OR: X("OR");
+    BCASE ND_RET: X("RET");
+    BCASE ND_SEQ: X("SEQ");
+    BCASE ND_SET: X("SET");
+    BCASE ND_STR: X("string");
+    BCASE ND_SUB: X("SUB");
+    BCASE ND_VAR: X("var"); PS(symbols[n->sval].name);
+    BCASE ND_WHILE: X("WHILE");
+    BCASE ND_XOR: X("XOR");
+    break; default:
+        break;
+    }
+}
+
 node *paren_expr(); /* forward declaration */
 
 /* <term> ::= <id> | <int> | <paren_expr> */
@@ -296,6 +336,12 @@ node *term() {
         x = new_node(ND_STR);
         x->sval = genSymbol(genStringSymbolName(), ND_STR);
         symbols[x->sval].val = (long)tmp;
+        next_token();
+    }
+    else if (tok == TOK_FUNC) {
+        x = new_node(ND_FUNC_CALL);
+        x->sval = genSymbol(id_name, TOK_FUNC);
+        x->val = x->sval;
         next_token();
     }
     else x = paren_expr();
@@ -687,6 +733,7 @@ node *defFunc(node *x) {
     x->sval = sym;
     nextShouldBe(TOK_LBRA);
     x->o1 = statement();
+    dumpNode(x, 0);
     c(x);
     gReturn();
     return x;

@@ -1,4 +1,51 @@
-; TC source file: bm.tc
+
+; 2: EMPTY
+; 5: var x
+; 5: CONST 1002
+; 4: MUL
+; 4: CONST 998
+; 3: MUL
+; 2: RET
+; 1: SEQ
+; 0: DEF
+; 2: EMPTY
+; 3: var x
+; 5: var x
+; 6: CONST 1001
+; 6: CONST 1
+; 5: SUB
+; 4: MUL
+; 5: CONST 999
+; 5: CONST 1
+; 4: ADD
+; 3: MUL
+; 2: SET
+; 1: SEQ
+; 0: DEF
+; 6: EMPTY
+; 7: var x
+; 7: CONST 500
+; 6: SET
+; 5: SEQ
+; 5: CALL
+; 4: SEQ
+; 5: var num
+; 5: var x
+; 4: SET
+; 3: SEQ
+; 4: var x
+; 5: EMPTY
+; 6: var x
+; 7: var x
+; 7: CONST 1
+; 6: SUB
+; 5: SET
+; 4: SEQ
+; 3: WHILE
+; 2: SEQ
+; 2: CALL
+; 1: SEQ
+; 0: DEF; TC source file: bm.tc
 format ELF executable
 ;================== code =====================
 segment readable executable
