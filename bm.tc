@@ -1,10 +1,18 @@
 int num;
 int x;
 
+int TMil() {
+	return x*1002*998;
+}
+
+int Mil() {
+	x = x * (1001-1) * (999+1);
+}
+
 void main() {
 	// putc(65);
-	num = 1000*1000*1000;
-	x = num;
+	x = 500; Mil();
+	num = x;
 	while (x) { x = x - 1; }
 	exit();
 

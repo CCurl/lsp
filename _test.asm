@@ -1,11 +1,23 @@
 ; TC source file: test.tc
-format PE console
-include 'win32ax.inc'
+format ELF executable
 ;================== code =====================
-.code
+segment readable executable
 entry main
 ;================== library ==================
-exit:	ret
+exit:
+	MOV EAX, 1
+	XOR EBX, EBX
+	INT 0x80
+
+putc:
+	MOV [_pc_buf], EAX
+	MOV EAX, 4
+	MOV EBX, 0
+	LEA ECX, [_pc_buf]
+	MOV EDX, 1
+	INT 0x80
+	RET
+
 ;=============================================
 T1:
 	PUSH EAX
@@ -34,7 +46,7 @@ T1:
 @@:	MOV EAX, EDX
 	TEST EAX, EAX
 	POP EAX
-	JZ .END45
+	JZ .END50
 	; THEN ...
 	PUSH EAX
 	MOV EAX, [t13]
@@ -44,7 +56,7 @@ T1:
 	ADD EAX, EBX
 	MOV [t13], EAX
 	POP EAX
-.END45:
+.END50:
 	PUSH EAX
 	MOV EAX, 1
 	MOV [t11], EAX
@@ -82,13 +94,13 @@ T1:
 @@:	MOV EAX, EDX
 	TEST EAX, EAX
 	POP EAX
-	JZ .END89
+	JZ .END94
 	; THEN ...
 	PUSH EAX
 	MOV EAX, 2
 	MOV [t11], EAX
 	POP EAX
-.END89:
+.END94:
 	PUSH EAX
 	MOV EAX, 1
 	MOV [t12], EAX
@@ -126,13 +138,13 @@ T1:
 @@:	MOV EAX, EDX
 	TEST EAX, EAX
 	POP EAX
-	JZ .END133
+	JZ .END138
 	; THEN ...
 	PUSH EAX
 	MOV EAX, 2
 	MOV [t12], EAX
 	POP EAX
-.END133:
+.END138:
 	RET
 
 T2:
@@ -153,7 +165,7 @@ T2:
 	MOV EAX, 0
 	MOV [c], EAX
 	POP EAX
-.WS154:
+.WS159:
 	PUSH EAX
 	MOV EAX, [t2]
 	PUSH EAX
@@ -166,7 +178,7 @@ T2:
 @@:	MOV EAX, EDX
 	TEST EAX, EAX
 	POP EAX
-	JZ .WE185
+	JZ .WE190
 	PUSH EAX
 	MOV EAX, [c]
 	PUSH EAX
@@ -183,8 +195,8 @@ T2:
 	IMUL EBX
 	MOV [t2], EAX
 	POP EAX
-	JMP .WS154
-.WE185: 
+	JMP .WS159
+.WE190: 
 	PUSH EAX
 	MOV EAX, 1
 	MOV [t21], EAX
@@ -206,13 +218,13 @@ T2:
 @@:	MOV EAX, EDX
 	TEST EAX, EAX
 	POP EAX
-	JZ .END213
+	JZ .END218
 	; THEN ...
 	PUSH EAX
 	MOV EAX, 2
 	MOV [t21], EAX
 	POP EAX
-.END213:
+.END218:
 	PUSH EAX
 	MOV EAX, 1
 	MOV [t22], EAX
@@ -230,13 +242,13 @@ T2:
 @@:	MOV EAX, EDX
 	TEST EAX, EAX
 	POP EAX
-	JZ .END237
+	JZ .END242
 	; THEN ...
 	PUSH EAX
 	MOV EAX, 2
 	MOV [t22], EAX
 	POP EAX
-.END237:
+.END242:
 	RET
 
 T3:
@@ -284,20 +296,20 @@ T3:
 @@:	MOV EAX, EDX
 	TEST EAX, EAX
 	POP EAX
-	JZ .ELSE292
+	JZ .ELSE297
 	; THEN ...
 	PUSH EAX
 	MOV EAX, 2
 	MOV [t30], EAX
 	POP EAX
-	JMP .END298
-.ELSE292:
+	JMP .END303
+.ELSE297:
 	; ELSE ...
 	PUSH EAX
 	MOV EAX, 4
 	MOV [t30], EAX
 	POP EAX
-.END298:
+.END303:
 	RET
 
 T4:
@@ -314,7 +326,7 @@ T4:
 	MOV EAX, 0
 	MOV [t40], EAX
 	POP EAX
-.WS315:
+.WS320:
 	PUSH EAX
 	MOV EAX, [t40]
 	PUSH EAX
@@ -327,7 +339,7 @@ T4:
 @@:	MOV EAX, EDX
 	TEST EAX, EAX
 	POP EAX
-	JZ .WE338
+	JZ .WE343
 	PUSH EAX
 	MOV EAX, [t40]
 	PUSH EAX
@@ -336,9 +348,9 @@ T4:
 	ADD EAX, EBX
 	MOV [t40], EAX
 	POP EAX
-	JMP .WS315
-.WE338: 
-.DS339:
+	JMP .WS320
+.WE343: 
+.DS344:
 	PUSH EAX
 	MOV EAX, [t40]
 	PUSH EAX
@@ -360,7 +372,7 @@ T4:
 @@:	MOV EAX, EDX
 	TEST EAX, EAX
 	POP EAX
-	JNZ .DS339
+	JNZ .DS344
 	; IF ...
 	PUSH EAX
 	MOV EAX, [t40]
@@ -374,13 +386,13 @@ T4:
 @@:	MOV EAX, EDX
 	TEST EAX, EAX
 	POP EAX
-	JZ .END381
+	JZ .END386
 	; THEN ...
 	PUSH EAX
 	MOV EAX, 2
 	MOV [t40], EAX
 	POP EAX
-.END381:
+.END386:
 	PUSH EAX
 	MOV EAX, 1
 	MOV [t41], EAX
@@ -398,13 +410,13 @@ T4:
 @@:	MOV EAX, EDX
 	TEST EAX, EAX
 	POP EAX
-	JZ .END405
+	JZ .END410
 	; THEN ...
 	PUSH EAX
 	MOV EAX, 2
 	MOV [t41], EAX
 	POP EAX
-.END405:
+.END410:
 	RET
 
 T41:
@@ -446,13 +458,13 @@ T5:
 @@:	MOV EAX, EDX
 	TEST EAX, EAX
 	POP EAX
-	JZ .END453
+	JZ .END458
 	; THEN ...
 	PUSH EAX
 	MOV EAX, 2
 	MOV [t50], EAX
 	POP EAX
-.END453:
+.END458:
 	PUSH EAX
 	MOV EAX, 1
 	MOV [t51], EAX
@@ -474,13 +486,13 @@ T5:
 @@:	MOV EAX, EDX
 	TEST EAX, EAX
 	POP EAX
-	JZ .END481
+	JZ .END486
 	; THEN ...
 	PUSH EAX
 	MOV EAX, 2
 	MOV [t51], EAX
 	POP EAX
-.END481:
+.END486:
 	PUSH EAX
 	MOV EAX, 1
 	MOV [t52], EAX
@@ -502,13 +514,13 @@ T5:
 @@:	MOV EAX, EDX
 	TEST EAX, EAX
 	POP EAX
-	JZ .END509
+	JZ .END514
 	; THEN ...
 	PUSH EAX
 	MOV EAX, 2
 	MOV [t52], EAX
 	POP EAX
-.END509:
+.END514:
 	PUSH EAX
 	MOV EAX, 1
 	MOV [t53], EAX
@@ -518,13 +530,13 @@ T5:
 	MOV EAX, [t53]
 	TEST EAX, EAX
 	POP EAX
-	JZ .END525
+	JZ .END530
 	; THEN ...
 	PUSH EAX
 	MOV EAX, 2
 	MOV [t53], EAX
 	POP EAX
-.END525:
+.END530:
 	RET
 
 main:
@@ -540,8 +552,9 @@ main:
 	RET
 
 ;================== data =====================
-.data
+segment readable writeable
 ;=============================================
+_pc_buf:	dd 0
 _t1:	dd 0
 t13:	dd 0
 t11:	dd 0
@@ -564,35 +577,36 @@ t53:	dd 0
 ff:	dd 0
 _s001_:	db "hi there", 0
 
-; symbols: 1000 entries, 29 used
+; symbols: 1000 entries, 30 used
 ; num type size val       name
 ; --- ---- ---- --------- -----------------
 ; 0   25   4    $0        exit
-; 1   25   4    $1        T1
-; 2   0    4    $0        _t1
-; 3   0    4    $0        t13
-; 4   0    4    $0        t11
-; 5   0    4    $0        t12
-; 6   25   4    $6        T2
-; 7   0    4    $0        _t2
-; 8   0    4    $0        t2
-; 9   0    4    $0        c
-; 10  0    4    $0        t21
-; 11  0    4    $0        t22
-; 12  25   4    $C        T3
-; 13  0    4    $0        _t3
-; 14  0    4    $0        t30
-; 15  25   4    $F        T4
-; 16  0    4    $0        _t4
-; 17  0    4    $0        t40
-; 18  0    4    $0        t41
-; 19  25   4    $13       T41
-; 20  25   4    $14       T5
-; 21  0    4    $0        _t5
-; 22  0    4    $0        t50
-; 23  0    4    $0        t51
-; 24  0    4    $0        t52
-; 25  0    4    $0        t53
-; 26  25   4    $1A       main
-; 27  0    4    $0        ff
-; 28  2    4    $B4ADE4   _s001_
+; 1   0    4    $0        _pc_buf
+; 2   25   4    $0        T1
+; 3   0    4    $0        _t1
+; 4   0    4    $0        t13
+; 5   0    4    $0        t11
+; 6   0    4    $0        t12
+; 7   25   4    $0        T2
+; 8   0    4    $0        _t2
+; 9   0    4    $0        t2
+; 10  0    4    $0        c
+; 11  0    4    $0        t21
+; 12  0    4    $0        t22
+; 13  25   4    $0        T3
+; 14  0    4    $0        _t3
+; 15  0    4    $0        t30
+; 16  25   4    $0        T4
+; 17  0    4    $0        _t4
+; 18  0    4    $0        t40
+; 19  0    4    $0        t41
+; 20  25   4    $0        T41
+; 21  25   4    $0        T5
+; 22  0    4    $0        _t5
+; 23  0    4    $0        t50
+; 24  0    4    $0        t51
+; 25  0    4    $0        t52
+; 26  0    4    $0        t53
+; 27  25   4    $0        main
+; 28  0    4    $0        ff
+; 29  2    4    $565F329C _s001_

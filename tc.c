@@ -169,9 +169,10 @@ void next_token() {
             if (words[tok] == NULL) {
                 tok = TOK_ID;
                 if (ch == '(') {
+                    tok = TOK_FUNC;
                     next_ch();
-                    if (ch == ')') { tok = TOK_FUNC; next_ch(); }
-                    else { syntax_error(); }
+                    //if (ch == ')') { tok = TOK_FUNC; next_ch(); }
+                    // else { syntax_error(); }
                 }
             }
         }
@@ -180,11 +181,20 @@ void next_token() {
     }
 }
 
-void expect_token(int exp) {
+void tokenShouldBe(int exp) {
     if (tok != exp) {
         printf("-expected token [%d], not[%d]-", exp, tok);
         syntax_error();
     }
+}
+
+void nextShouldBe(int exp) {
+    next_token();
+    tokenShouldBe(exp);
+}
+
+void expectToken(int exp) {
+    tokenShouldBe(exp);
     next_token();
 }
 
@@ -330,9 +340,9 @@ node *expr() {
 /* <paren_expr> ::= "(" <expr> ")" */
 node *paren_expr() {
     node *x;
-    expect_token(TOK_LPAR);
+    expectToken(TOK_LPAR);
     x = expr();
-    expect_token(TOK_RPAR);
+    expectToken(TOK_RPAR);
     return x;
 }
 
@@ -355,34 +365,36 @@ node *statement() {
         x->o1 = paren_expr();
         x->o2 = statement();
     }
-    else if (tok == TOK_FUNC) { /* <id> "();" */
+    else if (tok == TOK_FUNC) { /* <id> "(" */
         x = new_node(ND_FUNC_CALL);
         x->sval = genSymbol(id_name, TOK_FUNC);
         x->val = symbols[x->sval].val;
         next_token();
-        expect_token(TOK_SEMI);
+        expectToken(TOK_RPAR);
+        expectToken(TOK_SEMI);
     }
     else if (tok == TOK_ID) { /* <id> "=" <expr> ";" */
         x = new_node(ND_VAR);
         x->sval = genSymbol(id_name, ND_VAR);
         x->val = x->sval;
+        nextShouldBe(TOK_SET);
         next_token();
-        expect_token(TOK_SET);
         x = gen(ND_SET, x, expr());
-        expect_token(TOK_SEMI);
+        expectToken(TOK_SEMI);
     }
     else if (tok == DO_TOK) { /* "do" <statement> "while" <paren_expr> ";" */
         x = new_node(ND_DO);
         next_token();
         x->o1 = statement();
-        expect_token(WHILE_TOK);
+        expectToken(WHILE_TOK);
         x->o2 = paren_expr();
-        expect_token(TOK_SEMI);
+        expectToken(TOK_SEMI);
     }
     else if (tok == RET_TOK) { /* "return" ";"*/
         x = new_node(ND_RET);
         next_token();
-        expect_token(TOK_SEMI);
+        if (tok != TOK_SEMI) { x->o1 = expr(); }
+        expectToken(TOK_SEMI);
     }
     else if (tok == TOK_SEMI) { /* ";" */
         x = new_node(ND_EMPTY);
@@ -402,7 +414,6 @@ node *statement() {
     else { syntax_error(); }
     return x;
 }
-
 
 /*---------------------------------------------------------------------------*/
 /* Code generator. */
@@ -436,6 +447,16 @@ void gInit() {
     gHere = 0;
 }
 
+void adjDepth(int by) {
+    static int depth = 0;
+    depth += by;
+    // if (1<depth) { char x[16]; sprintf(x,"\t; depth:%d",depth); gN(x); }
+    // if (1 >= depth) { char x[24]; sprintf(x,"\t; TOS:EAX"); gN(x); }
+    // if (2 == depth) { char x[24]; sprintf(x,"\t; TOS:EBX, NOS:EAX"); gN(x); }
+    // if (3 == depth) { char x[24]; sprintf(x,"\t; TOS:ECX, NOS:EBX"); gN(x); }
+    // if (4 == depth) { char x[24]; sprintf(x,"\t; TOS:EDX, NOS:ECX"); gN(x); }
+}
+
 int hole() { return gHere; }
 void fix(int tgtLn, int tgt, char *pfx) {
     char x[32];
@@ -452,9 +473,9 @@ void gDtoA() { gN("\tMOV EAX, EDX"); }
 void gAtoB() { gN("\tMOV EBX, EAX"); }
 
 void gNOP() { gN("\tNOP"); }
-void gPushA() { gN("\tPUSH EAX"); }
-void gPopA()  { gN("\tPOP EAX"); }
-void gPopB()  { gN("\tPOP EBX"); }
+void gPushA() { gN("\tPUSH EAX"); adjDepth(1); }
+void gPopA()  { gN("\tPOP EAX"); adjDepth(-1); }
+void gPopB()  { gN("\tPOP EBX"); adjDepth(-1); }
 void gXorDD() { gN("\tXOR EDX, EDX"); }
 
 void gMovIMM(int val) {
@@ -481,7 +502,7 @@ void gFetch(int sym) {
     int off = 0, sz = s->sz;
     char x[64];
     char *reg = (sz==1) ? "AL" : "EAX";
-    gN("\tPUSH EAX");
+    gPushA();
     if (sz == 1) { gN("XOR EAX, EAX"); }
     if (off) {
         sprintf(x, "\tMOV %s, [%s+%d]", reg, s->name, off);
@@ -504,7 +525,7 @@ void gAdd() { gPopB(); gN("\tADD EAX, EBX"); }
 void gSub() { gAtoB(); gPopA(); gN("\tSUB EAX, EBX"); }
 void gMul() { gPopB(); gN("\tIMUL EBX"); }
 void gDiv() { gAtoB(); gPopA(); gN("\tIDIV EAX"); }
-void gTestA() { gN("\tTEST EAX, EAX"); gN("\tPOP EAX"); }
+void gTestA() { gN("\tTEST EAX, EAX"); gPopA(); }
 void gCC(char *op)  {
     gN("\tXOR EDX, EDX");
     gPopB(); gN("\tCMP EAX, EBX");
@@ -557,13 +578,13 @@ void gWinLin(int seg) {
         gN(";================== library ==================");
         int sym = genSymbol("exit", TOK_FUNC);
         sym = genSymbol("_pc_buf", 0);
-        gN("exit:\n\tMOV EAX, 1\n\tXOR EBX, EBX\n\tINT 0x80");
+        gN("exit:\n\tMOV EAX, 1\n\tXOR EBX, EBX\n\tINT 0x80\n");
         gN("putc:\n\tMOV [_pc_buf], EAX");
-        gN("MOV EAX, 4");
-        gN("MOV EBX, 0");
-        gN("LEA ECX, [_pc_buf]");
-        gN("MOV EDX, 1");
-        gN("INT 0x80\n");
+        gN("\tMOV EAX, 4");
+        gN("\tMOV EBX, 0");
+        gN("\tLEA ECX, [_pc_buf]");
+        gN("\tMOV EDX, 1");
+        gN("\tINT 0x80\n\tRET\n");
         gN(";=============================================");
     } else if (seg == 'D') {
         gN(";================== data =====================");
@@ -573,13 +594,12 @@ void gWinLin(int seg) {
 #endif
 }
 // ----------------------------------------------------------
-
 void c(node *x) {
     int p1, p2, p3;
     switch (x->kind) {
         case ND_VAR:   gFetch(x->sval); break;
         case ND_CONST: gLit(x->val); break;
-        case ND_STR:   gN("\tPUSH EAX\n\tLEA EAX, [");
+        case ND_STR:   gPushA(); gN("\tLEA EAX, [");
             gAppend(symbols[x->sval].name, 0);
             gAppend("]", 0);
             break;
@@ -596,9 +616,8 @@ void c(node *x) {
         case ND_AND:   c(x->o1); c(x->o2); gAnd();  break;
         case ND_OR:    c(x->o1); c(x->o2); gOr();   break;
         case ND_XOR:   c(x->o1); c(x->o2); gXor();  break;
-        case ND_SET:   c(x->o2); gStore(x->o1->sval); gN("\tPOP EAX");
-            break;
-        case ND_IF1:  gN("\t; IF ..."); c(x->o1);
+        case ND_SET:   c(x->o2); gStore(x->o1->sval); gPopA(); break;
+        case ND_IF1:   gN("\t; IF ..."); c(x->o1);
             gTestA(); p1 = gHere; gN("\tJZ");
             gN("\t; THEN ..."); c(x->o2);
             fix(p1, gHere, "END");
@@ -638,7 +657,8 @@ void c(node *x) {
             gCall(x->sval);
             gPostCall(); break;
         case ND_FUNC_DEF: c(x->o1); break;
-        case ND_RET: gReturn(); break;
+        case ND_RET: if (x->o1) { c(x->o1); gPopB(); }
+            gN("\tRET"); break;
     }
 }
 
@@ -649,12 +669,27 @@ void defSize(int type, int sym) {
     // check for ";" or "[" <int> "];"
     symbols[sym].sz = (type == INT_TOK) ? 4 : 1;
     if (tok == TOK_SEMI) { next_token(); return; }
-    expect_token(TOK_LARR);
+    expectToken(TOK_LARR);
     symbols[sym].sz = int_val;
     if (type == INT_TOK) { symbols[sym].sz *= 4; }
-    expect_token(TOK_NUM);
-    expect_token(TOK_RARR);
-    expect_token(TOK_SEMI);
+    expectToken(TOK_NUM);
+    expectToken(TOK_RARR);
+    expectToken(TOK_SEMI);
+}
+
+node *defFunc(node *x) {
+    int seqNo = 1;
+    int sym = genSymbol(id_name, TOK_FUNC);
+    gN(symbols[sym].name);
+    nextShouldBe(TOK_RPAR);
+    gAppend(":", 0);
+    x = gen(ND_FUNC_DEF, NULL, NULL);
+    x->sval = sym;
+    nextShouldBe(TOK_LBRA);
+    x->o1 = statement();
+    c(x);
+    gReturn();
+    return x;
 }
 
 node *defs(node *st) {
@@ -663,28 +698,21 @@ node *defs(node *st) {
     while (1) {
         if (tok == EOI) { break; }
         if (tok == VOID_TOK) {
-            int seqNo = 1;
-            next_token(); expect_token(TOK_FUNC);
-            int sym = genSymbol(id_name, TOK_FUNC);
-            symbols[sym].val = sym;
-            gN(id_name);
-            gAppend(":", 0);
-            x = gen(ND_FUNC_DEF, NULL, NULL);
-            x->sval = sym;
-            if (tok != TOK_LBRA) error("'{' expected.");
-            x->o1 = statement();
-            c(x);
-            gReturn();
+            nextShouldBe(TOK_FUNC);
+            x = defFunc(x);
             continue;
         }
         if (tok == INT_TOK) {
-            next_token(); expect_token(TOK_ID);
+            next_token();
+            if (tok == TOK_FUNC) { x = defFunc(x); continue; }
+            tokenShouldBe(TOK_ID);
             int sym = genSymbol(id_name, ND_VAR);
+            next_token();
             defSize(INT_TOK, sym);
             continue;
         }
         if (tok == BYTE_TOK) {
-            next_token(); expect_token(TOK_ID);
+            nextShouldBe(TOK_ID);
             int sym = genSymbol(id_name, ND_VAR);
             defSize(BYTE_TOK, sym);
             continue;
