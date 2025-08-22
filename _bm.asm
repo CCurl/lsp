@@ -19,19 +19,19 @@
 ; 5: CONST 1
 ; 4: ADD
 ; 3: MUL
-; 2: SET
+; 2: SET x
 ; 1: SEQ
 ; 0: DEF
 ; 6: EMPTY
 ; 7: var x
 ; 7: CONST 500
-; 6: SET
+; 6: SET x
 ; 5: SEQ
 ; 5: CALL
 ; 4: SEQ
 ; 5: var num
 ; 5: var x
-; 4: SET
+; 4: SET num
 ; 3: SEQ
 ; 4: var x
 ; 5: EMPTY
@@ -39,7 +39,7 @@
 ; 7: var x
 ; 7: CONST 1
 ; 6: SUB
-; 5: SET
+; 5: SET x
 ; 4: SEQ
 ; 3: WHILE
 ; 2: SEQ

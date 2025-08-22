@@ -303,7 +303,7 @@ void dumpNode(node *n, int lvl) {
     BCASE ND_OR: X("OR");
     BCASE ND_RET: X("RET");
     BCASE ND_SEQ: X("SEQ");
-    BCASE ND_SET: X("SET");
+    BCASE ND_SET: X("SET"); PS(symbols[n->o1->sval].name);
     BCASE ND_STR: X("string");
     BCASE ND_SUB: X("SUB");
     BCASE ND_VAR: X("var"); PS(symbols[n->sval].name);
