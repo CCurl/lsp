@@ -45,17 +45,16 @@ char cur_line[256] = {0};
 int cur_off = 0, cur_lnum = 0, is_eof = 0;
 
 void msg(int fatal, char *s, int cr, int ln) {
+    printf("\n%s%s", s, cr ? "\n" : " ");
     if (ln) {
-        printf("\nat (%d,%d): %s", cur_lnum, cur_off, s);
+        printf("at(% d, % d)", cur_lnum, cur_off);
         printf("\n%s", cur_line);
         for (int i=2; i<cur_off; i++) { fprintf(stdout, " "); }
         printf("^\n");
-    } else {
-        printf("%s%s", s, cr ? "\n" : " ");
     }
     if (fatal) { exit(1); }
 }
-void syntax_error() { msg(1, "syntax error", 1, 1); }
+void syntax_error() { msg(1, "syntax error", 0, 1); }
 
 int isAlpha(int ch) { return BTWI(ch, 'A', 'Z') || BTWI(ch, 'a', 'z') || (ch == '_'); }
 int isNum(int ch) { return BTWI(ch, '0', '9'); }
@@ -160,7 +159,7 @@ void next_token() {
 
 void tokenShouldBe(int exp) {
     if (tok != exp) {
-        printf("-expected token [%d], not[%d]-", exp, tok);
+        printf("\n-expected token [%d], not[%d]-", exp, tok);
         syntax_error();
     }
 }
@@ -363,6 +362,19 @@ int intStmt() {
     return 0;
 }
 
+void doIdStmt() {
+    int s = findSymbol(id_name, 'L');
+    if (s < 0) { s = findSymbol(id_name, 'I'); }
+    if (s < 0) { syntax_error(); }
+    next_token();
+    if (tok == TOK_SET) {
+        next_token();
+        expr();
+        G("\n\tMOV \t[%s], EAX", symbols[s].name);
+    }
+    expectToken(TOK_SEMI);
+}
+
 int statements() {
     while (1) {
         if (tok == TOK_RBRA) { next_token(); return 0; }
@@ -377,6 +389,7 @@ int statement() {
     if (tok == WHILE_TOK) { return parseWhile(); }
     if (tok == RET_TOK)   { return parseReturn(); }
     if (tok == INT_TOK)   { return intStmt(); }
+    if (tok == TOK_ID)    { doIdStmt(); return 0; }
     expr();
     expectToken(TOK_SEMI);
     return 0;
