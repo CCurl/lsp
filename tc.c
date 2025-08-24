@@ -281,8 +281,8 @@ int expr();
 int term();
 
 void parens() {
-    int tr = tgtReg - 1;
-    if (tr < 0) { tr = 0; P("tr<0"); }
+    //int tr = tgtReg - 1;
+    //if (tr < 0) { tr = 0; P("; ** tr<0 **"); }
     expr();
     // G("\n\tMOV \t%s, %s", regName(tr), regName(tr+1));
     tokenShouldBe(TOK_RPAR);
@@ -308,7 +308,18 @@ int evalOp(int id) {
     else if (id == TOK_MINUS) { return id; }
     else if (id == TOK_STAR)  { return id; }
     else if (id == TOK_SLASH) { return id; }
+    else if (id == TOK_LT)    { return id; }
+    else if (id == TOK_GT)    { return id; }
+    else if (id == TOK_EQ)    { return id; }
     return 0;
+}
+
+void doCmp(char *op) {
+    G("\n\tCMP \t%s, %s", lReg, rReg);
+    G("\n\tMOV \t%s, 0", lReg);
+    G("\n\t%s \t@F", op);
+    G("\n\tINC \t%s", lReg);
+    G("\n@@:");
 }
 
 int expr() {
@@ -325,6 +336,9 @@ int expr() {
             G("\n\tCDQ\n\tIDIV\tECX");
             if (tgtReg != 0) { G("\n\tXCHG\tEAX, %s", lReg); }
         }
+        else if (op == TOK_LT)  { opPrep(); doCmp("JGE"); }
+        else if (op == TOK_GT)  { opPrep(); doCmp("JLE"); }
+        else if (op == TOK_EQ)  { opPrep(); doCmp("JNE"); }
         else { syntax_error(); }
         next_token();
         op = evalOp(tok);
@@ -332,10 +346,18 @@ int expr() {
     return 0;
 }
 
-int parseIf() {
+int ifStmt() {
+    static int iSeq = 1;
+    G("\n\t; IF #%d ...", iSeq);
     expectNext(TOK_LPAR);
     expr();
-    expectNext(TOK_RPAR);
+    expectToken(TOK_RPAR);
+    G("\n\tTEST\tEAX, EAX");
+    G("\n\tJNZ \tIF_%02d", iSeq);
+    G("\n\t; Then #%d ...", iSeq);
+    statement();
+    G("\n\t; ENDIF #%d ...", iSeq);
+    G("\nIF_%02d:", iSeq++);
     return 0;
 }
 
@@ -362,7 +384,7 @@ int intStmt() {
     return 0;
 }
 
-void doIdStmt() {
+void idStmt() {
     int s = findSymbol(id_name, 'L');
     if (s < 0) { s = findSymbol(id_name, 'I'); }
     if (s < 0) { syntax_error(); }
@@ -385,11 +407,11 @@ int statements() {
 int statement() {
     tgtReg = 0;
     if (tok == TOK_LBRA) { next_token(); return statements(); }
-    if (tok == IF_TOK)    { return parseIf(); }
+    if (tok == IF_TOK)    { ifStmt(); return 0; }
     if (tok == WHILE_TOK) { return parseWhile(); }
     if (tok == RET_TOK)   { return parseReturn(); }
     if (tok == INT_TOK)   { return intStmt(); }
-    if (tok == TOK_ID)    { doIdStmt(); return 0; }
+    if (tok == TOK_ID)    { idStmt(); return 0; }
     expr();
     expectToken(TOK_SEMI);
     return 0;

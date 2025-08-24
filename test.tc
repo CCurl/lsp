@@ -3,6 +3,11 @@ int T1() {
 	int y;
 	x = 1-(y*(10/x)-4);
 	y = x/23;
+	if ((y+1) < (x*2)) { y = y+1; }
+	int z; z = 1;
+	if (y == 5) { y = y*3; }
+	z = z+1;
+	if (y >  5) { y = y-1; }
 	return;
 }
 
