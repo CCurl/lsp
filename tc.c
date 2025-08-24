@@ -211,17 +211,13 @@ char *genStringSymbolName() {
     return name;
 }
 
-void dumpSymbols(int details, FILE* toFP) {
-    FILE *fp = toFP ? toFP : stdout;
-    fprintf(fp, "\n; symbols: %d entries, %d used\n", SYMBOLS_SZ, numSymbols);
-    fprintf(fp, "; num type size name\n");
-    fprintf(fp, "; --- ---- ---- -----------------\n");
-    if (details) {
-        for (int i = 0; i < numSymbols; i++) {
-            SYM_T *x = &symbols[i];
-            fprintf(fp, "; %-3d %-4c %-4d %s\n", 
-                i, x->type, x->sz, x->name);
-        }
+void dumpSymbols() {
+    printf("\n\n; symbols: %d entries, %d used\n", SYMBOLS_SZ, numSymbols);
+    printf("; num type size name\n");
+    printf("; --- ---- ---- -----------------\n");
+    for (int i = 0; i < numSymbols; i++) {
+        SYM_T *x = &symbols[i];
+        if (x->type != 'F') { printf("%s:\tdb 0 DUP(%d)\n", x->name, x->sz); }
     }
 }
 
@@ -286,16 +282,16 @@ int expr();
 int term();
 
 void parens() {
-    // ++tgtReg;
+    int tr = tgtReg - 1;
+    if (tr < 0) { tr = 0; P("tr<0"); }
     expr();
-    // --tgtReg;
-    G("\n\tMOV %s, %s", regName(tgtReg), regName(tgtReg+1));
+    // G("\n\tMOV \t%s, %s", regName(tr), regName(tr+1));
     tokenShouldBe(TOK_RPAR);
 }
 
 int term() {
-    if (tok == TOK_ID)  { G("\n\tMOV %s, [%s]", regName(tgtReg), id_name); return 1; }
-    if (tok == TOK_NUM) { G("\n\tMOV %s, %d", regName(tgtReg), int_val); return 1; }
+    if (tok == TOK_ID)  { G("\n\tMOV \t%s, [%s]", regName(tgtReg), id_name); return 1; }
+    if (tok == TOK_NUM) { G("\n\tMOV \t%s, %d", regName(tgtReg), int_val); return 1; }
     if (tok == TOK_LPAR) { next_token();  parens();  return 1; }
     return 0;
 }
@@ -309,8 +305,10 @@ void opPrep() {
 }
 
 int evalOp(int id) {
-    if (id == TOK_PLUS) { return TOK_PLUS; }
-    else if (id == TOK_MINUS) { return TOK_MINUS; }
+    if (id == TOK_PLUS) { return id; }
+    else if (id == TOK_MINUS) { return id; }
+    else if (id == TOK_STAR)  { return id; }
+    else if (id == TOK_SLASH) { return id; }
     return 0;
 }
 
@@ -319,8 +317,15 @@ int expr() {
     next_token();
     int op = evalOp(tok);
     while (op != 0) {
-        if (op == TOK_PLUS) { opPrep(); G("\n\tADD %s, %s", lReg, rReg); }
-        else if (op == TOK_MINUS) { opPrep(); G("\n\tSUB %s, %s", lReg, rReg); }
+        if (op == TOK_PLUS) { opPrep(); G("\n\tADD \t%s, %s", lReg, rReg); }
+        else if (op == TOK_MINUS) { opPrep(); G("\n\tSUB \t%s, %s", lReg, rReg); }
+        else if (op == TOK_STAR)  { opPrep(); G("\n\tIMUL\t%s, %s", lReg, rReg); }
+        else if (op == TOK_SLASH) { opPrep();
+            if (tgtReg != 0) { G("\n\tXCHG\tEAX, %s", lReg); }
+            if (tgtReg != 1) { G("\n\tXCHG\tECX, %s", rReg); }
+            G("\n\tCDQ\n\tIDIV\tECX");
+            if (tgtReg != 0) { G("\n\tXCHG\tEAX, %s", lReg); }
+        }
         else { syntax_error(); }
         next_token();
         op = evalOp(tok);
@@ -366,6 +371,7 @@ int statements() {
 }
 
 int statement() {
+    tgtReg = 0;
     if (tok == TOK_LBRA) { next_token(); return statements(); }
     if (tok == IF_TOK)    { return parseIf(); }
     if (tok == WHILE_TOK) { return parseWhile(); }
@@ -434,14 +440,7 @@ int main(int argc, char *argv[]) {
     // printf("; %d lines, %d nodes\n", gHere, num_nodes);
 
     winLin('D');
-
-    for (int i=0; i<numSymbols; i++) {
-        SYM_T *s = &symbols[i];
-        if (s->type != 'F') { printf("\n%s:\tdd 0", s->name); }
-    }
-
-    P("\n");
-    dumpSymbols(1, 0);
+    dumpSymbols();
 
     return 0;
 }

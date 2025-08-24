@@ -1,7 +1,8 @@
 int T1() {
 	int x;
 	int y;
-	x+1-(y+(2+x));
+	x+1-(y*(10/x)+44);
+	y/23;
 	return;
 }
 

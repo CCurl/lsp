@@ -12,11 +12,26 @@ putc:	RET
 ;=============================================
 ;---------------------------------------------
 T1:
-	MOV EAX, [x]
-	MOV EBX, 1
-	ADD EAX, EBX
-	MOV EBX, 2
-	SUB EAX, EBX
+	MOV 	EAX, [x]
+	MOV 	EBX, 1
+	ADD 	EAX, EBX
+	MOV 	EBX, [y]
+	MOV 	ECX, 10
+	MOV 	EDX, [x]
+	XCHG	EAX, ECX
+	XCHG	ECX, EDX
+	CDQ
+	IDIV	ECX
+	XCHG	EAX, ECX
+	IMUL	EBX, ECX
+	MOV 	ECX, 44
+	ADD 	EBX, ECX
+	SUB 	EAX, EBX
+	MOV 	EAX, [y]
+	MOV 	EBX, 23
+	XCHG	ECX, EBX
+	CDQ
+	IDIV	ECX
 	RET
 ;---------------------------------------------
 main:
@@ -24,15 +39,10 @@ main:
 ;================== data =====================
 .data
 ;=============================================
-_pc_buf:	dd 0
-x:	dd 0
 
-; symbols: 1000 entries, 6 used
+; symbols: 1000 entries, 7 used
 ; num type size name
 ; --- ---- ---- -----------------
-; 0   F    4    exit
-; 1   F    4    putc
-; 2   I    4    _pc_buf
-; 3   F    4    T1
-; 4   L    4    x
-; 5   F    4    main
+_pc_buf:	db 0 DUP(4)
+x:	db 0 DUP(4)
+y:	db 0 DUP(4)
