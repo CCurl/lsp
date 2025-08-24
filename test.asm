@@ -45,14 +45,13 @@ T1:
 	INC 	EAX
 @@:
 	TEST	EAX, EAX
-	JNZ 	IF_01
+	JNZ 	ENDIF_01
 	; Then #1 ...
 	MOV 	EAX, [y]
 	MOV 	EBX, 1
 	ADD 	EAX, EBX
 	MOV 	[y], EAX
-	; ENDIF #1 ...
-IF_01:
+ENDIF_01:
 	MOV 	EAX, 1
 	MOV 	[z], EAX
 	; IF #2 ...
@@ -64,14 +63,13 @@ IF_01:
 	INC 	EAX
 @@:
 	TEST	EAX, EAX
-	JNZ 	IF_02
+	JNZ 	ENDIF_02
 	; Then #2 ...
 	MOV 	EAX, [y]
 	MOV 	EBX, 3
 	IMUL	EAX, EBX
 	MOV 	[y], EAX
-	; ENDIF #2 ...
-IF_02:
+ENDIF_02:
 	MOV 	EAX, [z]
 	MOV 	EBX, 1
 	ADD 	EAX, EBX
@@ -85,14 +83,13 @@ IF_02:
 	INC 	EAX
 @@:
 	TEST	EAX, EAX
-	JNZ 	IF_03
+	JNZ 	ENDIF_03
 	; Then #3 ...
 	MOV 	EAX, [y]
 	MOV 	EBX, 1
 	SUB 	EAX, EBX
 	MOV 	[y], EAX
-	; ENDIF #3 ...
-IF_03:
+ENDIF_03:
 	RET
 ;---------------------------------------------
 main:

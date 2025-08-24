@@ -353,11 +353,10 @@ int ifStmt() {
     expr();
     expectToken(TOK_RPAR);
     G("\n\tTEST\tEAX, EAX");
-    G("\n\tJNZ \tIF_%02d", iSeq);
+    G("\n\tJNZ \tENDIF_%02d", iSeq);
     G("\n\t; Then #%d ...", iSeq);
     statement();
-    G("\n\t; ENDIF #%d ...", iSeq);
-    G("\nIF_%02d:", iSeq++);
+    G("\nENDIF_%02d:", iSeq++);
     return 0;
 }
 
