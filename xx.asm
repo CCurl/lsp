@@ -1,59 +1,69 @@
-; **************************************************************************
+format PE console
+include 'win32ax.inc'
 
-format ELF executable
+;=======================================
+section '.code' code readable executable
+;=======================================
+start: JMP main
+       RET
 
-segment readable writable executable
+;---------------------------------------------
+Mil:
+	MOV 	EAX, [x]
+	MOV 	EBX, 1000
+	MOV 	ECX, 1000
+	IMUL	EBX, ECX
+	IMUL	EAX, EBX
+	MOV 	[x], EAX
+	RET
 
-; -------------------------------------------------------------------------------------
-; -------------------------------------------------------------------------------------
-; -------------------------------------------------------------------------------------
-entry _start
+;---------------------------------------------
+bm:
+	MOV 	EAX, 500
+	MOV 	[x], EAX
+	CALL	Mil
+	MOV 	EAX, [x]
+	MOV 	[num], EAX
+WHILE_01:
+	MOV 	EAX, [x]
+	TEST	EAX, EAX
+	JZ  	WEND_01
+	DEC 	[x]
+	JMP 	WHILE_01
+WEND_01:
+	RET
 
-_start:
-    mov eax,0x2d2d2d2d
-    jmp main
-
-exit:
-    mov eax, 1      ; syscall number for exit
-    mov ebx, 0      ; exit code 22
-    int 0x80        ; call kernel
-
-sPush:
-    mov eax,0x77777777
-    mov ecx, ebx
-    mov ebx, eax
-    ret
-
-sPop:
-    mov eax, ebx
-    mov ebx, ecx
-    ret
-    mov eax,0x77777777
-
-doEmit:
-    mov eax, 4
-    mov edx, 1
-    int 0x80
-doAdd: 
-    call sPop
-    add eax, ebx
-    ret
-
+;---------------------------------------------
 main:
-    mov eax,0x79797979
-    lea esi, [stk]
-    lea ecx, [xmsg]
-    mov eax, 0x11223344
-    call sPush
-    mov eax, 0x11223344
-    call sPop
-    jmp exit
+		cinvoke printf, "Start ..."
+		call bm
+		cinvoke printf, "End."
+        cinvoke printf, "%cEnter a number: ", 10
+        cinvoke scanf, "%d", Number1
+        cinvoke printf, "Enter a number: "
+        cinvoke scanf, "%d", Number2
 
-    mov eax,0x79797979
+        mov ecx, [Number1]
+        mov ebx, [Number2]
+        add ebx, ecx
+        mov [Sum], ebx
+        cinvoke printf, "%d + %d = %d%c",[Number1],[Number2],[Sum],10
+        cinvoke printf, "Done."
+        ; cinvoke printf, "Press any key to close console..."
+        ; invoke getch
+        ret
 
-; segment readable writable
-dtx:  db "-DATA-", 0
-stk:  db 64 dup(0)
-xmsg: db "hi there",0
-here: dd 0
-dte:  db 1024 dup(?)
+;======================================
+section '.data' data readable writeable
+;======================================
+Number1 dd 0
+Number2 dd 0
+Sum     dd 0
+x		dd 0
+num		dd 0
+
+;====================================
+section '.idata' import data readable
+;====================================
+library msvcrt,'msvcrt.dll',kernel32,'kernel32.dll'
+import msvcrt,printf,'printf',scanf,'scanf',getch,'_getch' 

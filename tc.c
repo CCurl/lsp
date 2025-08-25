@@ -12,6 +12,8 @@
 #define NODES_SZ    10000
 
 #define BTWI(n,l,h) ((l<=n)&&(n<=h))
+#define G printf
+#define P(str) printf("%s",str)
 
 typedef unsigned char byte;
 
@@ -20,49 +22,21 @@ extern SYM_T symbols[SYMBOLS_SZ];
 
 // Tokens - NOTE: the first 8 must match the words list in tc.c
 enum {
-    DO_TOK, ELSE_TOK, IF_TOK, WHILE_TOK, VOID_TOK, INT_TOK, BYTE_TOK, RET_TOK
-    , TOK_LBRA, TOK_RBRA, TOK_LPAR, TOK_RPAR, TOK_LARR, TOK_RARR
-    , TOK_PLUS, TOK_MINUS, TOK_STAR, TOK_SLASH
+    DO_TOK, ELSE_TOK, IF_TOK, WHILE_TOK, VOID_TOK, INT_TOK, CHAR_TOK, RET_TOK
+    , TOK_LBRA, TOK_RBRA, TOK_LPAR, TOK_RPAR, TOK_LARR, TOK_RARR, TOK_COMMA
+    , TOK_PLUS, TOK_MINUS, TOK_STAR, TOK_SLASH, TOK_INC, TOK_DEC, TOK_PLEQ
     , TOK_LT, TOK_EQ, TOK_GT, TOK_NEQ
     , TOK_SET, TOK_NUM, TOK_ID, TOK_FUNC, TOK_STR
     , TOK_OR, TOK_AND, TOK_XOR, TOK_LOR, TOK_LAND
-    , TOK_SEMI, EOI
+    , TOK_SEMI, ND_VARINC, EOI
 };
-
-// Syntax tree node types
-enum {
-    ND_VAR, ND_CONST, ND_STR, ND_ADD, ND_SUB, ND_MUL, ND_DIV
-    , ND_LT, ND_EQ, ND_GT, ND_NEQ, ND_SET
-    , ND_AND, ND_OR, ND_XOR, ND_LAND, ND_LOR
-    , ND_FUNC_CALL, ND_FUNC_DEF
-    , ND_IF1, ND_IF2, ND_WHILE, ND_DO, ND_EMPTY, ND_SEQ
-    , ND_RET
-};
-
-// VM opcodes
-enum {
-    NOP=0x90, IADD=0x01
-    , IAND=0x21, IOR=0x09, IXOR=0x31
-    , ISUB=0x29, MULDIV=0xf7
-    , IRET=0xc3
-    , MovRR=0x89, MovIMM=0xb8, MovFet=0xa1, MovSto=0xa3
-    , XCHGAB=0x93, ICMP=0x39
-    , JZ=0x74, JNZ=0x75, JGE=0x7d, JLE=0x7e
-    , INCDX=0x42
-};
-
-byte vm[CODE_SZ];
-extern int findSymbolVal(char type, long val);
-extern void dumpSymbols(int details, FILE *toFP);
 
  /*---------------------------------------------------------------------------*/
  /* Lexer. */
 
 // NOTE: these have to be in sync with the first <x> entries in the 
 // list of tokens
-char *words[] = { "do", "else", "if"
-    , "while", "void", "int", "char"
-    , "return", NULL};
+char *words[] = { "do", "else", "if" , "while", "void", "int", "char" , "return", NULL};
 
 int ch = ' ', tok, int_val;
 char id_name[256];
@@ -70,19 +44,17 @@ FILE *input_fp = NULL;
 char cur_line[256] = {0};
 int cur_off = 0, cur_lnum = 0, is_eof = 0;
 
-void msg(char *s, int cr, int ln) {
+void msg(int fatal, char *s, int cr, int ln) {
+    printf("\n%s%s", s, cr ? "\n" : " ");
     if (ln) {
-        printf("\nat (%d,%d): %s", cur_lnum, cur_off, s);
+        printf("at(% d, % d)", cur_lnum, cur_off);
         printf("\n%s", cur_line);
         for (int i=2; i<cur_off; i++) { fprintf(stdout, " "); }
         printf("^\n");
-        return;
     }
-    printf("%s%s", s, cr ? "\n" : " ");
+    if (fatal) { exit(1); }
 }
-void warn(char *s)  { msg(s,1,1); }
-void error(char *err) { msg(err,1,1); exit(1); }
-void syntax_error() { error("syntax error"); }
+void syntax_error() { msg(1, "syntax error", 0, 1); }
 
 int isAlpha(int ch) { return BTWI(ch, 'A', 'Z') || BTWI(ch, 'a', 'z') || (ch == '_'); }
 int isNum(int ch) { return BTWI(ch, '0', '9'); }
@@ -118,8 +90,13 @@ void next_token() {
     case ')': next_ch(); tok = TOK_RPAR;  break;
     case '[': next_ch(); tok = TOK_LARR;  break;
     case ']': next_ch(); tok = TOK_RARR;  break;
-    case '+': next_ch(); tok = TOK_PLUS;  break;
-    case '-': next_ch(); tok = TOK_MINUS; break;
+    case '+': next_ch(); tok = TOK_PLUS;
+        if (ch == '+') { next_ch(); tok = TOK_INC; }
+        if (ch == '=') { next_ch(); tok = TOK_PLEQ; }
+        break;
+    case '-': next_ch(); tok = TOK_MINUS;
+        if (ch == '-') { next_ch(); tok = TOK_DEC; }
+        break;
     case '*': next_ch(); tok = TOK_STAR;  break;
     case '/': next_ch(); tok = TOK_SLASH;
         if (ch == '/') { // Line comment?
@@ -127,10 +104,11 @@ void next_token() {
             goto again;
         }
         break;
-    case ';': next_ch(); tok = TOK_SEMI; break;
-    case '<': next_ch(); tok = TOK_LT;   break;
-    case '>': next_ch(); tok = TOK_GT;   break;
-    case '^': next_ch(); tok = TOK_XOR;  break;
+    case ';': next_ch(); tok = TOK_SEMI;  break;
+    case ',': next_ch(); tok = TOK_COMMA; break;
+    case '<': next_ch(); tok = TOK_LT;    break;
+    case '>': next_ch(); tok = TOK_GT;    break;
+    case '^': next_ch(); tok = TOK_XOR;   break;
     case '=': next_ch(); tok = TOK_SET;
         if (ch == '=') { tok = TOK_EQ; next_ch(); }
         break;
@@ -169,9 +147,10 @@ void next_token() {
             if (words[tok] == NULL) {
                 tok = TOK_ID;
                 if (ch == '(') {
+                    tok = TOK_FUNC;
                     next_ch();
-                    if (ch == ')') { tok = TOK_FUNC; next_ch(); }
-                    else { syntax_error(); }
+                    //if (ch == ')') { tok = TOK_FUNC; next_ch(); }
+                    // else { syntax_error(); }
                 }
             }
         }
@@ -180,13 +159,16 @@ void next_token() {
     }
 }
 
-void expect_token(int exp) {
+void tokenShouldBe(int exp) {
     if (tok != exp) {
-        printf("-expected token [%d], not[%d]-", exp, tok);
+        printf("\n-expected token [%d], not[%d]-", exp, tok);
         syntax_error();
     }
-    next_token();
 }
+
+void expectToken(int exp) { tokenShouldBe(exp); next_token(); }
+void expectNext(int exp) { next_token(); expectToken(exp); }
+void nextShouldBe(int exp) { next_token(); tokenShouldBe(exp); }
 
 /*---------------------------------------------------------------------------*/
 /* Symbols */
@@ -194,13 +176,15 @@ void expect_token(int exp) {
 SYM_T symbols[SYMBOLS_SZ];
 int numSymbols = 0;
 
+char *symName(int sym) { return symbols[sym].name; }
+
 int findSymbol(char *name, char type) {
     int i = 0;
     while (i < numSymbols) {
         SYM_T *x = &symbols[i];
         if (strcmp(x->name, name) == 0) {
             if (x->type == type) { return i; }
-            error("name already defined with different type.");
+            return -1; // msg(0, "name already defined with different type.", 1, 1);
         }
         i=i+1;
     }
@@ -221,461 +205,282 @@ int genSymbol(char *name, char type) {
     return i;
 }
 
-void dumpSymbols(int details, FILE *toFP) {
-    FILE *fp = toFP ? toFP : stdout;
-    fprintf(fp, "symbols: %d entries, %d used\n", SYMBOLS_SZ, numSymbols);
-    fprintf(fp, "num type size val       name\n");
-    fprintf(fp, "--- ---- ---- --------- -----------------\n");
-    if (details) {
-        for (int i = 0; i < numSymbols; i++) {
-            SYM_T *x = &symbols[i];
-            fprintf(fp, "%-3d %-4d %-4d $%-8lX %s\n", 
-                i, x->type, x->sz, x->val, x->name);
-        }
+char *genStringSymbolName() {
+    static char name[32];
+    static int strNum = 0;
+    sprintf(name, "_s%03d_", ++strNum);
+    return name;
+}
+
+void dumpSymbols() {
+    printf("\n\n; symbols: %d entries, %d used\n", SYMBOLS_SZ, numSymbols);
+    printf("; num type size name\n");
+    printf("; --- ---- ---- -----------------\n");
+    for (int i = 0; i < numSymbols; i++) {
+        SYM_T *x = &symbols[i];
+        if (x->type != 'F') { printf("%s\t\tdd 0\n", x->name); }
     }
 }
 
 /*---------------------------------------------------------------------------*/
 /* Parser. */
 
-struct node_s { int kind; struct node_s *o1,  *o2,  *o3; int val, sval; };
-typedef struct node_s node;
-int num_nodes = 0;
-node nodes[NODES_SZ];
-
-node *new_node(int k) {
-    if (NODES_SZ <= num_nodes) { error("no nodes!"); }
-    node *x = &nodes[num_nodes++];
-    x->kind = k;
-    return x;
-}
-
-node *gen(int k, node *o1, node *o2) {
-    node *x = new_node(k);
-    x->o1 = o1;
-    x->o2 = o2;
-    return x;
-}
-
-node *paren_expr(); /* forward declaration */
-
-/* <term> ::= <id> | <int> | <paren_expr> */
-node *term() {
-    node *x;
-    if (tok == TOK_ID) {
-        x = new_node(ND_VAR);
-        x->sval = genSymbol(id_name, ND_VAR);
-        x->val = x->sval;
-        next_token();
-    }
-    else if (tok == TOK_NUM) {
-        x = new_node(ND_CONST);
-        x->val = int_val;
-        next_token();
-    }
-    else if (tok == TOK_STR) {
-        char *tmp = hAlloc(strlen(id_name)+1);
-        strcpy(tmp, id_name);
-        x = new_node(ND_STR);
-        x->val = (int)tmp;
-        next_token();
-    }
-    else x = paren_expr();
-    return x;
-}
-
-/* <math_op> ::= "+" | "-" | "*" | "/" */
-int mathop() {
-    if (tok == TOK_PLUS) { return ND_ADD; }
-    else if (tok == TOK_MINUS) { return ND_SUB; }
-    else if (tok == TOK_STAR)  { return ND_MUL; }
-    else if (tok == TOK_SLASH) { return ND_DIV; }
-    else if (tok == TOK_LAND)  { return ND_LAND; }
-    else if (tok == TOK_LOR)   { return ND_LOR; }
-    else if (tok == TOK_AND)   { return ND_AND; }
-    else if (tok == TOK_OR)    { return ND_OR; }
-    else if (tok == TOK_XOR)   { return ND_XOR; }
-    return 0;
-}
-
-/* <math> ::= <term> | <math> <math_op> <term> */
-node *math() {
-    node *x = term();
-    while (mathop()) {
-        x = gen(mathop(), x, 0);
-        next_token();
-        x->o2 = term();
-    }
-    return x;
-}
-
-/* <expr> ::= <math> | <math> <test-op> <math> */
-node *expr() {
-    node *x = math();
-    if (tok == TOK_LT)  { next_token(); return gen(ND_LT,  x, math()); }
-    if (tok == TOK_GT)  { next_token(); return gen(ND_GT,  x, math()); }
-    if (tok == TOK_EQ)  { next_token(); return gen(ND_EQ,  x, math()); }
-    if (tok == TOK_NEQ) { next_token(); return gen(ND_NEQ, x, math()); }
-    return x;
-}
-
-/* <paren_expr> ::= "(" <expr> ")" */
-node *paren_expr() {
-    node *x;
-    expect_token(TOK_LPAR);
-    x = expr();
-    expect_token(TOK_RPAR);
-    return x;
-}
-
-node *statement() {
-    node *x = NULL;
-    if (tok == IF_TOK) { /* "if" <paren_expr> <statement> */
-        x = new_node(ND_IF1);
-        next_token();
-        x->o1 = paren_expr();
-        x->o2 = statement();
-        if (tok == ELSE_TOK) { /* ... "else" <statement> */
-            x->kind = ND_IF2;
-            next_token();
-            x->o3 = statement();
-        }
-    }
-    else if (tok == WHILE_TOK) { /* "while" <paren_expr> <statement> */
-        x = new_node(ND_WHILE);
-        next_token();
-        x->o1 = paren_expr();
-        x->o2 = statement();
-    }
-    else if (tok == TOK_FUNC) { /* <id> "();" */
-        x = new_node(ND_FUNC_CALL);
-        x->sval = genSymbol(id_name, TOK_FUNC);
-        x->val = symbols[x->sval].val;
-        next_token();
-        expect_token(TOK_SEMI);
-    }
-    else if (tok == TOK_ID) { /* <id> "=" <expr> ";" */
-        x = new_node(ND_VAR);
-        x->sval = genSymbol(id_name, ND_VAR);
-        x->val = x->sval;
-        next_token();
-        expect_token(TOK_SET);
-        x = gen(ND_SET, x, expr());
-        expect_token(TOK_SEMI);
-    }
-    else if (tok == DO_TOK) { /* "do" <statement> "while" <paren_expr> ";" */
-        x = new_node(ND_DO);
-        next_token();
-        x->o1 = statement();
-        expect_token(WHILE_TOK);
-        x->o2 = paren_expr();
-        expect_token(TOK_SEMI);
-    }
-    else if (tok == RET_TOK) { /* "return" ";"*/
-        x = new_node(ND_RET);
-        next_token();
-        expect_token(TOK_SEMI);
-    }
-    else if (tok == TOK_SEMI) { /* ";" */
-        x = new_node(ND_EMPTY);
-        next_token();
-    }
-    else if (tok == TOK_LBRA) { /* "{" <statements> "}" */
-        int seqNo = 1;
-        x = new_node(ND_EMPTY);
-        next_token();
-        while (tok != TOK_RBRA) {
-            x = gen(ND_SEQ, x, 0);
-            x->val = seqNo;
-            x->o2 = statement();
-        }
-        next_token();
-    }
-    else { syntax_error(); }
-    return x;
-}
-
-
-/*---------------------------------------------------------------------------*/
-/* Code generator. */
-// change this to generate code for a different architecture
-char *gLines[10000], * gCurLine;
-int gHere, gLineSz;
-
-// ----------------------------------------------------------
-
-void gN(char *txt) {
-    gLineSz = (int)strlen(txt)+1;
-    gCurLine = hAlloc(gLineSz);
-    gLines[gHere] = gCurLine;
-    strcpy(gCurLine, txt);
-    //printf("%03d: %s\n", gHere, gCurLine);
-    gHere = gHere+1;
-}
-
-void gAppend(char *txt, int sp) {
-    if (gLineSz < (int)(strlen(gCurLine) + strlen(txt) + 2)) {
-        gLineSz = gLineSz + 16;
-        gCurLine = hRealloc(gCurLine, gLineSz);
-        gLines[gHere-1] = gCurLine;
-    }
-    if (sp) { strcat(gCurLine, " "); }
-    strcat(gCurLine, txt);
-    //printf(" --> %s\n", gCurLine);
-}
-
-void gInit() {
-    gHere = 0;
-}
-
-int hole() { return gHere; }
-void fix(int tgtLn, int tgt, char *pfx) {
-    char x[32];
-    sprintf(x, " .%s%d", pfx, tgt);
-    gLines[tgtLn] = hRealloc(gLines[tgtLn], 64);
-    strcat(gLines[tgtLn], x);
-    // if (v == gHere) { sprintf(x, ".L%d:", v); gN(x); }
-}
-
-void gDump() { for (int i=0; i<gHere; i++) { printf("%s\n", gLines[i]); } }
-
-void gBtoA() { gN("\tMOV EAX, EBX"); }
-void gDtoA() { gN("\tMOV EAX, EDX"); }
-void gAtoB() { gN("\tMOV EBX, EAX"); }
-
-void gNOP() { gN("\tNOP"); }
-void gPushA() { gN("\tPUSH EAX"); }
-void gPopA()  { gN("\tPOP EAX"); }
-void gPopB()  { gN("\tPOP EBX"); }
-void gXorDD() { gN("\tXOR EDX, EDX"); }
-
-void gMovIMM(int val) {
-    char x[64];
-    sprintf(x, "\tMOV EAX, %d", val);
-    gN(x);
-}
-
-void gStore(int sym) {
-    SYM_T *s = &symbols[sym];
-    int off = 0, sz = s->sz;
-    char x[64];
-    char *reg = (sz==1) ? "AL" : "EAX";
-    if (off) {
-        sprintf(x, "\tMOV [%s+%d], %s", s->name, off, reg);
-    } else {
-        sprintf(x, "\tMOV [%s], %s", s->name, reg);
-    }
-    gN(x);
-}
-
-void gFetch(int sym) {
-    SYM_T *s = &symbols[sym];
-    int off = 0, sz = s->sz;
-    char x[64];
-    char *reg = (sz==1) ? "AL" : "EAX";
-    gN("\tPUSH EAX");
-    if (sz == 1) { gN("XOR EAX, EAX"); }
-    if (off) {
-        sprintf(x, "\tMOV %s, [%s+%d]", reg, s->name, off);
-    } else {
-        sprintf(x, "\tMOV %s, [%s]", reg, s->name);
-    }
-    gN(x);
-}
-
-void gLit(int v) { gPushA(); gMovIMM(v); }
-
-// push ebp ; mov ebp, esp
-void gPreCall() { } // gN("push ebp"); gN("mov ebp, esp"); }
-void gCall(int fn) {
-    gN("\tCALL");
-    gAppend(symbols[fn].name, 1);
-}
-void gReturn() { gN("\tRET"); gN(""); }
-// mov esp, ebp ; pop ebp
-void gPostCall() { } // gN(3, "\x89\xec\x5d"); }
-void gAdd() { gPopB(); gN("\tADD EAX, EBX"); }
-void gSub() { gAtoB(); gPopA(); gN("\tSUB EAX, EBX"); }
-void gMul() { gPopB(); gN("\tIMUL EBX"); }
-void gDiv() { gAtoB(); gPopA(); gN("\tIDIV EAX"); }
-void gTestA() { gN("\tTEST EAX, EAX"); gN("\tPOP EAX"); }
-void gCC(char *op)  {
-    gN("\tXOR EDX, EDX");
-    gPopB(); gN("\tCMP EAX, EBX");
-    gN("\t"); gAppend(op, 0); gAppend("@f", 1);
-    gN("\tINC DX");
-    gN("@@:\tMOV EAX, EDX");
-}
-void gLT()  { gCC("JGE"); }
-void gGT()  { gCC("JLE"); }
-void gEQ()  { gCC("JNE"); }
-void gNEQ() { gCC("JE"); }
-void gAnd() { gPopB(); gN("\tAND EAX, EBX"); }
-void gOr()  { gPopB(); gN("\tOR EAX, EBX"); }
-void gXor() { gPopB(); gN("\tXOR EAX, EBX"); }
-int gNewTag(int ln, char *pfx) {
-    char x[64];
-    sprintf(x, ".%s%d:", pfx, ln);
-    gN(x);
-    return ln;
-}
-void gJmpTo(int ln, char *op, char *pfx) {
-    char x[64];
-    sprintf(x, "\t%s .%s%d", op, pfx, ln);
-    gN(x);
-}
-
-void gWinLin(int seg) {
+void winLin(int seg) {
 #ifdef _WIN32
     // Windows (32-bit)
     if (seg == 'C') {
-        gN("format PE console");
-        gN("include 'win32ax.inc'");
-        gN(";================== code =====================");
-        gN(".code");
-        gN(";=============================================");
-    } else if (seg == 'D') {
-        gN(";================== data =====================");
-        gN(".data");
-        gN(";=============================================");
+        int s = genSymbol("exit", 'F');
+        s = genSymbol("putc", 'F');
+        s = genSymbol("_pc_buf", 'I');
+        P("\nformat PE console");
+        P("\ninclude 'win32ax.inc'\n");
+        P("\n; ======================================= ");
+        P("\nsection '.code' code readable executable");
+        P("\n;=======================================*/");
+
+        P("\n\nstart: JMP main");
+        P("\n;================== library ==================");
+        P("\nexit:\tRET\n");
+        P("\nputc:\tRET\n");
+        P("\n;=============================================");
+    }
+    else if (seg == 'D') {
+        P("\n\n;================== data =====================");
+        P("\nsection '.data' data readable writeable");
+        P("\n;=============================================");
+    }
+    else if (seg == 'I') {
+        P("\n;====================================");
+        P("\nsection '.idata' import data readable");
+        P("\n; ====================================");
+        P("\nlibrary msvcrt, 'msvcrt.dll', kernel32, 'kernel32.dll'");
+        P("\nimport msvcrt,printf,'printf',scanf,'scanf',getch,'_getch'\n");
     }
 #else
     // Linux (32-bit)
     if (seg == 'C') {
-        gN("format ELF executable");
-        gN(";================== code =====================");
-        gN("segment readable executable");
-        gN(";=============================================");
-    } else if (seg == 'D') {
-        gN(";================== data =====================");
-        gN("segment readable writeable");
-        gN(";=============================================");
-    } else if (seg == 'L') {
-        int sym = genSymbol("exit", TOK_FUNC);
-        gN("exit:");
-        gN("\tMOV EAX, 1");
-        gN("\tXOR EBX, EBX");
-        gN("\tINT 0x80");
+        int s = genSymbol("exit", 'F');
+        s = genSymbol("putc", 'F');
+        s = genSymbol("_pc_buf", 'I');
+        P("\nformat ELF executable");
+        P("\n;================== code =====================");
+        P("\nsegment readable executable\nentry main");
+        P("\n;================== library ==================");
+        P("\nexit:\n\tMOV EAX, 1\n\tXOR EBX, EBX\n\tINT 0x80\n");
+        P("\nputc:\n\tMOV [_pc_buf], EAX");
+        P("\n\tMOV EAX, 4");
+        P("\n\tMOV EBX, 0");
+        P("\n\tLEA ECX, [_pc_buf]");
+        P("\n\tMOV EDX, 1");
+        P("\n\tINT 0x80\n\tRET\n");
+        P("\n;=============================================");
+    }
+    else if (seg == 'D') {
+        P("\n;================== data =====================");
+        P("\nsegment readable writeable");
+        P("\n;=============================================");
+    }
+    else if (seg == 'I') {
+        // P("\n;================== data =====================");
+        // P("\nsegment readable writeable");
+        // P("\n;=============================================");
     }
 #endif
 }
-// ----------------------------------------------------------
 
-void c(node *x) {
-    int p1, p2, p3;
-    switch (x->kind) {
-        case ND_VAR:   gFetch(x->sval); break;
-        case ND_CONST: gLit(x->val); break;
-        case ND_STR:   gLit(x->val); break;
-        case ND_ADD:   c(x->o1); c(x->o2); gAdd();  break;
-        case ND_MUL:   c(x->o1); c(x->o2); gMul();  break;
-        case ND_SUB:   c(x->o1); c(x->o2); gSub();  break;
-        case ND_DIV:   c(x->o1); c(x->o2); gDiv();  break;
-        case ND_LT:    c(x->o1); c(x->o2); gLT();   break;
-        case ND_GT:    c(x->o1); c(x->o2); gGT();   break;
-        case ND_EQ:    c(x->o1); c(x->o2); gEQ();   break;
-        case ND_NEQ:   c(x->o1); c(x->o2); gNEQ();  break;
-        case ND_LAND:  c(x->o1); c(x->o2); gAnd();  break;
-        case ND_LOR:   c(x->o1); c(x->o2); gOr();   break;
-        case ND_AND:   c(x->o1); c(x->o2); gAnd();  break;
-        case ND_OR:    c(x->o1); c(x->o2); gOr();   break;
-        case ND_XOR:   c(x->o1); c(x->o2); gXor();  break;
-        case ND_SET:   c(x->o2); gStore(x->o1->sval); gN("\tPOP EAX");
-            break;
-        case ND_IF1:  gN("\t; IF ..."); c(x->o1);
-            gTestA(); p1 = gHere; gN("\tJZ");
-            gN("\t; THEN ..."); c(x->o2);
-            fix(p1, gHere, "END");
-            gNewTag(gHere, "END");
-            break;
-        case ND_IF2:  gN("\t; IF ... ELSE ..."); c(x->o1);
-            gTestA(); p1 = gHere; gN("\tJZ");
-            gN("\t; THEN ..."); c(x->o2);
-            p2 = gHere; gN("\tJMP");
-            fix(p1, gHere, "ELSE");
-            gNewTag(gHere, "ELSE");
-            gN("\t; ELSE ...");
-            c(x->o3);
-            fix(p2, gHere, "END");
-            gNewTag(gHere, "END");
-            break;
-        case ND_WHILE: p1 = gNewTag(gHere, "WS");
-            c(x->o1);
-            gTestA();
-            p2 = gHere;
-            gN("\tJZ");
-            c(x->o2);
-            gJmpTo(p1, "JMP", "WS");
-            p3 = gNewTag(gHere, "WE");
-            gAppend("", 1);
-            fix(p2, p3, "WE");
-            break;
-        case ND_DO: p1 = gHere; gNewTag(p1, "DS");
-            c(x->o1);
-            c(x->o2);
-            gTestA();
-            gJmpTo(p1, "JNZ", "DS"); break;
-        case ND_EMPTY: break;
-        case ND_SEQ: c(x->o1); c(x->o2); break;
-        case ND_FUNC_CALL: 
-            gPreCall();
-            gCall(x->sval);
-            gPostCall(); break;
-        case ND_FUNC_DEF: c(x->o1); break;
-        case ND_RET: gReturn(); break;
-    }
+int tgtReg = 0;
+char regs[6][4] = { "EAX", "EBX", "ECX", "EDX", "ESI", "EDI" };
+char *lReg, *rReg;
+char *regName(int regNum) { return regs[regNum]; }
+
+int statement();
+int expr();
+int term();
+
+void parens() {
+    //int tr = tgtReg - 1;
+    //if (tr < 0) { tr = 0; P("; ** tr<0 **"); }
+    expr();
+    // G("\n\tMOV \t%s, %s", regName(tr), regName(tr+1));
+    tokenShouldBe(TOK_RPAR);
 }
 
-/*---------------------------------------------------------------------------*/
-/* Definitions. */
-
-void defSize(int type, int sym) {
-    // check for ";" or "[" <int> "];"
-    symbols[sym].sz = (type == INT_TOK) ? 4 : 1;
-    if (tok == TOK_SEMI) { next_token(); return; }
-    expect_token(TOK_LARR);
-    symbols[sym].sz = int_val;
-    if (type == INT_TOK) { symbols[sym].sz *= 4; }
-    expect_token(TOK_NUM);
-    expect_token(TOK_RARR);
-    expect_token(TOK_SEMI);
+int term() {
+    if (tok == TOK_ID)  { G("\n\tMOV \t%s, [%s]", regName(tgtReg), id_name); return 1; }
+    if (tok == TOK_NUM) { G("\n\tMOV \t%s, %d", regName(tgtReg), int_val); return 1; }
+    if (tok == TOK_LPAR) { next_token();  parens();  return 1; }
+    return 0;
 }
 
-node *defs(node *st) {
-    node *x = st;
+void opPrep() {
+    ++tgtReg;
     next_token();
-    while (1) {
-        if (tok == EOI) { break; }
-        if (tok == VOID_TOK) {
-            int seqNo = 1;
-            next_token(); expect_token(TOK_FUNC);
-            int sym = genSymbol(id_name, TOK_FUNC);
-            symbols[sym].val = sym;
-            gN(id_name);
-            gAppend(":", 0);
-            x = gen(ND_FUNC_DEF, NULL, NULL);
-            x->sval = sym;
-            if (tok != TOK_LBRA) error("'{' expected.");
-            x->o1 = statement();
-            c(x);
-            gReturn();
-            continue;
+    term();
+    rReg = regName(tgtReg--);
+    lReg = regName(tgtReg);
+}
+
+int evalOp(int id) {
+    if (id == TOK_PLUS) { return id; }
+    else if (id == TOK_MINUS) { return id; }
+    else if (id == TOK_STAR)  { return id; }
+    else if (id == TOK_SLASH) { return id; }
+    else if (id == TOK_LT)    { return id; }
+    else if (id == TOK_GT)    { return id; }
+    else if (id == TOK_EQ)    { return id; }
+    return 0;
+}
+
+void doCmp(char *op) {
+    G("\n\tCMP \t%s, %s", lReg, rReg);
+    G("\n\tMOV \t%s, 0", lReg);
+    G("\n\t%s \t@F", op);
+    G("\n\tINC \t%s", lReg);
+    G("\n@@:");
+}
+
+int expr() {
+    if (term() == 0) { return 0; }
+    next_token();
+    int op = evalOp(tok);
+    while (op != 0) {
+        if (op == TOK_PLUS) { opPrep(); G("\n\tADD \t%s, %s", lReg, rReg); }
+        else if (op == TOK_MINUS) { opPrep(); G("\n\tSUB \t%s, %s", lReg, rReg); }
+        else if (op == TOK_STAR)  { opPrep(); G("\n\tIMUL\t%s, %s", lReg, rReg); }
+        else if (op == TOK_SLASH) { opPrep();
+            if (tgtReg != 0) { G("\n\tXCHG\tEAX, %s", lReg); }
+            if (tgtReg != 1) { G("\n\tXCHG\tECX, %s", rReg); }
+            G("\n\tCDQ\n\tIDIV\tECX");
+            if (tgtReg != 0) { G("\n\tXCHG\tEAX, %s", lReg); }
         }
-        if (tok == INT_TOK) {
-            next_token(); expect_token(TOK_ID);
-            int sym = genSymbol(id_name, ND_VAR);
-            defSize(INT_TOK, sym);
-            continue;
-        }
-        if (tok == BYTE_TOK) {
-            next_token(); expect_token(TOK_ID);
-            int sym = genSymbol(id_name, ND_VAR);
-            defSize(BYTE_TOK, sym);
-            continue;
-        }
-        syntax_error();
+        else if (op == TOK_LT)  { opPrep(); doCmp("JGE"); }
+        else if (op == TOK_GT)  { opPrep(); doCmp("JLE"); }
+        else if (op == TOK_EQ)  { opPrep(); doCmp("JNE"); }
+        else { syntax_error(); }
+        next_token();
+        op = evalOp(tok);
     }
-    return st;
+    return 0;
+}
+
+int ifStmt() {
+    static int iSeq = 1;
+    G("\nIF_%02d:", iSeq);
+    expectNext(TOK_LPAR);
+    expr();
+    expectToken(TOK_RPAR);
+    G("\n\tTEST\tEAX, EAX");
+    G("\n\tJZ  \tENDIF_%02d", iSeq);
+    G("\nTHEN_%02d:", iSeq);
+    statement();
+    G("\nENDIF_%02d:", iSeq++);
+    return 0;
+}
+
+int whileStmt() {
+    static int iSeq = 1;
+    G("\nWHILE_%02d:", iSeq);
+    expectNext(TOK_LPAR);
+    expr();
+    expectToken(TOK_RPAR);
+    G("\n\tTEST\tEAX, EAX");
+    G("\n\tJZ  \tWEND_%02d", iSeq);
+    statement();
+    G("\n\tJMP \tWHILE_%02d", iSeq);
+    G("\nWEND_%02d:", iSeq++);
+    return 0;
+}
+
+int parseReturn() {
+    next_token();
+    if (tok != TOK_SEMI) { expr(); }
+    expectToken(TOK_SEMI);
+    P("\n\tRET");
+    return 0;
+}
+
+int intStmt() {
+    nextShouldBe(TOK_ID);
+    genSymbol(id_name, 'L');
+    expectNext(TOK_SEMI);
+    return 0;
+}
+
+void idStmt() {
+    int s = findSymbol(id_name, 'L');
+    if (s < 0) { s = findSymbol(id_name, 'I'); }
+    if (s < 0) { syntax_error(); }
+    next_token();
+    if (tok == TOK_SET) { next_token(); expr(); G("\n\tMOV \t[%s], EAX", symbols[s].name); }
+    else if (tok == TOK_DEC) { next_token(); G("\n\tDEC \t[%s]", symbols[s].name); }
+    else if (tok == TOK_INC) { next_token(); G("\n\tINC \t[%s]", symbols[s].name); }
+    expectToken(TOK_SEMI);
+}
+
+int statements() {
+    while (1) {
+        if (tok == TOK_RBRA) { next_token(); return 0; }
+        statement();
+    }
+}
+
+int statement() {
+    tgtReg = 0;
+    if (tok == TOK_LBRA) { next_token(); return statements(); }
+    if (tok == IF_TOK)    { ifStmt(); return 0; }
+    if (tok == WHILE_TOK) { whileStmt(); return 0; }
+    if (tok == RET_TOK)   { return parseReturn(); }
+    if (tok == INT_TOK)   { return intStmt(); }
+    if (tok == TOK_ID)    { idStmt(); return 0; }
+    if (tok == TOK_FUNC)  { expectNext(TOK_RPAR); G("\n\tCALL\t%s", id_name); return 0; }
+
+    expr();
+    expectToken(TOK_SEMI);
+    return 0;
+}
+
+void defSize() {
+    if (tok == TOK_SEMI) { return; }
+    expectToken(TOK_LARR);
+    expectToken(TOK_NUM);
+    expectToken(TOK_RARR);
+}
+
+int funcDef() {
+    P("\n;---------------------------------------------");
+    G("\n%s:", id_name);
+    int s = genSymbol(id_name, 'F');
+    expectNext(TOK_RPAR);
+    expectToken(TOK_LBRA);
+    statements();
+    P("\n\tRET");
+    return 0;
+}
+
+int parseVar(int type) {
+    next_token();
+    if (tok == TOK_FUNC) { return funcDef(); }
+    tokenShouldBe(TOK_ID);
+    int s = genSymbol(id_name, type);
+    next_token();
+    defSize(type, s);
+    expectToken(TOK_SEMI);
+    return 0;
+}
+
+int parseDef() {
+    if (tok == VOID_TOK) { next_token(); tokenShouldBe(TOK_FUNC); return funcDef(); }
+    if (tok == INT_TOK) { return parseVar('I'); }
+    if (tok == CHAR_TOK) { return parseVar('C'); }
+    syntax_error();
+    return 0;
+}
+
+void defs() {
+    next_token();
+    while (tok != EOI) {
+        parseDef();
+    }
 }
 
 /*---------------------------------------------------------------------------*/
@@ -686,30 +491,18 @@ int main(int argc, char *argv[]) {
     if (fn) { input_fp = fopen(fn, "rt"); }
     if (!input_fp) { input_fp = stdin; }
     hInit(0);
-    gInit();
-    gN("; TC source file: ");
-    gAppend(fn ? fn : "stdin", 0);
-    gWinLin('C');
-    gN("entry main");
-    gWinLin('L');
-    defs(NULL);
+    //gInit();
+    P("; TC source file: ");
+    P(fn ? fn : "stdin");
+    winLin('C');
+    defs();
     if (input_fp != stdin) { fclose(input_fp); }
-    printf("%d lines, %d nodes\n", gHere, num_nodes);
+    // printf("; %d lines, %d nodes\n", gHere, num_nodes);
 
-    gWinLin('D');
-    for (int i=0; i<numSymbols; i++) {
-        SYM_T *s = &symbols[i];
-        if (s->type == 0) { gN(s->name); gAppend(":\tdd 0",0); }
-    }
-    FILE *fp = fopen("_tc.asm", "wt");
-    if (fp) {
-        for (int i=0; i<gHere; i++) { fprintf(fp, "%s\n", gLines[i]); }
-        fclose(fp);
-    }
+    winLin('D');
+    dumpSymbols();
 
-    fp = fopen("tc.sym", "wt");
-    dumpSymbols(1, fp);
-    fclose(fp);
+    winLin('I');
 
     return 0;
 }

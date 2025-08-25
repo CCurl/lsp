@@ -20,35 +20,35 @@ The grammar of language in EBNF is:
 ```
   <program>    ::= <defs>
   <defs>       ::= <def> | <defs> <def>
-  <def>        ::= <func_def> | <int-def> | <byte-def>
+  <def>        ::= <func_def> | <int-def> | <char-def>
   <func-def>   ::= "void" <id> "()" "{" <statement> "}" |
   <int-def>    ::= "int"  <id> ";" | "int" <id>  "[" <int> "]" ";"
-  <byte-def>   ::= "byte" <id> ";" | "byte" <id> "[" <int> "]" ";"
+  <char-def>   ::= "char" <id> ";" | "char" <id> "[" <int> "]" ";"
   <statements> ::= <statement> <statements> | <nothing>
   <statement>  ::= "if" <paren_expr> <statement> |
-                  "if" <paren_expr> <statement> "else" <statement> |
-                  "while" <paren_expr> <statement> |
-                  "do" <statement> "while" <paren_expr> ";" |
-                  "{" <statements> "}" |
-                  <func-call> ";" |
-                  <expr> ";" |
-                  <id> "=" <expr> ";" |
-                  <id> "[" <expr> "]" "=" <expr> ";" | (future)
-                  "//" |
-                  ";" |
-                  <nothing>
-  <paren_expr>  ::= "(" <expr> ")"
-  <expr>        ::= <math> | <math> <test-op> <math>
-  <test-op>     ::= one of (< = > != || &&)
-  <math>        ::= <term> | <math> <math_op> <term>
-  <math-op>     ::= one of (+ - * / & | ^)
+                   "if" <paren_expr> <statement> "else" <statement> |
+                   "while" <paren_expr> <statement> |
+                   "do" <statement> "while" <paren_expr> ";" |
+                   "{" <statements> "}" |
+                   <func-call> ";" |
+                   <expr> ";" |
+                   <id> "=" <expr> ";" |
+                   <id> "[" <expr> "]" "=" <expr> ";" | (future)
+                   "//" |
+                   ";" |
+                   <nothing>
+  <paren_expr> ::= "(" <expr> ")"
+  <expr>       ::= <math> | <math> <test-op> <math>
+  <test-op>    ::= one of (< = > != || &&)
+  <math>       ::= <term> | <math> <math_op> <term>
+  <math-op>    ::= one of (+ - * / & | ^)
 
-  <term>        ::= <id> | <int> | <string> | <paren_expr>
-  <id>          ::= <alpha><alpha-numeric>*
-  <int>         ::= [0-9]*
-  <string>      ::= '"' <chars> '"'
-  <func-call>   ::= <id> "(" ")"
-  <nothing>     ::= 
+  <term>       ::= <id> | <int> | <string> | <paren_expr>
+  <id>         ::= <alpha><alpha-numeric>*
+  <int>        ::= [0-9]*
+  <string>     ::= '"' <chars> '"'
+  <func-call>  ::= <id> "(" ")"
+  <nothing>    ::= 
  ```
 
 It is broken into multiple parts
@@ -57,13 +57,13 @@ It is broken into multiple parts
 tc.c: the tiny-c compiler
 - This takes a .tc file as the only argument.
 - If no argument is given, it reads the source from stdin.
-- The output is written to file 'tc.out'.
-- tc.out should (eventually) be an executable program.
+- The output is written to file '_tc.asm'.
+- This is a assembly file that can be assembled by fasm.
 - It also generates file 'tc.sym', a listing of the symbols defined.
 
 hex-dump.c: A little program to dump a file's contents in hex.
 
-vm.c: an x86/Linux emulator
+vm.c: an x86/Linux emulator (in progress)
 - This is a VM that emulates an extremely stripped down Linux/x86 system.
 - Its purpose is to be able to debug the system without contantly causing crashes.
 - It generates file 'vm.lst', a disassembly listing of the program.
@@ -76,7 +76,7 @@ Running:
 ```
 make tc
 make vm
-make test
+make test 
 make bm
 ```
 

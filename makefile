@@ -40,13 +40,13 @@ clean:
 	rm -f tc.out tc.sym vm.lst
 
 test: all
-	./tc test.tc
-	fasm _tc.asm test
+	./tc test.tc > _test.asm
+	fasm _test.asm test
 	chmod +x test
-	./hex-dump test > vm.lst
+	./hex-dump test > test.hex
 
 bm: all
-	./tc bm.tc
-	fasm _tc.asm bm
+	./tc bm.tc > _bm.asm
+	fasm _bm.asm bm
 	chmod +x bm
-	./hex-dump test > vm.lst
+	./hex-dump bm > bm.hex

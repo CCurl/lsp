@@ -17,3 +17,5 @@ vm.trc
 test
 bm
 *.exe
+*.hex
+tc.sym

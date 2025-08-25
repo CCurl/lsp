@@ -144,15 +144,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <None Include="bm.bat" />
+    <None Include=".gitignore" />
+    <None Include="bm.asm" />
     <None Include="bm.tc" />
-    <None Include="tc.sym" />
-    <None Include="test.bat" />
+    <None Include="make.bat" />
+    <None Include="test.asm" />
     <None Include="test.tc" />
-    <None Include="makefile" />
     <None Include="README.md" />
     <None Include="x86-notes" />
-    <None Include="_tc.asm" />
+    <None Include="xx.asm" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="heap.c" />
