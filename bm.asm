@@ -1,4 +1,4 @@
-; TC source file: bm.tc
+
 format PE console
 include 'win32ax.inc'
 
@@ -14,8 +14,10 @@ putc:	RET
 
 ;=============================================
 ;---------------------------------------------
-TMil:
+T1:
 	RET
+;---------------------------------------------
+T2:
 	RET
 ;---------------------------------------------
 Mil:
@@ -46,13 +48,12 @@ WEND_01:
 section '.data' data readable writeable
 ;=============================================
 
-; symbols: 1000 entries, 8 used
+; symbols: 1000 entries, 9 used
 ; num type size name
 ; --- ---- ---- -----------------
 _pc_buf		dd 0
 num		dd 0
 x		dd 0
-
 
 ;====================================
 section '.idata' import data readable

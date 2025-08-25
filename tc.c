@@ -22,7 +22,7 @@ extern SYM_T symbols[SYMBOLS_SZ];
 
 // Tokens - NOTE: the first 8 must match the words list in tc.c
 enum {
-    DO_TOK, ELSE_TOK, IF_TOK, WHILE_TOK, VOID_TOK, INT_TOK, CHAR_TOK, RET_TOK
+    NO_TOK, ELSE_TOK, IF_TOK, WHILE_TOK, VOID_TOK, INT_TOK, CHAR_TOK, RET_TOK
     , TOK_LBRA, TOK_RBRA, TOK_LPAR, TOK_RPAR, TOK_LARR, TOK_RARR, TOK_COMMA
     , TOK_PLUS, TOK_MINUS, TOK_STAR, TOK_SLASH, TOK_INC, TOK_DEC, TOK_PLEQ
     , TOK_LT, TOK_EQ, TOK_GT, TOK_NEQ
@@ -36,7 +36,7 @@ enum {
 
 // NOTE: these have to be in sync with the first <x> entries in the 
 // list of tokens
-char *words[] = { "do", "else", "if" , "while", "void", "int", "char" , "return", NULL};
+char *words[] = { "", "else", "if" , "while", "void", "int", "char" , "return", NULL};
 
 int ch = ' ', tok, int_val;
 char id_name[256];
@@ -44,17 +44,14 @@ FILE *input_fp = NULL;
 char cur_line[256] = {0};
 int cur_off = 0, cur_lnum = 0, is_eof = 0;
 
-void msg(int fatal, char *s, int cr, int ln) {
-    printf("\n%s%s", s, cr ? "\n" : " ");
-    if (ln) {
-        printf("at(% d, % d)", cur_lnum, cur_off);
-        printf("\n%s", cur_line);
-        for (int i=2; i<cur_off; i++) { fprintf(stdout, " "); }
-        printf("^\n");
-    }
-    if (fatal) { exit(1); }
+void msg(int fatal, char *s) {
+    printf("\n; %s at(%d, %d)", s, cur_lnum, cur_off);
+    printf("\n; %s", cur_line);
+    for (int i=2; i<cur_off; i++) { printf(" "); }
+    printf("\ ^\n");
+    if (fatal) { fprintf(stderr, "\n%s", s); exit(1); }
 }
-void syntax_error() { msg(1, "syntax error", 0, 1); }
+void syntax_error() { msg(1, "syntax error"); }
 
 int isAlpha(int ch) { return BTWI(ch, 'A', 'Z') || BTWI(ch, 'a', 'z') || (ch == '_'); }
 int isNum(int ch) { return BTWI(ch, '0', '9'); }
@@ -488,21 +485,17 @@ void defs() {
 
 int main(int argc, char *argv[]) {
     char *fn = (argc > 1) ? argv[1] : NULL;
-    if (fn) { input_fp = fopen(fn, "rt"); }
-    if (!input_fp) { input_fp = stdin; }
+    input_fp = stdin;
+    if (fn) {
+        input_fp = fopen(fn, "rt");
+        if (!input_fp) { msg(1, "cannot open source file!"); }
+    }
     hInit(0);
-    //gInit();
-    P("; TC source file: ");
-    P(fn ? fn : "stdin");
     winLin('C');
     defs();
     if (input_fp != stdin) { fclose(input_fp); }
-    // printf("; %d lines, %d nodes\n", gHere, num_nodes);
-
     winLin('D');
     dumpSymbols();
-
     winLin('I');
-
     return 0;
 }

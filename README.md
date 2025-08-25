@@ -1,51 +1,46 @@
-This is a simple compiler, disassembler and vm-emulator, mostly for learning.<br/>
-It also includes a heap-based memory management system.<br/>
-It supports a C-like syntax.<br/>
+# A simple compiler for a FASM-based tool chain.
+TC is a minimal compiler that supports a C-like syntax.<br/>
 Its initial purpose was to be a pedagogical tool for learning about compilers.<br/>
-It has matured into a serious attempt at a minimal and simply full-fledged compiler.<br/>
-The compiler does a minimal amount of error checking to help highlight the structure of the compiler.<br/>
-<br/>
-Note: I am interested in learning how compilers work, and I came across Marc Feeley's Tiny-C.<br/>
-I found it here: http://www.iro.umontreal.ca/~felipe/IFT2030-Automne2002/Complements/tinyc.c<br/>
-Seeing the copyright, I emailed Mark and asked him if I could use it, and he said<br/>
-that it was under a MIT license and I could do what I wanted with it.<br/>
-This work is based on Marc's tinyc.c effort.<br/>
-<br/>
-The idea is to build on tiny-c to generate runnable, program in byte-code.<br/>
-That program (tc.out) should be a native executable for Linux.<br/>
-I should be able to also run it using 'vm'.<br/>
-<br/>
-The grammar of language in EBNF is:
+It has morphed into a serious attempt at a minimal and simple full-fledged compiler.<br/>
+The compiler currently does a minimal amount of error checking.<br/>
+It generates assembly code for the FASM assembler.<br/>
+
+## How it works
+Since TC generates assembly code for FASM, forward branches are not a problem.<br/>
+TC breake the input stream into tokens.<br/>
+TC implements a sort of state-machine where the current token is associated with some code.<br/>
+That code can look at the next token (if necessary) and decide what to do next.<br/>
+
+### Grammar
+The grammar of language in EBNF is below.<br/>
+Note that I am not very familiar with EBNF, so this may not be 100% accurate.
 
 ```
   <program>    ::= <defs>
-  <defs>       ::= <def> | <defs> <def>
+  <defs>       ::= <defs> <def> | <def>
   <def>        ::= <func_def> | <int-def> | <char-def>
   <func-def>   ::= "void" <id> "()" "{" <statement> "}" |
-  <int-def>    ::= "int"  <id> ";" | "int" <id>  "[" <int> "]" ";"
-  <char-def>   ::= "char" <id> ";" | "char" <id> "[" <int> "]" ";"
-  <statements> ::= <statement> <statements> | <nothing>
+  <int-def>    ::= "int"  <id> ";" | "int" <id>  "[" <num> "]" ";"
+  <char-def>   ::= "char" <id> ";" | "char" <id> "[" <num> "]" ";"
+  <statements> ::= <statements> <statement> | <statement> | <nothing>
   <statement>  ::= "if" <paren_expr> <statement> |
                    "if" <paren_expr> <statement> "else" <statement> |
                    "while" <paren_expr> <statement> |
-                   "do" <statement> "while" <paren_expr> ";" |
                    "{" <statements> "}" |
                    <func-call> ";" |
                    <expr> ";" |
                    <id> "=" <expr> ";" |
                    <id> "[" <expr> "]" "=" <expr> ";" | (future)
                    "//" |
-                   ";" |
-                   <nothing>
+                   ";"
   <paren_expr> ::= "(" <expr> ")"
-  <expr>       ::= <math> | <math> <test-op> <math>
+  <expr>       ::= <term> | <term> <op> <term>
   <test-op>    ::= one of (< = > != || &&)
-  <math>       ::= <term> | <math> <math_op> <term>
-  <math-op>    ::= one of (+ - * / & | ^)
-
-  <term>       ::= <id> | <int> | <string> | <paren_expr>
+  <math-op>    ::= one of (+ - * /*)
+  <op>         ::= <math-op> | <test-op>
+  <term>       ::= <id> | <num> | <string> | <paren_expr>
   <id>         ::= <alpha><alpha-numeric>*
-  <int>        ::= [0-9]*
+  <num>        ::= [0-9]*
   <string>     ::= '"' <chars> '"'
   <func-call>  ::= <id> "(" ")"
   <nothing>    ::= 
@@ -56,10 +51,9 @@ It is broken into multiple parts
 
 tc.c: the tiny-c compiler
 - This takes a .tc file as the only argument.
-- If no argument is given, it reads the source from stdin.
-- The output is written to file '_tc.asm'.
-- This is a assembly file that can be assembled by fasm.
-- It also generates file 'tc.sym', a listing of the symbols defined.
+- If no argument is given, it reads the source from STDIN.
+- The output is written to STDOUT.
+- This is a assembly file that can be assembled by FASM.
 
 hex-dump.c: A little program to dump a file's contents in hex.
 
@@ -68,21 +62,15 @@ vm.c: an x86/Linux emulator (in progress)
 - Its purpose is to be able to debug the system without contantly causing crashes.
 - It generates file 'vm.lst', a disassembly listing of the program.
 
-Debugging:
-- the vm generates 'vm.lst' before it runs so it is easy to see what it thinks the program is.
-- using tc.sym and vm.lst together provide a pretty good picture of what the generated program is doing.
-
 Running:
 ```
-make tc
-make vm
 make test 
 make bm
 ```
 
 TODO:
-- [i] Create a simple emulator that can run a subset of x86 machine code.
-- [i] Update tc.c to generate x86 machine code for the above emulator.
-- [ ] Generate an x86 executable program.
+- [i] Update tc to generate FASM code that generates an executable.
+- [i] Create a simple emulator (vm) that can run a useful subset of Linux.
 - [ ] Optimize the code generated by tc.c.
 - [ ] Enhance tc to the point where it can build itself.
+- [ ] 

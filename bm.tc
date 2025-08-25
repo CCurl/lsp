@@ -1,9 +1,9 @@
 int num;
 int x;
 
-int TMil() {
-	return; // x*1002*998;
-}
+int T1() { }
+int T2() { ; }
+// int T3() { if (1) {} }
 
 int Mil() {
 	x = x * (1000 * 1000);
