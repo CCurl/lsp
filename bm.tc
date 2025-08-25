@@ -3,7 +3,8 @@ int x;
 
 int T1() { }
 int T2() { ; }
-// int T3() { if (1) {} }
+int T3() { if (1) {} }
+int T4() { if (x == (num-1)) { x = num+1; } }
 
 int Mil() {
 	x = x * (1000 * 1000);
@@ -15,8 +16,5 @@ void main() {
 	Mil();
 	num = x;
 	while (x) { x--; }
-	// exit();
-
-	// x = num;
-	// do { x = x-1; } while (x);
+	// putc(66);
 }

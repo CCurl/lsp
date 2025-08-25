@@ -1,5 +1,4 @@
 /* Chris Curl, MIT license. */
-/* Based on work by Marc Feeley (2001), MIT license. */
 /* Please see the README.md for details. */
 
 #include <stdio.h>
@@ -48,8 +47,7 @@ void msg(int fatal, char *s) {
     printf("\n; %s at(%d, %d)", s, cur_lnum, cur_off);
     printf("\n; %s", cur_line);
     for (int i=2; i<cur_off; i++) { printf(" "); }
-    printf("\ ^\n");
-    if (fatal) { fprintf(stderr, "\n%s", s); exit(1); }
+    if (fatal) { fprintf(stderr, "\n%s (see output for details)\n", s); exit(1); }
 }
 void syntax_error() { msg(1, "syntax error"); }
 
@@ -63,7 +61,12 @@ void next_line() {
     if (fgets(cur_line, 256, input_fp) != cur_line) {
         is_eof = 1;
     }
-    //printf("----- %s\n", cur_line);
+    int l = strlen(cur_line);
+    if ((0 < l) && (cur_line[l-1] == 10)) { cur_line[l-1] = 0; }
+    else { l++; }
+    printf("\n\t;      %s", cur_line);
+    cur_line[l-1] = 10;
+    cur_line[l] = 0;
 }
 
 void next_ch() {
@@ -97,7 +100,7 @@ void next_token() {
     case '*': next_ch(); tok = TOK_STAR;  break;
     case '/': next_ch(); tok = TOK_SLASH;
         if (ch == '/') { // Line comment?
-            while ((ch != 10) && (ch != EOF)) { next_ch(); }
+            while ((ch) && (ch != 10) && (ch != EOF)) { next_ch(); }
             goto again;
         }
         break;
@@ -234,7 +237,6 @@ void winLin(int seg) {
         P("\n; ======================================= ");
         P("\nsection '.code' code readable executable");
         P("\n;=======================================*/");
-
         P("\n\nstart: JMP main");
         P("\n;================== library ==================");
         P("\nexit:\tRET\n");
@@ -261,7 +263,8 @@ void winLin(int seg) {
         s = genSymbol("_pc_buf", 'I');
         P("\nformat ELF executable");
         P("\n;================== code =====================");
-        P("\nsegment readable executable\nentry main");
+        P("\nsegment readable executable");
+        P("\nentry main");
         P("\n;================== library ==================");
         P("\nexit:\n\tMOV EAX, 1\n\tXOR EBX, EBX\n\tINT 0x80\n");
         P("\nputc:\n\tMOV [_pc_buf], EAX");

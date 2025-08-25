@@ -1,7 +1,7 @@
-# A simple compiler for a FASM-based tool chain.
+# A minimal and simple compiler for a FASM-based tool chain.
 TC is a minimal compiler that supports a C-like syntax.<br/>
 Its initial purpose was to be a pedagogical tool for learning about compilers.<br/>
-It has morphed into a serious attempt at a minimal and simple full-fledged compiler.<br/>
+It has morphed into a serious attempt at a minimal but useful full-fledged compiler.<br/>
 The compiler currently does a minimal amount of error checking.<br/>
 It generates assembly code for the FASM assembler.<br/>
 
@@ -28,7 +28,6 @@ Note that I am not very familiar with EBNF, so this may not be 100% accurate.
                    "while" <paren_expr> <statement> |
                    "{" <statements> "}" |
                    <func-call> ";" |
-                   <expr> ";" |
                    <id> "=" <expr> ";" |
                    <id> "[" <expr> "]" "=" <expr> ";" | (future)
                    "//" |
@@ -40,8 +39,8 @@ Note that I am not very familiar with EBNF, so this may not be 100% accurate.
   <num>        ::= [0-9]*
   <string>     ::= '"' <chars> '"'
   <op>         ::= <math-op> | <test-op> | <bin-op>
-  <math-op>    ::= one of (+ - * /*)
-  <test-op>    ::= one of (< = > != || &&)
+  <math-op>    ::= one of (+ - * /)
+  <test-op>    ::= one of (< == > != || &&)
   <bin-op>     ::= one of (& | ^)
   <paren_expr> ::= "(" <expr> ")"
   <nothing>    ::= 
@@ -51,10 +50,11 @@ It is broken into multiple parts
 - each part is implemented in a single file.
 
 tc.c: the tiny-c compiler
-- This takes a .tc file as the only argument.
+- This takes a source file as the only argument.
 - If no argument is given, it reads the source from STDIN.
 - The output is written to STDOUT.
 - This is a assembly file that can be assembled by FASM.
+- Any fatal errors are written to STDERR.
 
 hex-dump.c: A little program to dump a file's contents in hex.
 
