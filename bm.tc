@@ -2,7 +2,7 @@ int num;
 int x;
 
 int TMil() {
-	return x*1002*998;
+	return; // x*1002*998;
 }
 
 int Mil() {
@@ -11,10 +11,10 @@ int Mil() {
 
 void main() {
 	// putc(65);
-	x = 500; Mil();
+	x = 500*1000*1000; // Mil();
 	num = x;
 	while (x) { x = x - 1; }
-	exit();
+	// exit();
 
 	// x = num;
 	// do { x = x-1; } while (x);

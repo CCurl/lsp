@@ -1,3 +1,5 @@
+int zz;
+
 int T1() {
 	int x;
 	int y;
@@ -12,5 +14,8 @@ int T1() {
 }
 
 void main() {
+	int m1;
+	m1 = 10;
+	while (m1) { m1 = m1 - 1; }
 	return;
 }

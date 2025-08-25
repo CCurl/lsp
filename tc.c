@@ -182,7 +182,7 @@ int findSymbol(char *name, char type) {
         SYM_T *x = &symbols[i];
         if (strcmp(x->name, name) == 0) {
             if (x->type == type) { return i; }
-            msg(0,"name already defined with different type.", 1, 1);
+            return -1; // msg(0, "name already defined with different type.", 1, 1);
         }
         i=i+1;
     }
@@ -216,7 +216,7 @@ void dumpSymbols() {
     printf("; --- ---- ---- -----------------\n");
     for (int i = 0; i < numSymbols; i++) {
         SYM_T *x = &symbols[i];
-        if (x->type != 'F') { printf("%s:\tdb 0 DUP(%d)\n", x->name, x->sz); }
+        if (x->type != 'F') { printf("%s\t\tdd 0\n", x->name); }
     }
 }
 
@@ -231,18 +231,28 @@ void winLin(int seg) {
         s = genSymbol("putc", 'F');
         s = genSymbol("_pc_buf", 'I');
         P("\nformat PE console");
-        P("\ninclude 'win32ax.inc'");
-        P("\n;================== code =====================");
-        P("\n.code\nentry main");
+        P("\ninclude 'win32ax.inc'\n");
+        P("\n; ======================================= ");
+        P("\nsection '.code' code readable executable");
+        P("\n;=======================================*/");
+
+        P("\n\nstart: JMP main");
         P("\n;================== library ==================");
         P("\nexit:\tRET\n");
         P("\nputc:\tRET\n");
         P("\n;=============================================");
     }
     else if (seg == 'D') {
-        P("\n;================== data =====================");
-        P("\n.data");
+        P("\n\n;================== data =====================");
+        P("\nsection '.data' data readable writeable");
         P("\n;=============================================");
+    }
+    else if (seg == 'I') {
+        P("\n\n;====================================");
+        P("\nsection '.idata' import data readable");
+        P("\n; ====================================");
+        P("\nlibrary msvcrt, 'msvcrt.dll', kernel32, 'kernel32.dll'");
+        P("\nimport msvcrt,printf,'printf',scanf,'scanf',getch,'_getch'\n");
     }
 #else
     // Linux (32-bit)
@@ -348,23 +358,29 @@ int expr() {
 
 int ifStmt() {
     static int iSeq = 1;
-    G("\n\t; IF #%d ...", iSeq);
+    G("\nIF_%02d:", iSeq);
     expectNext(TOK_LPAR);
     expr();
     expectToken(TOK_RPAR);
     G("\n\tTEST\tEAX, EAX");
-    G("\n\tJNZ \tENDIF_%02d", iSeq);
-    G("\n\t; Then #%d ...", iSeq);
+    G("\n\tJZ  \tENDIF_%02d", iSeq);
+    G("\nTHEN_%02d:", iSeq);
     statement();
     G("\nENDIF_%02d:", iSeq++);
     return 0;
 }
 
-int parseWhile() {
+int whileStmt() {
+    static int iSeq = 1;
+    G("\nWHILE_%02d:", iSeq);
     expectNext(TOK_LPAR);
     expr();
-    expectNext(TOK_RPAR);
+    expectToken(TOK_RPAR);
+    G("\n\tTEST\tEAX, EAX");
+    G("\n\tJZ  \tWEND_%02d", iSeq);
     statement();
+    G("\n\tJMP \tWHILE_%02d", iSeq);
+    G("\nWEND_%02d:", iSeq++);
     return 0;
 }
 
@@ -407,7 +423,7 @@ int statement() {
     tgtReg = 0;
     if (tok == TOK_LBRA) { next_token(); return statements(); }
     if (tok == IF_TOK)    { ifStmt(); return 0; }
-    if (tok == WHILE_TOK) { return parseWhile(); }
+    if (tok == WHILE_TOK) { whileStmt(); return 0; }
     if (tok == RET_TOK)   { return parseReturn(); }
     if (tok == INT_TOK)   { return intStmt(); }
     if (tok == TOK_ID)    { idStmt(); return 0; }
@@ -417,10 +433,10 @@ int statement() {
 }
 
 void defSize() {
+    if (tok == TOK_SEMI) { return; }
     expectToken(TOK_LARR);
     expectToken(TOK_NUM);
     expectToken(TOK_RARR);
-    expectToken(TOK_SEMI);
 }
 
 int funcDef() {
@@ -429,7 +445,9 @@ int funcDef() {
     int s = genSymbol(id_name, 'F');
     expectNext(TOK_RPAR);
     expectToken(TOK_LBRA);
-    return statements();
+    statements();
+    P("\n\tRET");
+    return 0;
 }
 
 int parseVar(int type) {
@@ -439,6 +457,7 @@ int parseVar(int type) {
     int s = genSymbol(id_name, type);
     next_token();
     defSize(type, s);
+    expectToken(TOK_SEMI);
     return 0;
 }
 
@@ -475,6 +494,8 @@ int main(int argc, char *argv[]) {
 
     winLin('D');
     dumpSymbols();
+
+    winLin('I');
 
     return 0;
 }

@@ -32,7 +32,7 @@ T1:
 	CDQ
 	IDIV	ECX
 	MOV 	[y], EAX
-	; IF #1 ...
+IF_01:
 	MOV 	EAX, [y]
 	MOV 	EBX, 1
 	ADD 	EAX, EBX
@@ -45,8 +45,8 @@ T1:
 	INC 	EAX
 @@:
 	TEST	EAX, EAX
-	JNZ 	ENDIF_01
-	; Then #1 ...
+	JZ  	ENDIF_01
+THEN_01:
 	MOV 	EAX, [y]
 	MOV 	EBX, 1
 	ADD 	EAX, EBX
@@ -54,7 +54,7 @@ T1:
 ENDIF_01:
 	MOV 	EAX, 1
 	MOV 	[z], EAX
-	; IF #2 ...
+IF_02:
 	MOV 	EAX, [y]
 	MOV 	EBX, 5
 	CMP 	EAX, EBX
@@ -63,8 +63,8 @@ ENDIF_01:
 	INC 	EAX
 @@:
 	TEST	EAX, EAX
-	JNZ 	ENDIF_02
-	; Then #2 ...
+	JZ  	ENDIF_02
+THEN_02:
 	MOV 	EAX, [y]
 	MOV 	EBX, 3
 	IMUL	EAX, EBX
@@ -74,7 +74,7 @@ ENDIF_02:
 	MOV 	EBX, 1
 	ADD 	EAX, EBX
 	MOV 	[z], EAX
-	; IF #3 ...
+IF_03:
 	MOV 	EAX, [y]
 	MOV 	EBX, 5
 	CMP 	EAX, EBX
@@ -83,8 +83,8 @@ ENDIF_02:
 	INC 	EAX
 @@:
 	TEST	EAX, EAX
-	JNZ 	ENDIF_03
-	; Then #3 ...
+	JZ  	ENDIF_03
+THEN_03:
 	MOV 	EAX, [y]
 	MOV 	EBX, 1
 	SUB 	EAX, EBX
@@ -93,15 +93,28 @@ ENDIF_03:
 	RET
 ;---------------------------------------------
 main:
+	MOV 	EAX, 10
+	MOV 	[m1], EAX
+WHILE_01:
+	MOV 	EAX, [m1]
+	TEST	EAX, EAX
+	JZ  	WEND_01
+	MOV 	EAX, [m1]
+	MOV 	EBX, 1
+	SUB 	EAX, EBX
+	MOV 	[m1], EAX
+	JMP 	WHILE_01
+WEND_01:
 	RET
 ;================== data =====================
 .data
 ;=============================================
 
-; symbols: 1000 entries, 8 used
+; symbols: 1000 entries, 9 used
 ; num type size name
 ; --- ---- ---- -----------------
 _pc_buf:	db 0 DUP(4)
 x:	db 0 DUP(4)
 y:	db 0 DUP(4)
 z:	db 0 DUP(4)
+m1:	db 0 DUP(4)
