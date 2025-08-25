@@ -1,9 +1,12 @@
 ; TC source file: test.tc
 format PE console
 include 'win32ax.inc'
-;================== code =====================
-.code
-entry main
+
+; ======================================= 
+section '.code' code readable executable
+;=======================================*/
+
+start: JMP main
 ;================== library ==================
 exit:	RET
 
@@ -91,30 +94,42 @@ THEN_03:
 	MOV 	[y], EAX
 ENDIF_03:
 	RET
+	RET
 ;---------------------------------------------
 main:
 	MOV 	EAX, 10
+	MOV 	EBX, 1000
+	IMUL	EAX, EBX
+	MOV 	EBX, 1000
+	IMUL	EAX, EBX
 	MOV 	[m1], EAX
 WHILE_01:
 	MOV 	EAX, [m1]
 	TEST	EAX, EAX
 	JZ  	WEND_01
-	MOV 	EAX, [m1]
-	MOV 	EBX, 1
-	SUB 	EAX, EBX
-	MOV 	[m1], EAX
+	DEC 	[m1]
 	JMP 	WHILE_01
 WEND_01:
 	RET
+	RET
+
 ;================== data =====================
-.data
+section '.data' data readable writeable
 ;=============================================
 
-; symbols: 1000 entries, 9 used
+; symbols: 1000 entries, 10 used
 ; num type size name
 ; --- ---- ---- -----------------
-_pc_buf:	db 0 DUP(4)
-x:	db 0 DUP(4)
-y:	db 0 DUP(4)
-z:	db 0 DUP(4)
-m1:	db 0 DUP(4)
+_pc_buf		dd 0
+zz		dd 0
+x		dd 0
+y		dd 0
+z		dd 0
+m1		dd 0
+
+
+;====================================
+section '.idata' import data readable
+; ====================================
+library msvcrt, 'msvcrt.dll', kernel32, 'kernel32.dll'
+import msvcrt,printf,'printf',scanf,'scanf',getch,'_getch'

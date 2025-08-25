@@ -6,14 +6,15 @@ int TMil() {
 }
 
 int Mil() {
-	x = x * (1001-1) * (999+1);
+	x = x * (1000 * 1000);
 }
 
 void main() {
 	// putc(65);
-	x = 500*1000*1000; // Mil();
+	x = 500;
+	Mil();
 	num = x;
-	while (x) { x = x - 1; }
+	while (x) { x--; }
 	// exit();
 
 	// x = num;

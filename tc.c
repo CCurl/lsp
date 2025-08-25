@@ -24,7 +24,7 @@ extern SYM_T symbols[SYMBOLS_SZ];
 enum {
     DO_TOK, ELSE_TOK, IF_TOK, WHILE_TOK, VOID_TOK, INT_TOK, CHAR_TOK, RET_TOK
     , TOK_LBRA, TOK_RBRA, TOK_LPAR, TOK_RPAR, TOK_LARR, TOK_RARR, TOK_COMMA
-    , TOK_PLUS, TOK_MINUS, TOK_STAR, TOK_SLASH, TOK_INC, TOK_PLEQ
+    , TOK_PLUS, TOK_MINUS, TOK_STAR, TOK_SLASH, TOK_INC, TOK_DEC, TOK_PLEQ
     , TOK_LT, TOK_EQ, TOK_GT, TOK_NEQ
     , TOK_SET, TOK_NUM, TOK_ID, TOK_FUNC, TOK_STR
     , TOK_OR, TOK_AND, TOK_XOR, TOK_LOR, TOK_LAND
@@ -94,7 +94,9 @@ void next_token() {
         if (ch == '+') { next_ch(); tok = TOK_INC; }
         if (ch == '=') { next_ch(); tok = TOK_PLEQ; }
         break;
-    case '-': next_ch(); tok = TOK_MINUS; break;
+    case '-': next_ch(); tok = TOK_MINUS;
+        if (ch == '-') { next_ch(); tok = TOK_DEC; }
+        break;
     case '*': next_ch(); tok = TOK_STAR;  break;
     case '/': next_ch(); tok = TOK_SLASH;
         if (ch == '/') { // Line comment?
@@ -248,7 +250,7 @@ void winLin(int seg) {
         P("\n;=============================================");
     }
     else if (seg == 'I') {
-        P("\n\n;====================================");
+        P("\n;====================================");
         P("\nsection '.idata' import data readable");
         P("\n; ====================================");
         P("\nlibrary msvcrt, 'msvcrt.dll', kernel32, 'kernel32.dll'");
@@ -277,6 +279,11 @@ void winLin(int seg) {
         P("\n;================== data =====================");
         P("\nsegment readable writeable");
         P("\n;=============================================");
+    }
+    else if (seg == 'I') {
+        // P("\n;================== data =====================");
+        // P("\nsegment readable writeable");
+        // P("\n;=============================================");
     }
 #endif
 }
@@ -404,11 +411,9 @@ void idStmt() {
     if (s < 0) { s = findSymbol(id_name, 'I'); }
     if (s < 0) { syntax_error(); }
     next_token();
-    if (tok == TOK_SET) {
-        next_token();
-        expr();
-        G("\n\tMOV \t[%s], EAX", symbols[s].name);
-    }
+    if (tok == TOK_SET) { next_token(); expr(); G("\n\tMOV \t[%s], EAX", symbols[s].name); }
+    else if (tok == TOK_DEC) { next_token(); G("\n\tDEC \t[%s]", symbols[s].name); }
+    else if (tok == TOK_INC) { next_token(); G("\n\tINC \t[%s]", symbols[s].name); }
     expectToken(TOK_SEMI);
 }
 
@@ -427,6 +432,8 @@ int statement() {
     if (tok == RET_TOK)   { return parseReturn(); }
     if (tok == INT_TOK)   { return intStmt(); }
     if (tok == TOK_ID)    { idStmt(); return 0; }
+    if (tok == TOK_FUNC)  { expectNext(TOK_RPAR); G("\n\tCALL\t%s", id_name); return 0; }
+
     expr();
     expectToken(TOK_SEMI);
     return 0;

@@ -7,27 +7,38 @@ section '.code' code readable executable
 start: JMP main
        RET
 
-main:
-	MOV 	EAX, 500
+;---------------------------------------------
+Mil:
+	MOV 	EAX, [x]
 	MOV 	EBX, 1000
-	IMUL	EAX, EBX
-	MOV 	EBX, 1000
+	MOV 	ECX, 1000
+	IMUL	EBX, ECX
 	IMUL	EAX, EBX
 	MOV 	[x], EAX
+	RET
+
+;---------------------------------------------
+bm:
+	MOV 	EAX, 500
+	MOV 	[x], EAX
+	CALL	Mil
 	MOV 	EAX, [x]
 	MOV 	[num], EAX
 WHILE_01:
 	MOV 	EAX, [x]
 	TEST	EAX, EAX
 	JZ  	WEND_01
-	DEC		DWORD [x]
+	DEC 	[x]
 	JMP 	WHILE_01
 WEND_01:
 	RET
 
+;---------------------------------------------
 main:
+		cinvoke printf, "Start ..."
 		call bm
-        cinvoke printf, "Enter a number: "
+		cinvoke printf, "End."
+        cinvoke printf, "%cEnter a number: ", 10
         cinvoke scanf, "%d", Number1
         cinvoke printf, "Enter a number: "
         cinvoke scanf, "%d", Number2
@@ -37,8 +48,9 @@ main:
         add ebx, ecx
         mov [Sum], ebx
         cinvoke printf, "%d + %d = %d%c",[Number1],[Number2],[Sum],10
-        cinvoke printf, "Press any key to close console..."
-        invoke getch
+        cinvoke printf, "Done."
+        ; cinvoke printf, "Press any key to close console..."
+        ; invoke getch
         ret
 
 ;======================================
