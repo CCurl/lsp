@@ -7,8 +7,8 @@ It generates assembly code for the FASM assembler.<br/>
 
 ## How it works
 Since TC generates assembly code for FASM, forward branches are not a problem.<br/>
-TC breake the input stream into tokens.<br/>
-TC implements a sort of state-machine where the current token is associated with some code.<br/>
+TC breaks the input stream into a stream of tokens.<br/>
+The current token is associated with some code.<br/>
 That code can look at the next token (if necessary) and decide what to do next.<br/>
 
 ### Grammar
@@ -33,16 +33,17 @@ Note that I am not very familiar with EBNF, so this may not be 100% accurate.
                    <id> "[" <expr> "]" "=" <expr> ";" | (future)
                    "//" |
                    ";"
-  <paren_expr> ::= "(" <expr> ")"
+  <func-call>  ::= <id> "(" ")"
   <expr>       ::= <term> | <term> <op> <term>
-  <test-op>    ::= one of (< = > != || &&)
-  <math-op>    ::= one of (+ - * /*)
-  <op>         ::= <math-op> | <test-op>
   <term>       ::= <id> | <num> | <string> | <paren_expr>
   <id>         ::= <alpha><alpha-numeric>*
   <num>        ::= [0-9]*
   <string>     ::= '"' <chars> '"'
-  <func-call>  ::= <id> "(" ")"
+  <op>         ::= <math-op> | <test-op> | <bin-op>
+  <math-op>    ::= one of (+ - * /*)
+  <test-op>    ::= one of (< = > != || &&)
+  <bin-op>     ::= one of (& | ^)
+  <paren_expr> ::= "(" <expr> ")"
   <nothing>    ::= 
  ```
 
