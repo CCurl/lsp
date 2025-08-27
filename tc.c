@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "heap.h"
 
 #define SYMBOLS_SZ   1000
 #define CODE_SZ     25000
@@ -27,11 +26,8 @@ enum {
     , TOK_LT, TOK_EQ, TOK_GT, TOK_NEQ
     , TOK_SET, TOK_NUM, TOK_ID, TOK_FUNC, TOK_STR
     , TOK_OR, TOK_AND, TOK_XOR, TOK_LOR, TOK_LAND
-    , TOK_SEMI, ND_VARINC, EOI
+    , TOK_SEMI, EOI
 };
-
- /*---------------------------------------------------------------------------*/
- /* Lexer. */
 
 // NOTE: these have to be in sync with the first <x> entries in the 
 // list of tokens
@@ -42,11 +38,18 @@ char id_name[256];
 FILE *input_fp = NULL;
 char cur_line[256] = {0};
 int cur_off = 0, cur_lnum = 0, is_eof = 0;
+int tgtReg = 0;
+char regs[6][4] = { "EAX", "EBX", "ECX", "EDX", "ESI", "EDI" };
+char *lReg, *rReg;
+
+void statement();
+void expr();
+int term();
 
 void msg(int fatal, char *s) {
     printf("\n; %s at(%d, %d)", s, cur_lnum, cur_off);
     printf("\n; %s", cur_line);
-    for (int i=2; i<cur_off; i++) { printf(" "); }
+    for (int i = 1; i < cur_off; i++) { printf(" "); } printf("^");
     if (fatal) { fprintf(stderr, "\n%s (see output for details)\n", s); exit(1); }
 }
 void syntax_error() { msg(1, "syntax error"); }
@@ -64,7 +67,7 @@ void next_line() {
     int l = strlen(cur_line);
     if ((0 < l) && (cur_line[l-1] == 10)) { cur_line[l-1] = 0; }
     else { l++; }
-    printf("\n\t;      %s", cur_line);
+    printf("\n\t; %s", cur_line);
     cur_line[l-1] = 10;
     cur_line[l] = 0;
 }
@@ -79,6 +82,8 @@ void next_ch() {
     if (ch == 9) { ch = cur_line[cur_off-1] = 32; }
 }
 
+/*---------------------------------------------------------------------------*/
+/* Lexer */
 void next_token() {
     again:
     while (BTWI(ch,1,32)) { next_ch(); }
@@ -132,6 +137,9 @@ void next_token() {
         id_name[len] = 0;
         next_ch();
         break;
+    case '\'': next_ch(); int_val = ch; next_ch();
+        if (ch == '\'') { next_ch(); tok = TOK_NUM; } else { syntax_error(); }
+        break;
     default:
         if (isNum(ch)) {
             int_val = 0; /* missing overflow check */
@@ -149,8 +157,6 @@ void next_token() {
                 if (ch == '(') {
                     tok = TOK_FUNC;
                     next_ch();
-                    //if (ch == ')') { tok = TOK_FUNC; next_ch(); }
-                    // else { syntax_error(); }
                 }
             }
         }
@@ -172,7 +178,6 @@ void nextShouldBe(int exp) { next_token(); tokenShouldBe(exp); }
 
 /*---------------------------------------------------------------------------*/
 /* Symbols */
-
 SYM_T symbols[SYMBOLS_SZ];
 int numSymbols = 0;
 
@@ -196,12 +201,10 @@ int genSymbol(char *name, char type) {
     if (0 <= i) { return i; }
     i = numSymbols++;
     SYM_T *x = &symbols[i];
-    // x->name = hAlloc(strlen(name) + 1);
     x->val = 0;
     x->type = type;
     x->sz = 4;
     strcpy(x->name, name);
-    // printf("-new symbol:%s,%d-\n", x->name, x->type);
     return i;
 }
 
@@ -223,8 +226,7 @@ void dumpSymbols() {
 }
 
 /*---------------------------------------------------------------------------*/
-/* Parser. */
-
+/* Parser / code generator. */
 void winLin(int seg) {
 #ifdef _WIN32
     // Windows (32-bit)
@@ -288,22 +290,8 @@ void winLin(int seg) {
 #endif
 }
 
-int tgtReg = 0;
-char regs[6][4] = { "EAX", "EBX", "ECX", "EDX", "ESI", "EDI" };
-char *lReg, *rReg;
 char *regName(int regNum) { return regs[regNum]; }
-
-int statement();
-int expr();
-int term();
-
-void parens() {
-    //int tr = tgtReg - 1;
-    //if (tr < 0) { tr = 0; P("; ** tr<0 **"); }
-    expr();
-    // G("\n\tMOV \t%s, %s", regName(tr), regName(tr+1));
-    tokenShouldBe(TOK_RPAR);
-}
+void parens() { expr(); tokenShouldBe(TOK_RPAR); }
 
 int term() {
     if (tok == TOK_ID)  { G("\n\tMOV \t%s, [%s]", regName(tgtReg), id_name); return 1; }
@@ -328,6 +316,10 @@ int evalOp(int id) {
     else if (id == TOK_LT)    { return id; }
     else if (id == TOK_GT)    { return id; }
     else if (id == TOK_EQ)    { return id; }
+    else if (id == TOK_NEQ)   { return id; }
+    else if (id == TOK_AND)   { return id; }
+    else if (id == TOK_OR)    { return id; }
+    else if (id == TOK_XOR)   { return id; }
     return 0;
 }
 
@@ -335,12 +327,12 @@ void doCmp(char *op) {
     G("\n\tCMP \t%s, %s", lReg, rReg);
     G("\n\tMOV \t%s, 0", lReg);
     G("\n\t%s \t@F", op);
-    G("\n\tINC \t%s", lReg);
+    G("\n\tDEC \t%s", lReg);
     G("\n@@:");
 }
 
-int expr() {
-    if (term() == 0) { return 0; }
+void expr() {
+    if (term() == 0) { return; }
     next_token();
     int op = evalOp(tok);
     while (op != 0) {
@@ -356,14 +348,17 @@ int expr() {
         else if (op == TOK_LT)  { opPrep(); doCmp("JGE"); }
         else if (op == TOK_GT)  { opPrep(); doCmp("JLE"); }
         else if (op == TOK_EQ)  { opPrep(); doCmp("JNE"); }
+        else if (op == TOK_NEQ) { opPrep(); doCmp("JE"); }
+        else if (op == TOK_AND) { opPrep(); G("\n\tAND \t%s, %s", lReg, rReg); }
+        else if (op == TOK_OR)  { opPrep(); G("\n\tOR  \t%s, %s", lReg, rReg); }
+        else if (op == TOK_XOR) { opPrep(); G("\n\tXOR \t%s, %s", lReg, rReg); }
         else { syntax_error(); }
         next_token();
         op = evalOp(tok);
     }
-    return 0;
 }
 
-int ifStmt() {
+void ifStmt() {
     static int iSeq = 1;
     G("\nIF_%02d:", iSeq);
     expectNext(TOK_LPAR);
@@ -374,10 +369,9 @@ int ifStmt() {
     G("\nTHEN_%02d:", iSeq);
     statement();
     G("\nENDIF_%02d:", iSeq++);
-    return 0;
 }
 
-int whileStmt() {
+void whileStmt() {
     static int iSeq = 1;
     G("\nWHILE_%02d:", iSeq);
     expectNext(TOK_LPAR);
@@ -388,55 +382,61 @@ int whileStmt() {
     statement();
     G("\n\tJMP \tWHILE_%02d", iSeq);
     G("\nWEND_%02d:", iSeq++);
-    return 0;
 }
 
-int parseReturn() {
+void returnStmt() {
     next_token();
-    if (tok != TOK_SEMI) { expr(); }
+    if (tok != TOK_SEMI) {
+        expr();
+        // next_token();
+    }
     expectToken(TOK_SEMI);
     P("\n\tRET");
-    return 0;
 }
 
-int intStmt() {
+void intStmt() {
     nextShouldBe(TOK_ID);
     genSymbol(id_name, 'L');
     expectNext(TOK_SEMI);
-    return 0;
 }
 
 void idStmt() {
-    int s = findSymbol(id_name, 'L');
-    if (s < 0) { s = findSymbol(id_name, 'I'); }
-    if (s < 0) { syntax_error(); }
+    int si = findSymbol(id_name, 'L');
+    if (si < 0) { si = findSymbol(id_name, 'I'); }
+    if (si < 0) { syntax_error(); }
     next_token();
-    if (tok == TOK_SET) { next_token(); expr(); G("\n\tMOV \t[%s], EAX", symbols[s].name); }
-    else if (tok == TOK_DEC) { next_token(); G("\n\tDEC \t[%s]", symbols[s].name); }
-    else if (tok == TOK_INC) { next_token(); G("\n\tINC \t[%s]", symbols[s].name); }
+    SYM_T *s = &symbols[si];
+    if (tok == TOK_SET) { next_token(); expr(); G("\n\tMOV \t[%s], EAX", s->name); }
+    else if (tok == TOK_PLEQ) { next_token(); expr(); G("\n\tADD \t[%s], EAX", s->name); }
+    else if (tok == TOK_DEC)  { next_token(); G("\n\tDEC \t[%s]", s->name); }
+    else if (tok == TOK_INC)  { next_token(); G("\n\tINC \t[%s]", s->name); }
+    else { syntax_error(); }
     expectToken(TOK_SEMI);
 }
 
-int statements() {
+void funcStmt() {
+    expectNext(TOK_RPAR);
+    expectToken(TOK_SEMI);
+    G("\n\tCALL\t%s", id_name);
+}
+
+void statements() {
     while (1) {
-        if (tok == TOK_RBRA) { next_token(); return 0; }
+        if (tok == TOK_RBRA) { next_token(); return; }
         statement();
     }
 }
 
-int statement() {
+void statement() {
     tgtReg = 0;
-    if (tok == TOK_LBRA) { next_token(); return statements(); }
-    if (tok == IF_TOK)    { ifStmt(); return 0; }
-    if (tok == WHILE_TOK) { whileStmt(); return 0; }
-    if (tok == RET_TOK)   { return parseReturn(); }
-    if (tok == INT_TOK)   { return intStmt(); }
-    if (tok == TOK_ID)    { idStmt(); return 0; }
-    if (tok == TOK_FUNC)  { expectNext(TOK_RPAR); G("\n\tCALL\t%s", id_name); return 0; }
-
-    expr();
-    expectToken(TOK_SEMI);
-    return 0;
+    if (tok == TOK_LBRA)       { next_token(); statements(); }
+    else if (tok == IF_TOK)    { ifStmt(); }
+    else if (tok == WHILE_TOK) { whileStmt(); }
+    else if (tok == RET_TOK)   { returnStmt(); }
+    else if (tok == INT_TOK)   { intStmt(); }
+    else if (tok == TOK_ID)    { idStmt(); }
+    else if (tok == TOK_FUNC)  { expectNext(TOK_RPAR); G("\n\tCALL\t%s", id_name); }
+    else                       { expr(); expectToken(TOK_SEMI); }
 }
 
 void defSize() {
@@ -469,23 +469,15 @@ int parseVar(int type) {
 }
 
 int parseDef() {
-    if (tok == VOID_TOK) { next_token(); tokenShouldBe(TOK_FUNC); return funcDef(); }
+    if (tok == VOID_TOK) { nextShouldBe(TOK_FUNC); return funcDef(); }
     if (tok == INT_TOK) { return parseVar('I'); }
     if (tok == CHAR_TOK) { return parseVar('C'); }
     syntax_error();
     return 0;
 }
 
-void defs() {
-    next_token();
-    while (tok != EOI) {
-        parseDef();
-    }
-}
-
 /*---------------------------------------------------------------------------*/
 /* Main program. */
-
 int main(int argc, char *argv[]) {
     char *fn = (argc > 1) ? argv[1] : NULL;
     input_fp = stdin;
@@ -493,10 +485,10 @@ int main(int argc, char *argv[]) {
         input_fp = fopen(fn, "rt");
         if (!input_fp) { msg(1, "cannot open source file!"); }
     }
-    hInit(0);
     winLin('C');
-    defs();
-    if (input_fp != stdin) { fclose(input_fp); }
+    next_token();
+    while (tok != EOI) { parseDef(); }
+    if (input_fp) { fclose(input_fp); }
     winLin('D');
     dumpSymbols();
     winLin('I');

@@ -12,9 +12,12 @@ int Mil() {
 
 void main() {
 	// putc(65);
-	x = 500;
+	int c;
+	c = 's';
+	x = 1000;
 	Mil();
 	num = x;
 	while (x) { x--; }
+	c = 'e';
 	// putc(66);
 }

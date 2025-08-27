@@ -1,4 +1,4 @@
-; TC source file: test.tc
+
 format PE console
 include 'win32ax.inc'
 
@@ -13,8 +13,14 @@ exit:	RET
 putc:	RET
 
 ;=============================================
+	;      int zz;
+	;      
+	;      int T1() {
 ;---------------------------------------------
 T1:
+	;      	int x;
+	;      	int y;
+	;      	x = 1-(y*(10/x)-4);
 	MOV 	EAX, 1
 	MOV 	EBX, [y]
 	MOV 	ECX, 10
@@ -29,12 +35,14 @@ T1:
 	SUB 	EBX, ECX
 	SUB 	EAX, EBX
 	MOV 	[x], EAX
+	;      	y = x/23;
 	MOV 	EAX, [x]
 	MOV 	EBX, 23
 	XCHG	ECX, EBX
 	CDQ
 	IDIV	ECX
 	MOV 	[y], EAX
+	;      	if ((y+1) < (x*2)) { y = y+1; }
 IF_01:
 	MOV 	EAX, [y]
 	MOV 	EBX, 1
@@ -45,7 +53,7 @@ IF_01:
 	CMP 	EAX, EBX
 	MOV 	EAX, 0
 	JGE 	@F
-	INC 	EAX
+	DEC 	EAX
 @@:
 	TEST	EAX, EAX
 	JZ  	ENDIF_01
@@ -54,16 +62,18 @@ THEN_01:
 	MOV 	EBX, 1
 	ADD 	EAX, EBX
 	MOV 	[y], EAX
+	;      	int z; z = 1;
 ENDIF_01:
 	MOV 	EAX, 1
 	MOV 	[z], EAX
+	;      	if (y == 5) { y = y*3; }
 IF_02:
 	MOV 	EAX, [y]
 	MOV 	EBX, 5
 	CMP 	EAX, EBX
 	MOV 	EAX, 0
 	JNE 	@F
-	INC 	EAX
+	DEC 	EAX
 @@:
 	TEST	EAX, EAX
 	JZ  	ENDIF_02
@@ -72,18 +82,20 @@ THEN_02:
 	MOV 	EBX, 3
 	IMUL	EAX, EBX
 	MOV 	[y], EAX
+	;      	z = z+1;
 ENDIF_02:
 	MOV 	EAX, [z]
 	MOV 	EBX, 1
 	ADD 	EAX, EBX
 	MOV 	[z], EAX
+	;      	if (y >  5) { y = y-1; }
 IF_03:
 	MOV 	EAX, [y]
 	MOV 	EBX, 5
 	CMP 	EAX, EBX
 	MOV 	EAX, 0
 	JLE 	@F
-	INC 	EAX
+	DEC 	EAX
 @@:
 	TEST	EAX, EAX
 	JZ  	ENDIF_03
@@ -92,32 +104,67 @@ THEN_03:
 	MOV 	EBX, 1
 	SUB 	EAX, EBX
 	MOV 	[y], EAX
+	;      	z = x&y;
 ENDIF_03:
+	MOV 	EAX, [x]
+	MOV 	EBX, [y]
+	AND 	EAX, EBX
+	MOV 	[z], EAX
+	;      	z = x|y;
+	MOV 	EAX, [x]
+	MOV 	EBX, [y]
+	OR  	EAX, EBX
+	MOV 	[z], EAX
+	;      	z = x^y;
+	MOV 	EAX, [x]
+	MOV 	EBX, [y]
+	XOR 	EAX, EBX
+	MOV 	[z], EAX
+	;      	return x+y;
+	MOV 	EAX, [x]
+	MOV 	EBX, [y]
+	ADD 	EAX, EBX
+	;      }
 	RET
+	;      
+	;      void main() {
 	RET
 ;---------------------------------------------
 main:
-	MOV 	EAX, 10
+	;      	int m1;
+	;      	m1 = 's';
+	MOV 	EAX, 115
+	MOV 	[m1], EAX
+	;      	m1 = 500*1000*1000;
+	MOV 	EAX, 500
 	MOV 	EBX, 1000
 	IMUL	EAX, EBX
 	MOV 	EBX, 1000
 	IMUL	EAX, EBX
 	MOV 	[m1], EAX
+	;      	while (m1) { m1--; }
 WHILE_01:
 	MOV 	EAX, [m1]
 	TEST	EAX, EAX
 	JZ  	WEND_01
 	DEC 	[m1]
+	;      	int m2;
 	JMP 	WHILE_01
 WEND_01:
+	;      	m2 += m1;
+	MOV 	EAX, [m1]
+	ADD 	[m2], EAX
+	;      	return;
+	;      }
 	RET
+	;      }
 	RET
 
 ;================== data =====================
 section '.data' data readable writeable
 ;=============================================
 
-; symbols: 1000 entries, 10 used
+; symbols: 1000 entries, 11 used
 ; num type size name
 ; --- ---- ---- -----------------
 _pc_buf		dd 0
@@ -126,7 +173,7 @@ x		dd 0
 y		dd 0
 z		dd 0
 m1		dd 0
-
+m2		dd 0
 
 ;====================================
 section '.idata' import data readable

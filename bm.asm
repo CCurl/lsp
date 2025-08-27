@@ -74,8 +74,12 @@ Mil:
 ;---------------------------------------------
 main:
 	;      	// putc(65);
-	;      	x = 500;
-	MOV 	EAX, 500
+	;      	int c;
+	;      	c = 's';
+	MOV 	EAX, 115
+	MOV 	[c], EAX
+	;      	x = 1000;
+	MOV 	EAX, 1000
 	MOV 	[x], EAX
 	;      	Mil();
 	CALL	Mil
@@ -88,10 +92,13 @@ WHILE_01:
 	TEST	EAX, EAX
 	JZ  	WEND_01
 	DEC 	[x]
-	;      	// putc(66);
-	;      }
+	;      	c = 'e';
 	JMP 	WHILE_01
 WEND_01:
+	MOV 	EAX, 101
+	MOV 	[c], EAX
+	;      	// putc(66);
+	;      }
 	;      }
 	RET
 
@@ -99,12 +106,13 @@ WEND_01:
 section '.data' data readable writeable
 ;=============================================
 
-; symbols: 1000 entries, 11 used
+; symbols: 1000 entries, 12 used
 ; num type size name
 ; --- ---- ---- -----------------
 _pc_buf		dd 0
 num		dd 0
 x		dd 0
+c		dd 0
 
 ;====================================
 section '.idata' import data readable

@@ -10,12 +10,18 @@ int T1() {
 	if (y == 5) { y = y*3; }
 	z = z+1;
 	if (y >  5) { y = y-1; }
-	return;
+	z = x&y;
+	z = x|y;
+	z = x^y;
+	return x+y;
 }
 
 void main() {
 	int m1;
-	m1 = 10*1000*1000;
+	m1 = 's';
+	m1 = 500*1000*1000;
 	while (m1) { m1--; }
+	int m2;
+	m2 += m1;
 	return;
 }
