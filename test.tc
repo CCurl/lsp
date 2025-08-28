@@ -9,7 +9,7 @@ int T1() {
 	int z; z = 1;
 	if (y == 5) { y = y*3; }
 	z = z+1;
-	if (y >  5) { y = y-1; }
+	if (y > 5) { y = y-1; }
 	z = x&y;
 	z = x|y;
 	z = x^y;

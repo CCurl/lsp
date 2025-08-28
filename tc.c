@@ -250,12 +250,12 @@ void winLin(int seg) {
         P("\n;=======================================*/");
         P("\n\nstart: JMP main");
         P("\n;================== library ==================");
-        P("\nexit:\tRET\n");
-        P("\n\tputs:\tcinvoke printf, \"%s\", [pv]");
+        P("\nexit:\n\tPUSH 0\n\tCALL [ExitProcess]\n");
+        P("\nputs:\n\tcinvoke printf, \"%s\", [pv]");
         P("\n\tRET\n");
-        P("\n\tputc:\tcinvoke printf, \"%c\", [pv]");
+        P("\nputc:\n\tcinvoke printf, \"%c\", [pv]");
         P("\n\tRET\n");
-        P("\n\tputd:\tcinvoke printf, \"%d\", [pv]");
+        P("\nputd:\n\tcinvoke printf, \"%d\", [pv]");
         P("\n\tRET\n");
         P("\n;=============================================");
     }
@@ -269,7 +269,8 @@ void winLin(int seg) {
         P("\nsection '.idata' import data readable");
         P("\n; ====================================");
         P("\nlibrary msvcrt, 'msvcrt.dll', kernel32, 'kernel32.dll'");
-        P("\nimport msvcrt,printf,'printf',scanf,'scanf',getch,'_getch'\n");
+        P("\nimport msvcrt, printf,'printf', getch,'_getch'");
+        P("\nimport kernel32, ExitProcess,'ExitProcess'\n");
     }
 #else
     // Linux (32-bit)

@@ -8,15 +8,20 @@ section '.code' code readable executable
 
 start: JMP main
 ;================== library ==================
-exit:	RET
+exit:
+	PUSH 0
+	CALL [ExitProcess]
 
-	puts:	cinvoke printf, "%s", [pv]
+puts:
+	cinvoke printf, "%s", [pv]
 	RET
 
-	putc:	cinvoke printf, "%c", [pv]
+putc:
+	cinvoke printf, "%c", [pv]
 	RET
 
-	putd:	cinvoke printf, "%d", [pv]
+putd:
+	cinvoke printf, "%d", [pv]
 	RET
 
 ;=============================================
@@ -95,7 +100,7 @@ ENDIF_02:
 	MOV 	EBX, 1
 	ADD 	EAX, EBX
 	MOV 	[z], EAX
-	; 	if (y >  5) { y = y-1; }
+	; 	if (y > 5) { y = y-1; }
 IF_03:
 	MOV 	EAX, [y]
 	MOV 	EBX, 5
@@ -204,4 +209,5 @@ m2        	dd 0
 section '.idata' import data readable
 ; ====================================
 library msvcrt, 'msvcrt.dll', kernel32, 'kernel32.dll'
-import msvcrt,printf,'printf',scanf,'scanf',getch,'_getch'
+import msvcrt, printf,'printf', getch,'_getch'
+import kernel32, ExitProcess,'ExitProcess'
