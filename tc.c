@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "heap.h"
 
 #define SYMBOLS_SZ   1000
 #define CODE_SZ     25000
@@ -15,7 +16,7 @@
 
 typedef unsigned char byte;
 
-typedef struct { char type, name[32]; int sz; long val; } SYM_T;
+typedef struct { char type, name[32]; int sz; char *val; } SYM_T;
 extern SYM_T symbols[SYMBOLS_SZ];
 
 // Tokens - NOTE: the first 8 must match the words list in tc.c
@@ -38,7 +39,7 @@ char id_name[256];
 FILE *input_fp = NULL;
 char cur_line[256] = {0};
 int cur_off = 0, cur_lnum = 0, is_eof = 0;
-int tgtReg = 0;
+int tgtReg = 0, tok_len;
 char regs[6][4] = { "EAX", "EBX", "ECX", "EDX", "ESI", "EDI" };
 char *lReg, *rReg;
 
@@ -127,14 +128,15 @@ void next_token() {
     case '&': next_ch(); tok = TOK_AND;
         if (ch == '&') { tok = TOK_LAND; next_ch(); }
         break;
-    case '"': next_ch(); tok = TOK_STR;
-        int len = 0;
+    case '"': tok = TOK_STR;
+        tok_len = 0;
+        next_ch();
         while (ch != '"') {
-            id_name[len++] = ch;
-            next_ch();
             if (ch == EOF) { syntax_error(); }
+            id_name[tok_len++] = ch;
+            next_ch();
         }
-        id_name[len] = 0;
+        id_name[tok_len] = 0;
         next_ch();
         break;
     case '\'': next_ch(); int_val = ch; next_ch();
@@ -147,9 +149,9 @@ void next_token() {
             tok = TOK_NUM;
         }
         else if (isAlpha(ch)) {
-            int i = 0; /* missing overflow check */
-            while (isAlphaNum(ch)) { id_name[i++] = ch; next_ch(); }
-            id_name[i] = '\0';
+            tok_len = 0; /* missing overflow check */
+            while (isAlphaNum(ch)) { id_name[tok_len++] = ch; next_ch(); }
+            id_name[tok_len] = '\0';
             tok = 0;
             while ((words[tok] != NULL) && (strcmp(words[tok], id_name) != 0)) { tok++; }
             if (words[tok] == NULL) {
@@ -208,10 +210,13 @@ int genSymbol(char *name, char type) {
     return i;
 }
 
-char *genStringSymbolName() {
+char *genStringSymbol(char *str) {
     static char name[32];
     static int strNum = 0;
     sprintf(name, "_s%03d_", ++strNum);
+    SYM_T *s = &symbols[genSymbol(name, 'S')];
+    s->val = hAlloc(strlen(str)+1);
+    strcpy((char *)s->val, str);
     return name;
 }
 
@@ -221,7 +226,9 @@ void dumpSymbols() {
     printf("; --- ---- ---- -----------------\n");
     for (int i = 0; i < numSymbols; i++) {
         SYM_T *x = &symbols[i];
-        if (x->type != 'F') { printf("%s\t\tdd 0\n", x->name); }
+        if (x->type == 'S') { printf("%-10s\tdb \"%s\",0\n", x->name, x->val); }
+        else if (x->type == 'I') { printf("%-10s\tdd 0\n", x->name); }
+        else if (x->type == 'L') { printf("%-10s\tdd 0\n", x->name); }
     }
 }
 
@@ -232,8 +239,10 @@ void winLin(int seg) {
     // Windows (32-bit)
     if (seg == 'C') {
         int s = genSymbol("exit", 'F');
+        s = genSymbol("puts", 'F');
         s = genSymbol("putc", 'F');
-        s = genSymbol("_pc_buf", 'I');
+        s = genSymbol("putd", 'F');
+        s = genSymbol("pv", 'I');
         P("\nformat PE console");
         P("\ninclude 'win32ax.inc'\n");
         P("\n; ======================================= ");
@@ -242,7 +251,12 @@ void winLin(int seg) {
         P("\n\nstart: JMP main");
         P("\n;================== library ==================");
         P("\nexit:\tRET\n");
-        P("\nputc:\tRET\n");
+        P("\n\tputs:\tcinvoke printf, \"%s\", [pv]");
+        P("\n\tRET\n");
+        P("\n\tputc:\tcinvoke printf, \"%c\", [pv]");
+        P("\n\tRET\n");
+        P("\n\tputd:\tcinvoke printf, \"%d\", [pv]");
+        P("\n\tRET\n");
         P("\n;=============================================");
     }
     else if (seg == 'D') {
@@ -294,8 +308,9 @@ char *regName(int regNum) { return regs[regNum]; }
 void parens() { expr(); tokenShouldBe(TOK_RPAR); }
 
 int term() {
-    if (tok == TOK_ID)  { G("\n\tMOV \t%s, [%s]", regName(tgtReg), id_name); return 1; }
-    if (tok == TOK_NUM) { G("\n\tMOV \t%s, %d", regName(tgtReg), int_val); return 1; }
+    if (tok == TOK_ID)   { G("\n\tMOV \t%s, [%s]", regName(tgtReg), id_name); return 1; }
+    if (tok == TOK_NUM)  { G("\n\tMOV \t%s, %d",   regName(tgtReg), int_val); return 1; }
+    if (tok == TOK_STR)  { G("\n\tLEA \t%s, [%s]", regName(tgtReg), genStringSymbol(id_name)); return 1; }
     if (tok == TOK_LPAR) { next_token();  parens();  return 1; }
     return 0;
 }

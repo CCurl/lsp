@@ -47,8 +47,8 @@ main:
         mov ebx, [Number2]
         add ebx, ecx
         mov [Sum], ebx
-        cinvoke printf, "%d + %d = %d%c",[Number1],[Number2],[Sum],10
-        cinvoke printf, "Done."
+        cinvoke printf, "%d + %d = %d%c", [Number1],[Number2],[Sum],10
+        cinvoke printf, "%s", xxx
         ; cinvoke printf, "Press any key to close console..."
         ; invoke getch
         ret
@@ -61,6 +61,7 @@ Number2 dd 0
 Sum     dd 0
 x		dd 0
 num		dd 0
+xxx		db "hi there", 0
 
 ;====================================
 section '.idata' import data readable

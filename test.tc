@@ -19,8 +19,12 @@ int T1() {
 void main() {
 	int m1;
 	m1 = 's';
-	m1 = 500*1000*1000;
+	m1 = 1000*1000*1000;
+	pv = "start ... "; puts();
 	while (m1) { m1--; }
+	pv = "end."; puts();
+	pv = 10; putc();
+	pv = 123; putd();
 	int m2;
 	m2 += m1;
 	return;
