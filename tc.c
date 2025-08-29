@@ -177,6 +177,7 @@ void tokenShouldBe(int exp) {
 void expectToken(int exp) { tokenShouldBe(exp); next_token(); }
 void expectNext(int exp) { next_token(); expectToken(exp); }
 void nextShouldBe(int exp) { next_token(); tokenShouldBe(exp); }
+void tokenShouldNotBe(int x) { if (tok == x) { syntax_error(); } }
 
 /*---------------------------------------------------------------------------*/
 /* Symbols - 'I' = INT, 'C' = Char, 'P' = Parameter, 'L' = Local, 'S' = String */
@@ -460,7 +461,13 @@ void idStmt() {
 }
 
 void funcStmt() {
-    expectNext(TOK_RPAR);
+    next_token();
+    while (tok != TOK_RPAR) {
+        expr();
+        G("\n\tPUSH\tEAX");
+        if (tok == TOK_COMMA) { next_token(); tokenShouldNotBe(TOK_RPAR); }
+    }
+    expectToken(TOK_RPAR);
     expectToken(TOK_SEMI);
     G("\n\tCALL\t%s", id_name);
 }
@@ -480,7 +487,7 @@ void statement() {
     else if (tok == RET_TOK)   { returnStmt(); }
     else if (tok == INT_TOK)   { intStmt(); }
     else if (tok == TOK_ID)    { idStmt(); }
-    else if (tok == TOK_FUNC)  { expectNext(TOK_RPAR); G("\n\tCALL\t%s", id_name); }
+    else if (tok == TOK_FUNC)  { funcStmt(); }
     else                       { expr(); expectToken(TOK_SEMI); }
 }
 

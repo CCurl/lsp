@@ -119,7 +119,56 @@ Mil:
 main:
 	; 	// putc(65);
 	; 	putCh('s');
--expected token [11], not[27]-
-; syntax error at(21, 11)
-;  putCh('s');
-          ^
+	MOV 	EAX, 115
+	PUSH	EAX
+	; 	x = 1000;
+	CALL	x
+	MOV 	EAX, 1000
+	MOV 	[x], EAX
+	; 	Mil(x, 1000);
+	MOV 	EAX, [x]
+	PUSH	EAX
+	MOV 	EAX, 1000
+	PUSH	EAX
+	; 	putNum(x);
+	CALL	putNum
+	MOV 	EAX, [x]
+	PUSH	EAX
+	; 	num = x;
+	CALL	num
+	MOV 	EAX, [x]
+	MOV 	[num], EAX
+	; 	while (x) { x--; }
+WHILE_01:
+	MOV 	EAX, [x]
+	TEST	EAX, EAX
+	JZ  	WEND_01
+	DEC 	[x]
+	; 	putCh('e');
+	JMP 	WHILE_01
+WEND_01:
+	MOV 	EAX, 101
+	PUSH	EAX
+	; }
+	CALL	putCh
+	; }
+	RET
+
+;================== data =====================
+section '.data' data readable writeable
+;=============================================
+
+; symbols: 1000 entries, 19 used
+; num type size name
+; --- ---- ---- -----------------
+pv        	dd 0
+num       	dd 0
+x         	dd 0
+c         	dd 0
+
+;====================================
+section '.idata' import data readable
+; ====================================
+library msvcrt, 'msvcrt.dll', kernel32, 'kernel32.dll'
+import msvcrt, printf,'printf', getch,'_getch'
+import kernel32, ExitProcess,'ExitProcess'
