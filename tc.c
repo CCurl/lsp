@@ -207,7 +207,8 @@ int genSymbol(char *name, char type) {
     x->type = type;
     x->sz = 4;
     strcpy(x->name, name);
-    if (type == 'P') { ebpOff -= 4; x->offset = ebpOff; }
+    if (type == 'P') { ebpOff += 4; x->offset = ebpOff; }
+    else if (type == 'L') { ebpOff += 4; x->offset = ebpOff; } // TODO: fix this
     return i;
 }
 
@@ -229,6 +230,15 @@ void forgetLocals() {
         --numSymbols;
         t = symbols[numSymbols-1].type;
     }
+}
+
+char *genVarName(char *nm) {
+    static char ret[32];
+    int s = findSymbol(nm, 'L');
+    if (0 <= s) { sprintf(ret, "EBP-%d", symbols[s].offset); return ret; }
+    s = findSymbol(nm, 'P');
+    if (0 <= s) { sprintf(ret, "EBP-%d", symbols[s].offset); return ret; }
+    return nm;
 }
 
 void dumpSymbols() {
@@ -320,7 +330,7 @@ char *regName(int regNum) { return regs[regNum]; }
 void parens() { expr(); tokenShouldBe(TOK_RPAR); }
 
 int term() {
-    if (tok == TOK_ID)   { G("\n\tMOV \t%s, [%s]", regName(tgtReg), id_name); return 1; }
+    if (tok == TOK_ID)   { G("\n\tMOV \t%s, [%s]", regName(tgtReg), genVarName(id_name)); return 1; }
     if (tok == TOK_NUM)  { G("\n\tMOV \t%s, %d",   regName(tgtReg), int_val); return 1; }
     if (tok == TOK_STR)  { G("\n\tLEA \t%s, [%s]", regName(tgtReg), genStringSymbol(id_name)); return 1; }
     if (tok == TOK_LPAR) { next_token();  parens();  return 1; }
@@ -422,9 +432,17 @@ void returnStmt() {
 }
 
 void intStmt() {
+    char nm[32];
     nextShouldBe(TOK_ID);
     genSymbol(id_name, 'L');
-    expectNext(TOK_SEMI);
+    strcpy(nm, id_name);
+    next_token();
+    if (tok == TOK_SET) {
+        next_token();
+        expr();
+        G("\n\tMOV \t[%s], EAX", genVarName(nm));
+    }
+    expectToken(TOK_SEMI);
 }
 
 void idStmt() {
@@ -433,10 +451,10 @@ void idStmt() {
     if (si < 0) { syntax_error(); }
     next_token();
     SYM_T *s = &symbols[si];
-    if (tok == TOK_SET) { next_token(); expr(); G("\n\tMOV \t[%s], EAX", s->name); }
-    else if (tok == TOK_PLEQ) { next_token(); expr(); G("\n\tADD \t[%s], EAX", s->name); }
-    else if (tok == TOK_DEC)  { next_token(); G("\n\tDEC \t[%s]", s->name); }
-    else if (tok == TOK_INC)  { next_token(); G("\n\tINC \t[%s]", s->name); }
+    if (tok == TOK_SET) { next_token(); expr(); G("\n\tMOV \t[%s], EAX", genVarName(s->name)); }
+    else if (tok == TOK_PLEQ) { next_token(); expr(); G("\n\tADD \t[%s], EAX", genVarName(s->name)); }
+    else if (tok == TOK_DEC)  { next_token(); G("\n\tDEC \t[%s]", genVarName(s->name)); }
+    else if (tok == TOK_INC)  { next_token(); G("\n\tINC \t[%s]", genVarName(s->name)); }
     else { syntax_error(); }
     expectToken(TOK_SEMI);
 }

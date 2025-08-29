@@ -86,14 +86,14 @@ CR:
 	RET
 ;---------------------------------------------
 putCh:
-	MOV 	EAX, [chr]
+	MOV 	EAX, [EBP-4]
 	MOV 	[pv], EAX
 	CALL	putc
 	; void putNum(int n) { pv=n; putd(); }
 	RET
 ;---------------------------------------------
 putNum:
-	MOV 	EAX, [n]
+	MOV 	EAX, [EBP-4]
 	MOV 	[pv], EAX
 	CALL	putd
 	; 
@@ -102,7 +102,24 @@ putNum:
 ;---------------------------------------------
 Mil:
 	; 	int c = 1000;
--expected token [36], not[26]-
-; syntax error at(15, 9)
-;  int c = 1000;
-        ^
+	MOV 	EAX, 1000
+	MOV 	[EBP-8], EAX
+	; 	x = m * (c * c);
+	MOV 	EAX, [EBP-4]
+	MOV 	EBX, [EBP-8]
+	MOV 	ECX, [EBP-8]
+	IMUL	EBX, ECX
+	IMUL	EAX, EBX
+	MOV 	[x], EAX
+	; }
+	; 
+	; void main() {
+	RET
+;---------------------------------------------
+main:
+	; 	// putc(65);
+	; 	putCh('s');
+-expected token [11], not[27]-
+; syntax error at(21, 11)
+;  putCh('s');
+          ^
