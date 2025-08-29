@@ -1,31 +1,23 @@
-int zz;
+int num;
+int x;
 
-int T1() {
-	int x;
-	int y;
-	x = 1-(y*(10/x)-4);
-	y = x/23;
-	if ((y+1) < (x*2)) { y = y+1; }
-	int z; z = 1;
-	if (y == 5) { y = y*3; }
-	z = z+1;
-	if (y > 5) { y = y-1; }
-	z = x&y;
-	z = x|y;
-	z = x^y;
-	return x+y;
+int T1() { }
+int T2() { ; }
+int T3() { if (1) {} }
+int T4() { if (x == (num-1)) { x = num+1; } }
+
+int Mil(int m, int c) {
+	x = x * (1000 * 1000);
 }
 
 void main() {
-	int m1;
-	m1 = 's';
-	m1 = 1000*1000*1000;
-	pv = "start ... "; puts();
-	while (m1) { m1--; }
-	pv = "end."; puts();
-	pv = 10; putc();
-	pv = 123; putd();
-	int m2;
-	m2 += m1;
-	return;
+	// putc(65);
+	int c = 's';
+	pv = c; putc();
+	x = 1000;
+	Mil(x+1, c-1);
+	num = x;
+	while (x) { x--; }
+	c = 'e';
+	pv = c; putc();
 }

@@ -26,6 +26,11 @@ putd:
 
 ;=============================================
 	; int zz;
+	; int yy[10];
+	; 
+	; //int T0(a,b,c) {
+	; //	return a+b+c;
+	; //}
 	; 
 	; int T1() {
 ;---------------------------------------------
@@ -139,6 +144,19 @@ ENDIF_03:
 	; }
 	RET
 	; 
+	; void Mil() {
+	RET
+;---------------------------------------------
+Mil:
+	; 	zz = zz * 1000 * 1000;
+	MOV 	EAX, [zz]
+	MOV 	EBX, 1000
+	IMUL	EAX, EBX
+	MOV 	EBX, 1000
+	IMUL	EAX, EBX
+	MOV 	[zz], EAX
+	; }
+	; 
 	; void main() {
 	RET
 ;---------------------------------------------
@@ -147,18 +165,26 @@ main:
 	; 	m1 = 's';
 	MOV 	EAX, 115
 	MOV 	[m1], EAX
-	; 	m1 = 1000*1000*1000;
+	; 	zz = 1000; Mil();
 	MOV 	EAX, 1000
-	MOV 	EBX, 1000
-	IMUL	EAX, EBX
-	MOV 	EBX, 1000
-	IMUL	EAX, EBX
+	MOV 	[zz], EAX
+	PUSH	EBP
+	MOV 	EBP, ESP
+	; 	m1 = zz;
+	CALL	Mil
+	MOV 	ESP, EBP
+	POP 	EBP
+	MOV 	EAX, [zz]
 	MOV 	[m1], EAX
 	; 	pv = "start ... "; puts();
 	LEA 	EAX, [_s001_]
 	MOV 	[pv], EAX
-	CALL	puts
+	PUSH	EBP
+	MOV 	EBP, ESP
 	; 	while (m1) { m1--; }
+	CALL	puts
+	MOV 	ESP, EBP
+	POP 	EBP
 WHILE_01:
 	MOV 	EAX, [m1]
 	TEST	EAX, EAX
@@ -169,16 +195,28 @@ WHILE_01:
 WEND_01:
 	LEA 	EAX, [_s002_]
 	MOV 	[pv], EAX
-	CALL	puts
+	PUSH	EBP
+	MOV 	EBP, ESP
 	; 	pv = 10; putc();
+	CALL	puts
+	MOV 	ESP, EBP
+	POP 	EBP
 	MOV 	EAX, 10
 	MOV 	[pv], EAX
-	CALL	putc
+	PUSH	EBP
+	MOV 	EBP, ESP
 	; 	pv = 123; putd();
+	CALL	putc
+	MOV 	ESP, EBP
+	POP 	EBP
 	MOV 	EAX, 123
 	MOV 	[pv], EAX
-	CALL	putd
+	PUSH	EBP
+	MOV 	EBP, ESP
 	; 	int m2;
+	CALL	putd
+	MOV 	ESP, EBP
+	POP 	EBP
 	; 	m2 += m1;
 	MOV 	EAX, [m1]
 	ADD 	[m2], EAX
@@ -192,11 +230,12 @@ WEND_01:
 section '.data' data readable writeable
 ;=============================================
 
-; symbols: 1000 entries, 15 used
+; symbols: 1000 entries, 10 used
 ; num type size name
 ; --- ---- ---- -----------------
-pv        	dd 0
-zz        	dd 0
+pv        	dd 1 DUP(0)
+zz        	dd 1 DUP(0)
+yy        	dd 10 DUP(0)
 x         	dd 0
 y         	dd 0
 z         	dd 0

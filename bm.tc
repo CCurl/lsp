@@ -6,18 +6,22 @@ int T2() { ; }
 int T3() { if (1) {} }
 int T4() { if (x == (num-1)) { x = num+1; } }
 
-int Mil() {
-	x = x * (1000 * 1000);
+void SPC() { pv = ' '; putc(); }
+void CR() { pv = 10; putc(); }
+void putCh(int chr) { pv=chr; putc(); }
+void putNum(int n) { pv=n; putd(); }
+
+int Mil(int m, int c) {
+	x = m * (c * c);
 }
 
 void main() {
 	// putc(65);
-	int c;
-	c = 's';
+	putCh('s');
 	x = 1000;
-	Mil();
+	Mil(x, 1000);
+	putNum(x);
 	num = x;
 	while (x) { x--; }
-	c = 'e';
-	// putc(66);
+	putCh('e');
 }
