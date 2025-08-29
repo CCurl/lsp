@@ -461,15 +461,21 @@ void idStmt() {
 }
 
 void funcStmt() {
+    char nm[32];
+    strcpy(nm, id_name);
     next_token();
+    G("\n\tPUSH\tEBP");
+    G("\n\tMOV \tEBP, ESP");
     while (tok != TOK_RPAR) {
         expr();
         G("\n\tPUSH\tEAX");
         if (tok == TOK_COMMA) { next_token(); tokenShouldNotBe(TOK_RPAR); }
     }
+    G("\n\tCALL\t%s", nm);
     expectToken(TOK_RPAR);
     expectToken(TOK_SEMI);
-    G("\n\tCALL\t%s", id_name);
+    G("\n\tMOV \tESP, EBP");
+    G("\n\tPOP \tEBP");
 }
 
 void statements() {

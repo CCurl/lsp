@@ -74,28 +74,44 @@ ENDIF_02:
 SPC:
 	MOV 	EAX, 32
 	MOV 	[pv], EAX
+	PUSH	EBP
+	MOV 	EBP, ESP
 	CALL	putc
+	MOV 	ESP, EBP
+	POP 	EBP
 	; void CR() { pv = 10; putc(); }
 	RET
 ;---------------------------------------------
 CR:
 	MOV 	EAX, 10
 	MOV 	[pv], EAX
+	PUSH	EBP
+	MOV 	EBP, ESP
 	CALL	putc
+	MOV 	ESP, EBP
+	POP 	EBP
 	; void putCh(int chr) { pv=chr; putc(); }
 	RET
 ;---------------------------------------------
 putCh:
 	MOV 	EAX, [EBP-4]
 	MOV 	[pv], EAX
+	PUSH	EBP
+	MOV 	EBP, ESP
 	CALL	putc
+	MOV 	ESP, EBP
+	POP 	EBP
 	; void putNum(int n) { pv=n; putd(); }
 	RET
 ;---------------------------------------------
 putNum:
 	MOV 	EAX, [EBP-4]
 	MOV 	[pv], EAX
+	PUSH	EBP
+	MOV 	EBP, ESP
 	CALL	putd
+	MOV 	ESP, EBP
+	POP 	EBP
 	; 
 	; int Mil(int m) {
 	RET
@@ -119,23 +135,35 @@ Mil:
 main:
 	; 	// putc(65);
 	; 	putCh('s');
+	PUSH	EBP
+	MOV 	EBP, ESP
 	MOV 	EAX, 115
 	PUSH	EAX
+	CALL	putCh
 	; 	x = 1000;
-	CALL	x
+	MOV 	ESP, EBP
+	POP 	EBP
 	MOV 	EAX, 1000
 	MOV 	[x], EAX
 	; 	Mil(x, 1000);
+	PUSH	EBP
+	MOV 	EBP, ESP
 	MOV 	EAX, [x]
 	PUSH	EAX
 	MOV 	EAX, 1000
 	PUSH	EAX
+	CALL	Mil
 	; 	putNum(x);
-	CALL	putNum
+	MOV 	ESP, EBP
+	POP 	EBP
+	PUSH	EBP
+	MOV 	EBP, ESP
 	MOV 	EAX, [x]
 	PUSH	EAX
+	CALL	putNum
 	; 	num = x;
-	CALL	num
+	MOV 	ESP, EBP
+	POP 	EBP
 	MOV 	EAX, [x]
 	MOV 	[num], EAX
 	; 	while (x) { x--; }
@@ -147,10 +175,14 @@ WHILE_01:
 	; 	putCh('e');
 	JMP 	WHILE_01
 WEND_01:
+	PUSH	EBP
+	MOV 	EBP, ESP
 	MOV 	EAX, 101
 	PUSH	EAX
-	; }
 	CALL	putCh
+	; }
+	MOV 	ESP, EBP
+	POP 	EBP
 	; }
 	RET
 
