@@ -1,23 +1,26 @@
 int num;
 int x;
 
-int T1() { }
-int T2() { ; }
-int T3() { if (1) {} }
+int pN(int c) { pv = c; putd(); }
+int pC(int c) { pv = c; putc(); }
+int pS(int c) { pv = c; puts(); }
 int T4() { if (x == (num-1)) { x = num+1; } }
 
 int Mil(int m, int c) {
-	x = x * (1000 * 1000);
+	int x = m * (c * c);
+	return x;
 }
 
 void main() {
 	// putc(65);
 	int c = 's';
-	pv = c; putc();
-	x = 1000;
-	Mil(x+1, c-1);
+	pC(c);
+	x = 999;
+	Mil(1000, 500);
+	pN(x);
 	num = x;
 	while (x) { x--; }
 	c = 'e';
-	pv = c; putc();
+	pC(c);
+	pS(" - all done!");
 }

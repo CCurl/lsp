@@ -48,9 +48,9 @@ void expr();
 int term();
 
 void msg(int fatal, char *s) {
-    printf("\n; %s at(%d, %d)", s, cur_lnum, cur_off);
-    printf("\n; %s", cur_line);
-    for (int i = 1; i < cur_off; i++) { printf(" "); } printf("^");
+    printf("\n%s at(%d, %d)", s, cur_lnum, cur_off);
+    printf("\n%s", cur_line);
+    for (int i = 2; i < cur_off; i++) { printf(" "); } printf("^");
     if (fatal) { fprintf(stderr, "\n%s (see output for details)\n", s); exit(1); }
 }
 void syntax_error() { msg(1, "syntax error"); }
@@ -182,7 +182,7 @@ void tokenShouldNotBe(int x) { if (tok == x) { syntax_error(); } }
 /*---------------------------------------------------------------------------*/
 /* Symbols - 'I' = INT, 'C' = Char, 'P' = Parameter, 'L' = Local, 'S' = String */
 SYM_T symbols[SYMBOLS_SZ];
-int numSymbols = 0, ebpOff;
+int numSymbols = 0, localOff, paramOff;
 
 char *symName(int sym) { return symbols[sym].name; }
 
@@ -208,8 +208,8 @@ int genSymbol(char *name, char type) {
     x->type = type;
     x->sz = 4;
     strcpy(x->name, name);
-    if (type == 'P') { ebpOff += 4; x->offset = ebpOff; }
-    else if (type == 'L') { ebpOff += 4; x->offset = ebpOff; } // TODO: fix this
+    if (type == 'L') { localOff += 4; x->offset = localOff; }
+    else if (type == 'P') { paramOff += 4; x->offset = paramOff; }
     return i;
 }
 
@@ -223,9 +223,9 @@ char *genStringSymbol(char *str) {
     return name;
 }
 
-void InitLocals() { ebpOff = 0; }
+void InitLocals() { localOff = 0; paramOff = 4; }
 void forgetLocals() {
-    ebpOff = 0;
+    localOff = 0;
     int t = symbols[numSymbols-1].type;
     while (t == 'P') {
         --numSymbols;
@@ -238,7 +238,7 @@ char *genVarName(char *nm) {
     int s = findSymbol(nm, 'L');
     if (0 <= s) { sprintf(ret, "EBP-%d", symbols[s].offset); return ret; }
     s = findSymbol(nm, 'P');
-    if (0 <= s) { sprintf(ret, "EBP-%d", symbols[s].offset); return ret; }
+    if (0 <= s) { sprintf(ret, "EBP+%d", symbols[s].offset); return ret; }
     return nm;
 }
 
@@ -250,7 +250,6 @@ void dumpSymbols() {
         SYM_T *x = &symbols[i];
         if (x->type == 'S') { printf("%-10s\tdb \"%s\",0\n", x->name, x->strVal); }
         else if (x->type == 'I') { printf("%-10s\tdd 0\n", x->name); }
-        else if (x->type == 'L') { printf("%-10s\tdd 0\n", x->name); } // TODO: remove this
     }
 }
 
@@ -265,7 +264,7 @@ void winLin(int seg) {
         s = genSymbol("putc", 'F');
         s = genSymbol("putd", 'F');
         s = genSymbol("pv", 'I');
-        P("\nformat PE console");
+        P("format PE console");
         P("\ninclude 'win32ax.inc'\n");
         P("\n; ======================================= ");
         P("\nsection '.code' code readable executable");
@@ -300,7 +299,7 @@ void winLin(int seg) {
         int s = genSymbol("exit", 'F');
         s = genSymbol("putc", 'F');
         s = genSymbol("_pc_buf", 'I');
-        P("\nformat ELF executable");
+        P("format ELF executable");
         P("\n;================== code =====================");
         P("\nsegment readable executable");
         P("\nentry main");
@@ -426,10 +425,9 @@ void returnStmt() {
     next_token();
     if (tok != TOK_SEMI) {
         expr();
-        // next_token();
     }
     expectToken(TOK_SEMI);
-    P("\n\tRET");
+    P("\n\tJMP .RET");
 }
 
 void intStmt() {
@@ -464,8 +462,6 @@ void funcStmt() {
     char nm[32];
     strcpy(nm, id_name);
     next_token();
-    G("\n\tPUSH\tEBP");
-    G("\n\tMOV \tEBP, ESP");
     while (tok != TOK_RPAR) {
         expr();
         G("\n\tPUSH\tEAX");
@@ -474,8 +470,6 @@ void funcStmt() {
     G("\n\tCALL\t%s", nm);
     expectToken(TOK_RPAR);
     expectToken(TOK_SEMI);
-    G("\n\tMOV \tESP, EBP");
-    G("\n\tPOP \tEBP");
 }
 
 void statements() {
@@ -507,6 +501,7 @@ void defSize() {
 int funcDef() {
     P("\n;---------------------------------------------");
     G("\n%s:", id_name);
+    G("\n\tPUSH\tEBP\n\tMOV \tEBP, ESP\n\tSUB \tESP, 32");
     int s = genSymbol(id_name, 'F');
     InitLocals();
     next_token();
@@ -519,7 +514,10 @@ int funcDef() {
     expectToken(TOK_RPAR);
     expectToken(TOK_LBRA);
     statements();
-    P("\n\tRET");
+    G("\n.RET:");
+    G("\n\tMOV \tESP, EBP");
+    G("\n\tPOP \tEBP");
+    G("\n\tRET");
     forgetLocals();
     return 0;
 }
