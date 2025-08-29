@@ -11,7 +11,8 @@ void CR() { pv = 10; putc(); }
 void putCh(int chr) { pv=chr; putc(); }
 void putNum(int n) { pv=n; putd(); }
 
-int Mil(int m, int c) {
+int Mil(int m) {
+	int c = 1000;
 	x = m * (c * c);
 }
 

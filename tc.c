@@ -16,7 +16,7 @@
 
 typedef unsigned char byte;
 
-typedef struct { char type, name[32]; int sz; char *val; } SYM_T;
+typedef struct { char type, name[32]; int sz; int offset; char* strVal; } SYM_T;
 extern SYM_T symbols[SYMBOLS_SZ];
 
 // Tokens - NOTE: the first 8 must match the words list in tc.c
@@ -179,9 +179,9 @@ void expectNext(int exp) { next_token(); expectToken(exp); }
 void nextShouldBe(int exp) { next_token(); tokenShouldBe(exp); }
 
 /*---------------------------------------------------------------------------*/
-/* Symbols */
+/* Symbols - 'I' = INT, 'C' = Char, 'P' = Parameter, 'L' = Local, 'S' = String */
 SYM_T symbols[SYMBOLS_SZ];
-int numSymbols = 0;
+int numSymbols = 0, ebpOff;
 
 char *symName(int sym) { return symbols[sym].name; }
 
@@ -203,10 +203,11 @@ int genSymbol(char *name, char type) {
     if (0 <= i) { return i; }
     i = numSymbols++;
     SYM_T *x = &symbols[i];
-    x->val = 0;
+    x->strVal = NULL;
     x->type = type;
     x->sz = 4;
     strcpy(x->name, name);
+    if (type == 'P') { ebpOff -= 4; x->offset = ebpOff; }
     return i;
 }
 
@@ -215,9 +216,19 @@ char *genStringSymbol(char *str) {
     static int strNum = 0;
     sprintf(name, "_s%03d_", ++strNum);
     SYM_T *s = &symbols[genSymbol(name, 'S')];
-    s->val = hAlloc(strlen(str)+1);
-    strcpy((char *)s->val, str);
+    s->strVal = hAlloc(strlen(str)+1);
+    strcpy(s->strVal, str);
     return name;
+}
+
+void InitLocals() { ebpOff = 0; }
+void forgetLocals() {
+    ebpOff = 0;
+    int t = symbols[numSymbols-1].type;
+    while (t == 'P') {
+        --numSymbols;
+        t = symbols[numSymbols-1].type;
+    }
 }
 
 void dumpSymbols() {
@@ -226,9 +237,9 @@ void dumpSymbols() {
     printf("; --- ---- ---- -----------------\n");
     for (int i = 0; i < numSymbols; i++) {
         SYM_T *x = &symbols[i];
-        if (x->type == 'S') { printf("%-10s\tdb \"%s\",0\n", x->name, x->val); }
+        if (x->type == 'S') { printf("%-10s\tdb \"%s\",0\n", x->name, x->strVal); }
         else if (x->type == 'I') { printf("%-10s\tdd 0\n", x->name); }
-        else if (x->type == 'L') { printf("%-10s\tdd 0\n", x->name); }
+        else if (x->type == 'L') { printf("%-10s\tdd 0\n", x->name); } // TODO: remove this
     }
 }
 
@@ -466,10 +477,19 @@ int funcDef() {
     P("\n;---------------------------------------------");
     G("\n%s:", id_name);
     int s = genSymbol(id_name, 'F');
-    expectNext(TOK_RPAR);
+    InitLocals();
+    next_token();
+    while (tok == INT_TOK) {
+        nextShouldBe(TOK_ID);
+        genSymbol(id_name, 'P');
+        next_token();
+        if (tok == TOK_COMMA) { next_token(); }
+    }
+    expectToken(TOK_RPAR);
     expectToken(TOK_LBRA);
     statements();
     P("\n\tRET");
+    forgetLocals();
     return 0;
 }
 
