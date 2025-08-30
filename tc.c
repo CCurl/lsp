@@ -297,7 +297,7 @@ void winLin(int seg) {
     // Linux (32-bit)
     if (seg == 'C') {
         int s = genSymbol("exit", 'F');
-        s = genSymbol("putc", 'F');
+        s = genSymbol("pv", 'I');
         s = genSymbol("_pc_buf", 'I');
         P("format ELF executable");
         P("\n;================== code =====================");
@@ -305,6 +305,8 @@ void winLin(int seg) {
         P("\nentry main");
         P("\n;================== library ==================");
         P("\nexit:\n\tMOV EAX, 1\n\tXOR EBX, EBX\n\tINT 0x80\n");
+        P("\nputs:\n\tMOV [_pc_buf], EAX\n\tRET");
+        P("\nputd:\n\tMOV [_pc_buf], EAX\n\tRET");
         P("\nputc:\n\tMOV [_pc_buf], EAX");
         P("\n\tMOV EAX, 4");
         P("\n\tMOV EBX, 0");
@@ -446,8 +448,10 @@ void intStmt() {
 
 void idStmt() {
     int si = findSymbol(id_name, 'L');
+    if (si < 0) { si = findSymbol(id_name, 'P'); }
     if (si < 0) { si = findSymbol(id_name, 'I'); }
-    if (si < 0) { syntax_error(); }
+    if (si < 0) { si = findSymbol(id_name, 'C'); }
+    if (si < 0) { msg(1, "variable not defined!"); }
     next_token();
     SYM_T *s = &symbols[si];
     if (tok == TOK_SET) { next_token(); expr(); G("\n\tMOV \t[%s], EAX", genVarName(s->name)); }
@@ -491,7 +495,7 @@ void statement() {
     else                       { expr(); expectToken(TOK_SEMI); }
 }
 
-void defSize() {
+void defSize(int type, int s) {
     if (tok == TOK_SEMI) { return; }
     expectToken(TOK_LARR);
     expectToken(TOK_NUM);
