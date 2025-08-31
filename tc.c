@@ -16,9 +16,6 @@
 
 typedef unsigned char byte;
 
-typedef struct { char type, name[32]; int sz; int offset; char* strVal; } SYM_T;
-extern SYM_T symbols[SYMBOLS_SZ];
-
 // Tokens - NOTE: the first 8 must match the words list in tc.c
 enum {
     NO_TOK, ELSE_TOK, IF_TOK, WHILE_TOK, VOID_TOK, INT_TOK, CHAR_TOK, RET_TOK
@@ -180,8 +177,10 @@ void expectNext(int exp) { next_token(); expectToken(exp); }
 void nextShouldBe(int exp) { next_token(); tokenShouldBe(exp); }
 void tokenShouldNotBe(int x) { if (tok == x) { syntax_error(); } }
 
-/*---------------------------------------------------------------------------*/
-/* Symbols - 'I' = INT, 'C' = Char, 'P' = Parameter, 'L' = Local, 'S' = String */
+//---------------------------------------------------------------------------
+// Symbols - 'I' = INT, 'C' = Char, 'P' = Parameter, 'L' = Local, 'S' = String, 'T' = Target
+typedef struct { char type, active, name[32]; int sz; int offset; char *strVal; } SYM_T;
+
 SYM_T symbols[SYMBOLS_SZ];
 int numSymbols = 0, localOff, paramOff;
 
@@ -191,7 +190,7 @@ int findSymbol(char *name, char type) {
     int i = numSymbols-1;
     while (0 <= i) {
         SYM_T *x = &symbols[i];
-        if (strcmp(x->name, name) == 0) {
+        if (x->active && (strcmp(x->name, name) == 0)) {
             if (type == 0) { return i; }
             if (x->type == type) { return i; }
             return -1; // msg(0, "name already defined with different type.", 1, 1);
@@ -202,13 +201,12 @@ int findSymbol(char *name, char type) {
 }
 
 int genSymbol(char *name, char type) {
-    int i = findSymbol(name, type);
-    if (0 <= i) { return i; }
-    i = numSymbols++;
+    int i = numSymbols++;
     SYM_T *x = &symbols[i];
-    x->strVal = NULL;
     x->type = type;
+    x->active = 1;
     x->sz = 4;
+    x->strVal = NULL;
     strcpy(x->name, name);
     if (type == 'L') { localOff += 4; x->offset = localOff; }
     else if (type == 'P') { paramOff += 4; x->offset = paramOff; }
@@ -225,10 +223,17 @@ char *genStringSymbol(char *str) {
     return name;
 }
 
+int genTargetSymbol() {
+    static char name[32];
+    static int seq = 0;
+    sprintf(name, "_t%d", ++seq);
+    return genSymbol(name, 'T');
+}
+
 int genStrSymbol(char *str) {
     static char name[32];
-    static int strNum = 0;
-    sprintf(name, "_s%03d_", ++strNum);
+    static int seq = 0;
+    sprintf(name, "_s%d", ++seq);
     int sym = genSymbol(name, 'S');
     SYM_T *s = &symbols[sym];
     s->strVal = hAlloc(strlen(str)+1);
@@ -236,13 +241,17 @@ int genStrSymbol(char *str) {
     return sym;
 }
 
-void InitLocals() { localOff = 0; paramOff = 4; }
-void forgetLocals() {
+void InitLocals() {
     localOff = 0;
-    int t = symbols[numSymbols-1].type;
-    while (t == 'P') {
-        --numSymbols;
-        t = symbols[numSymbols-1].type;
+    paramOff = 4;
+}
+
+void forgetLocals() {
+    InitLocals();
+    int i = 0;
+    while (i < numSymbols) {
+        SYM_T *s = &symbols[i++];
+        if ((s->type == 'L') || (s->type == 'P')) { s->active = 0; }
     }
 }
 
@@ -263,6 +272,7 @@ void dumpSymbols() {
         SYM_T *x = &symbols[i];
         if (x->type == 'S') { printf("%-10s\tdb \"%s\",0\n", x->name, x->strVal); }
         else if (x->type == 'I') { printf("%-10s\tdd 0\n", x->name); }
+        else { printf("; %d: %-10s type=%c off=%d\n", i, x->name, x->type, x->offset); }
     }
 }
 
@@ -271,7 +281,8 @@ void dumpSymbols() {
 enum { NOP, LOADVAR, LOADIMM, LOADSTR, STORE
     , ADD, SUB, TIMES, DIVIDE
     , AND, OR, XOR
-    , JMP, JMPZ, JMPNZ, CALL, PARAM, RETURN
+    , JMP, JMPZ, JMPNZ, TARGET
+    , DEF, CALL, PARAM, RETURN
     , LT, GT, EQ, NEQ
     , PLEQ, DECVAR, INCVAR
 };
@@ -279,20 +290,19 @@ enum { NOP, LOADVAR, LOADIMM, LOADSTR, STORE
 int opcodes[10000], here;
 int arg1[10000];
 int arg2[10000];
-int arg3[10000];
 
 void gInit() { here = 0; }
 void gen(int op) { ++here; opcodes[here] = op; }
 void setA1(int h, int v)   { arg1[h?h:here] = v; }
 void setA2(int h, int v)   { arg2[h?h:here] = v; }
-void setA3(int h, int v)   { arg3[h?h:here] = v; }
 void gen1(int op, int a1) { gen(op); setA1(here, a1); }
-void gen2(int op, int a1, int a2) { gen(op); setA1(here, a1); setA2(here, a2); }
+void gen2(int op, int a1, int a2) { gen1(op, a1); setA2(here, a2); }
 
 void dumpIRL() {
     int i = 1;
     while (i <= here) {
-        printf("\n%3d: %d %d %d %d - ", i, opcodes[i], arg1[i], arg2[i], arg3[i] );
+        printf("\n%3d: %-3d %-3d %-5d - ", i, opcodes[i], arg1[i], arg2[i] );
+        // printf("\n%3d: %d %d %d %d - ", i, opcodes[i], arg1[i], arg2[i], arg3[i] );
         if (opcodes[i] == LOADVAR) { printf("LOADVAR %s, [%s]", regName(arg1[i]), genVarName(symName(arg2[i]))); }
         if (opcodes[i] == LOADIMM) { printf("LOADIMM %s, %d",   regName(arg1[i]), arg2[i]); }
         if (opcodes[i] == LOADSTR) { printf("LOADSTR %s, [%s]", regName(arg1[i]), genVarName(symName(arg2[i]))); }
@@ -308,9 +318,13 @@ void dumpIRL() {
         if (opcodes[i] == GT)      { printf("CMP_GT %s, %s",    regName(arg1[i]), regName(arg2[i])); }
         if (opcodes[i] == EQ)      { printf("CMP_EQ %s, %s",    regName(arg1[i]), regName(arg2[i])); }
         if (opcodes[i] == NEQ)     { printf("CMP_NEQ %s, %s",   regName(arg1[i]), regName(arg2[i])); }
+        if (opcodes[i] == DEF)     { printf("DEF %s",           symName(arg1[i])); }
         if (opcodes[i] == CALL)    { printf("CALL %s",          symName(arg1[i])); }
         if (opcodes[i] == PARAM)   { printf("PARAM EAX"); }
         if (opcodes[i] == RETURN)  { printf("RETURN"); }
+        if (opcodes[i] == TARGET)  { printf("TARGET %s",        symName(arg1[i])); }
+        if (opcodes[i] == JMP)     { printf("JMP %s",           symName(arg1[i])); }
+        if (opcodes[i] == JMPZ)    { printf("JMPZ %s",          symName(arg1[i])); }
         i++;
     }
 }
@@ -478,24 +492,27 @@ void ifStmt() {
     expectNext(TOK_LPAR);
     expr();
     expectToken(TOK_RPAR);
+    int tgt = genTargetSymbol();
+    gen1(JMPZ, tgt);
     G("\n\tTEST\tEAX, EAX");
     G("\n\tJZ  \tENDIF_%02d", iSeq);
     G("\nTHEN_%02d:", iSeq);
     statement();
+    gen1(TARGET, tgt);
     G("\nENDIF_%02d:", iSeq++);
 }
 
 void whileStmt() {
-    static int iSeq = 1;
-    G("\nWHILE_%02d:", iSeq);
+    int t1 = genTargetSymbol();
+    int t2 = genTargetSymbol();
+    gen1(TARGET, t1);
     expectNext(TOK_LPAR);
     expr();
     expectToken(TOK_RPAR);
-    G("\n\tTEST\tEAX, EAX");
-    G("\n\tJZ  \tWEND_%02d", iSeq);
+    gen1(JMPZ, t2);
     statement();
-    G("\n\tJMP \tWHILE_%02d", iSeq);
-    G("\nWEND_%02d:", iSeq++);
+    gen1(JMP, t1);
+    gen1(TARGET, t2);
 }
 
 void returnStmt() {
@@ -540,8 +557,8 @@ void idStmt() {
 }
 
 void funcStmt() {
-    char nm[32];
-    strcpy(nm, id_name);
+    int si = findSymbol(id_name, 'F');
+    if (si < 0) { si = genSymbol(id_name, 'F'); }
     next_token();
     while (tok != TOK_RPAR) {
         expr();
@@ -549,8 +566,8 @@ void funcStmt() {
         gen(PARAM);
         if (tok == TOK_COMMA) { next_token(); tokenShouldNotBe(TOK_RPAR); }
     }
-    G("\n\tCALL\t%s", nm);
-    gen1(CALL, genSymbol(nm,'F'));
+    G("\n\tCALL\t%s", symName(si));
+    gen1(CALL, si);
     expectToken(TOK_RPAR);
     expectToken(TOK_SEMI);
 }
@@ -586,6 +603,7 @@ int funcDef() {
     G("\n%s:", id_name);
     G("\n\tPUSH\tEBP\n\tMOV \tEBP, ESP\n\tSUB \tESP, 32");
     int s = genSymbol(id_name, 'F');
+    gen1(DEF, s);
     InitLocals();
     next_token();
     while (tok == INT_TOK) {
@@ -597,11 +615,12 @@ int funcDef() {
     expectToken(TOK_RPAR);
     expectToken(TOK_LBRA);
     statements();
+    gen(RETURN);
     G("\n.RET:");
     G("\n\tMOV \tESP, EBP");
     G("\n\tPOP \tEBP");
     G("\n\tRET");
-    // forgetLocals();
+    forgetLocals();
     return 0;
 }
 
