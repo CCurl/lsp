@@ -156,6 +156,40 @@ WHILE_01:
 	; 	c = 'e';
 	JMP 	WHILE_01
 WEND_01:
-syntax error at(23, 3)
- c = 'e';
- ^
+	MOV 	EAX, 101
+	MOV 	[EBP+12], EAX
+	; 	pC(c);
+	MOV 	EAX, [EBP+12]
+	PUSH	EAX
+	CALL	pC
+	; 	pS(" - all done!");
+	LEA 	EAX, [_s001_]
+	PUSH	EAX
+	CALL	pS
+	; 	exit();
+	CALL	exit
+	; }
+	; }
+.RET:
+	MOV 	ESP, EBP
+	POP 	EBP
+	RET
+
+;================== data =====================
+section '.data' data readable writeable
+;=============================================
+
+; symbols: 1000 entries, 18 used
+; num type size name
+; --- ---- ---- -----------------
+pv        	dd 0
+num       	dd 0
+x         	dd 0
+_s001_    	db " - all done!",0
+
+;====================================
+section '.idata' import data readable
+; ====================================
+library msvcrt, 'msvcrt.dll', kernel32, 'kernel32.dll'
+import msvcrt, printf,'printf', getch,'_getch'
+import kernel32, ExitProcess,'ExitProcess'
