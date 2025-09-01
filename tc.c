@@ -228,9 +228,9 @@ int addVar(char *name, char type) {
 }
 
 int genTargetSymbol() {
-    static char name[32];
+    static char name[8];
     static int seq = 0;
-    sprintf(name, "_t%d", ++seq);
+    sprintf(name, ".t%d", ++seq);
     return addVar(name, 'T');
 }
 
@@ -273,7 +273,7 @@ void dumpSymbols() {
     printf("\n\n; symbols: %d entries, %d used\n", 100, numVars);
     printf("; num type size name\n");
     printf("; --- ---- ---- -----------------\n");
-    for (int i = 0; i < numVars; i++) {
+    for (int i = 1; i <= numVars; i++) {
         SYM_T *x = &vars[i];
         if (x->type == 'I') { printf("%-10s\tdd 0\n", x->name); }
         if (x->type == 'C') { printf("%-10s\tdb %d DUP(0)\n", x->name, x->sz); }
@@ -342,8 +342,36 @@ void optimizeIRL() {
 }
 
 void genCode() {
-    // TODO!!!
-    dumpIRL();
+    int i = 1;
+    while (i <= here) {
+        int op = opcodes[i];
+        int a1 = arg1[i];
+        int a2 = arg2[i];
+        // printf("\n; %3d: %-3d %-3d %-5d\n\t", i, op, a1, a2);
+        if (op == LOADVAR) { printf("\n\tPUSH [%s]", genVarName(arg2[i])); }
+        if (op == LOADIMM) { printf("\n\tPUSH %d", a2); }
+        if (op == LOADSTR) { printf("\n\tLEA EAX, [%s]\n\tPUSH EAX", strings[i].name); }
+        if (op == STORE)   { printf("\n\tPOP DWORD [%s]", genVarName(a1)); }
+        if (op == PLEQ)    { printf("\n\tPOP EAX\n\tADD DWORD [%s], EAX", genVarName(a1)); }
+        if (op == DECVAR)  { printf("\n\tDEC DWORD [%s]", genVarName(a1)); }
+        if (op == INCVAR)  { printf("\n\tINC DWORD [%s]", genVarName(a1)); }
+        if (op == ADD)     { printf("\n\tPOP EAX\n\tADD [ESP], EAX"); }
+        if (op == SUB)     { printf("\n\tPOP EAX\n\tSUB [ESP], EAX"); }
+        if (op == MULT)    { printf("\n\tPOP EAX\n\tPOP EBX\n\tIMUL EAX, EBX\n\tPUSH EAX"); }
+        if (op == DIVIDE)  { printf("\n\tPOP EBX\n\tPOP EAX\n\tCDQ\n\tIDIV EBX\n\tPUSH EAX"); }
+        if (op == LT)      { printf("\n\tCMP_LT %s, %s", regName(a1), regName(a2)); }
+        if (op == GT)      { printf("\n\tCMP_GT %s, %s", regName(a1), regName(a2)); }
+        if (op == EQ)      { printf("\n\tCMP_EQ %s, %s", regName(a1), regName(a2)); }
+        if (op == NEQ)     { printf("\n\tCMP_NEQ %s, %s", regName(a1), regName(a2)); }
+        if (op == DEF)     { printf("\n%s:", functions[a1].name); }
+        if (op == CALL)    { printf("\n\tCALL %s", functions[a1].name); }
+        if (op == PARAM)   { printf("\n\t; PARAM"); }
+        if (op == RETURN)  { printf("\n\tRET"); }
+        if (op == TARGET)  { printf("\n%s:", vars[a1].name); }
+        if (op == JMP)     { printf("\n\tJMP %s", vars[a1].name); }
+        if (op == JMPZ)    { printf("\n\tJMPZ %s", vars[a1].name); }
+        i++;
+    }
 }
 
 //---------------------------------------------------------------------------
