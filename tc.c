@@ -66,7 +66,6 @@ void next_line() {
     int l = strlen(cur_line);
     if ((0 < l) && (cur_line[l-1] == 10)) { cur_line[l-1] = 0; }
     else { l++; }
-    printf("\n\t; %s", cur_line);
     cur_line[l-1] = 10;
     cur_line[l] = 0;
 }
@@ -279,7 +278,7 @@ void dumpSymbols() {
         if (x->type == 'I') { printf("%-10s\tdd 0\n", x->name); }
         if (x->type == 'C') { printf("%-10s\tdb %d DUP(0)\n", x->name, x->sz); }
     }
-    for (int i = 0; i < numStrings; i++) {
+    for (int i = 1; i <= numStrings; i++) {
         STR_T *x = &strings[i];
         printf("%-10s\tdb \"%s\", 0\n", x->name, x->val);
     }
@@ -288,7 +287,7 @@ void dumpSymbols() {
 //---------------------------------------------------------------------------
 // IRL
 enum { NOP, LOADVAR, LOADIMM, LOADSTR, STORE
-    , ADD, SUB, TIMES, DIVIDE
+    , ADD, SUB, MULT, DIVIDE
     , AND, OR, XOR
     , JMP, JMPZ, JMPNZ, TARGET
     , DEF, CALL, PARAM, RETURN
@@ -321,7 +320,7 @@ void dumpIRL() {
         if (opcodes[i] == INCVAR)  { printf("INCVAR [%s]",      genVarName(arg1[i])); }
         if (opcodes[i] == ADD)     { printf("ADD %s, %s",       regName(arg1[i]), regName(arg2[i])); }
         if (opcodes[i] == SUB)     { printf("SUB %s, %s",       regName(arg1[i]), regName(arg2[i])); }
-        if (opcodes[i] == TIMES)   { printf("TIMES %s, %s",     regName(arg1[i]), regName(arg2[i])); }
+        if (opcodes[i] == MULT)    { printf("MULT %s, %s",      regName(arg1[i]), regName(arg2[i])); }
         if (opcodes[i] == DIVIDE)  { printf("DIVIDE %s, %s",    regName(arg1[i]), regName(arg2[i])); }
         if (opcodes[i] == LT)      { printf("CMP_LT %s, %s",    regName(arg1[i]), regName(arg2[i])); }
         if (opcodes[i] == GT)      { printf("CMP_GT %s, %s",    regName(arg1[i]), regName(arg2[i])); }
@@ -390,7 +389,7 @@ void winLin(int seg) {
 #else
     // Linux (32-bit)
     if (seg == 'C') {
-        int s = addFunction("exit", 'F');
+        int s = addFunction("exit");
         s = addVar("pv", 'I');
         s = addVar("_pc_buf", 'I');
         P("format ELF executable");
@@ -455,13 +454,8 @@ int evalOp(int id) {
     return 0;
 }
 
-void doCmp(char *op) {
+void doCmp(int op) {
     opPrep();
-    G("\n\tCMP \t%s, %s", lReg, rReg);
-    G("\n\tMOV \t%s, 0", lReg);
-    G("\n\t%s \t@F", op);
-    G("\n\tDEC \t%s", lReg);
-    G("\n@@:");
 }
 
 void expr() {
@@ -469,22 +463,17 @@ void expr() {
     next_token();
     int op = evalOp(tok);
     while (op != 0) {
-        if (op == TOK_PLUS)       { opPrep(); G("\n\tADD \t%s, %s", lReg, rReg); gen2(ADD, tgtReg, tgtReg+1); }
-        else if (op == TOK_MINUS) { opPrep(); G("\n\tSUB \t%s, %s", lReg, rReg); gen2(SUB, tgtReg, tgtReg+1); }
-        else if (op == TOK_STAR)  { opPrep(); G("\n\tIMUL\t%s, %s", lReg, rReg); gen2(TIMES, tgtReg, tgtReg+1); }
-        else if (op == TOK_SLASH) { opPrep(); gen2(DIVIDE, tgtReg, tgtReg+1);
-            if (tgtReg != 0) { G("\n\tXCHG\tEAX, %s", lReg); }
-            if (tgtReg != 1) { G("\n\tXCHG\tECX, %s", rReg); }
-            G("\n\tCDQ\n\tIDIV\tECX");
-            if (tgtReg != 0) { G("\n\tXCHG\tEAX, %s", lReg); }
-        }
-        else if (op == TOK_AND) { opPrep(); G("\n\tAND \t%s, %s", lReg, rReg); gen2(AND, tgtReg, tgtReg+1); }
-        else if (op == TOK_OR)  { opPrep(); G("\n\tOR  \t%s, %s", lReg, rReg); gen2(OR, tgtReg, tgtReg+1); }
-        else if (op == TOK_XOR) { opPrep(); G("\n\tXOR \t%s, %s", lReg, rReg); gen2(XOR, tgtReg, tgtReg+1); }
-        else if (op == TOK_LT)  { doCmp("JGE");  gen2(LT, tgtReg, tgtReg+1); }
-        else if (op == TOK_GT)  { doCmp("JLE");  gen2(GT, tgtReg, tgtReg+1); }
-        else if (op == TOK_EQ)  { doCmp("JNE");  gen2(EQ, tgtReg, tgtReg+1); }
-        else if (op == TOK_NEQ) { doCmp("JE");   gen2(NEQ, tgtReg, tgtReg+1); }
+        if (op == TOK_PLUS)       { opPrep(); gen2(ADD,    tgtReg, tgtReg+1); }
+        else if (op == TOK_MINUS) { opPrep(); gen2(SUB,    tgtReg, tgtReg+1); }
+        else if (op == TOK_STAR)  { opPrep(); gen2(MULT,   tgtReg, tgtReg+1); }
+        else if (op == TOK_SLASH) { opPrep(); gen2(DIVIDE, tgtReg, tgtReg+1); }
+        else if (op == TOK_AND)   { opPrep(); gen2(AND,    tgtReg, tgtReg+1); }
+        else if (op == TOK_OR)    { opPrep(); gen2(OR,     tgtReg, tgtReg+1); }
+        else if (op == TOK_XOR)   { opPrep(); gen2(XOR,    tgtReg, tgtReg+1); }
+        else if (op == TOK_LT)    { opPrep(); gen2(LT,     tgtReg, tgtReg+1); }
+        else if (op == TOK_GT)    { opPrep(); gen2(GT,     tgtReg, tgtReg+1); }
+        else if (op == TOK_EQ)    { opPrep(); gen2(EQ,     tgtReg, tgtReg+1); }
+        else if (op == TOK_NEQ)   { opPrep(); gen2(NEQ,    tgtReg, tgtReg+1); }
         else { syntax_error(); }
         next_token();
         op = evalOp(tok);
@@ -493,18 +482,13 @@ void expr() {
 
 void ifStmt() {
     static int iSeq = 1;
-    G("\nIF_%02d:", iSeq);
     expectNext(TOK_LPAR);
     expr();
     expectToken(TOK_RPAR);
     int tgt = genTargetSymbol();
     gen1(JMPZ, tgt);
-    G("\n\tTEST\tEAX, EAX");
-    G("\n\tJZ  \tENDIF_%02d", iSeq);
-    G("\nTHEN_%02d:", iSeq);
     statement();
     gen1(TARGET, tgt);
-    G("\nENDIF_%02d:", iSeq++);
 }
 
 void whileStmt() {
@@ -527,7 +511,6 @@ void returnStmt() {
     }
     expectToken(TOK_SEMI);
     gen(RETURN);
-    P("\n\tJMP .RET");
 }
 
 void intStmt() {
@@ -549,9 +532,9 @@ void idStmt() {
     if (si < 0) { msg(1, "variable not defined!"); }
     next_token();
     if (tok == TOK_SET) { next_token(); expr(); gen1(STORE, si); }
-    else if (tok == TOK_PLEQ) { next_token(); expr(); G("\n\tADD \t[%s], EAX", genVarName(si)); gen1(PLEQ, si); }
-    else if (tok == TOK_DEC)  { next_token(); G("\n\tDEC \t[%s]", genVarName(si)); gen1(DECVAR, si); }
-    else if (tok == TOK_INC)  { next_token(); G("\n\tINC \t[%s]", genVarName(si)); gen1(INCVAR, si); }
+    else if (tok == TOK_PLEQ) { next_token(); expr(); genVarName(si); gen1(PLEQ, si); }
+    else if (tok == TOK_DEC)  { next_token(); gen1(DECVAR, si); }
+    else if (tok == TOK_INC)  { next_token(); gen1(INCVAR, si); }
     else { syntax_error(); }
     expectToken(TOK_SEMI);
 }
@@ -562,11 +545,9 @@ void funcStmt() {
     next_token();
     while (tok != TOK_RPAR) {
         expr();
-        G("\n\tPUSH\tEAX");
         gen(PARAM);
         if (tok == TOK_COMMA) { next_token(); tokenShouldNotBe(TOK_RPAR); }
     }
-    G("\n\tCALL\t%s", functions[si].name);
     gen1(CALL, si);
     expectToken(TOK_RPAR);
     expectToken(TOK_SEMI);
@@ -599,9 +580,6 @@ void defSize(int type, int s) {
 }
 
 int funcDef() {
-    P("\n;---------------------------------------------");
-    G("\n%s:", id_name);
-    G("\n\tPUSH\tEBP\n\tMOV \tEBP, ESP\n\tSUB \tESP, 32");
     int s = addFunction(id_name);
     gen1(DEF, s);
     InitLocals();
@@ -617,14 +595,11 @@ int funcDef() {
     expectToken(TOK_LBRA);
     statements();
     gen(RETURN);
-    G("\n.RET:");
-    G("\n\tMOV \tESP, EBP");
-    G("\n\tPOP \tEBP");
-    G("\n\tRET");
     optimizeIRL();
     genCode();
     here = 0;
     forgetLocals();
+    printf("\n");
     return 0;
 }
 
