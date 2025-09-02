@@ -18,21 +18,21 @@ F2: ; puts
 	MOV [I5], EAX
 	POP EAX
 	cinvoke printf, "%s", [I5]
-	CALL RETfromEBP
+	JMP RETfromEBP
 
 F3: ; emit
 	CALL RETtoEBP
 	MOV [I5], EAX
 	POP EAX
 	cinvoke printf, "%c", [I5]
-	CALL RETfromEBP
+	JMP RETfromEBP
 
 F4: ; .d
 	CALL RETtoEBP
 	MOV [I5], EAX
 	POP EAX
 	cinvoke printf, "%d", [I5]
-	CALL RETfromEBP
+	JMP RETfromEBP
 
 ;=============================================
 init:
@@ -58,9 +58,7 @@ EBPtoRET:
 	RET
 
 ; Perform a RET from the [EBP] stack
-; NB: EDX is destroyed
 RETfromEBP:
-	POP  EDX
 	PUSH DWORD [EBP]
 	SUB  EBP, 4
 	RET
@@ -95,7 +93,7 @@ F8: ; T4
 	MOV [EAX], ECX
 	POP EAX
 .t1:
-	CALL RETfromEBP
+	JMP RETfromEBP
 
 F12: ; Mil
 	CALL RETtoEBP
@@ -107,7 +105,7 @@ F12: ; Mil
 	MOV EAX,1000
 	POP EBX
 	IMUL EAX, EBX
-	CALL RETfromEBP
+	JMP RETfromEBP
 
 F13: ; main
 	CALL RETtoEBP
@@ -139,7 +137,7 @@ F13: ; main
 	PUSH EAX
 	LEA EAX, [S1]
 	CALL F2 ; puts (2)
-	CALL RETfromEBP
+	JMP RETfromEBP
 
 ;================== data =====================
 section '.data' data readable writeable

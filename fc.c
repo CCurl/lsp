@@ -235,9 +235,7 @@ void genStartupCode() {
     printf("\n\tPUSH EDX");
     printf("\n\tRET\n");
     printf("\n; Perform a RET from the [EBP] stack");
-    printf("\n; NB: EDX is destroyed");
     printf("\nRETfromEBP:");
-    printf("\n\tPOP  EDX");
     printf("\n\tPUSH DWORD [EBP]");
     printf("\n\tSUB  EBP, 4");
     printf("\n\tRET");
@@ -272,7 +270,7 @@ void genCode() {
         else if (op == DEF)     { printf("\n\n%s: ; %s\n\tCALL RETtoEBP", asmName(a1), varName(a1)); }
         else if (op == CALL)    { printf("\n\tCALL %s ; %s (%d)", asmName(a1), varName(a1), a1); }
         else if (op == PARAM)   { printf("\n\t; PARAM"); }
-        else if (op == RETURN)  { printf("\n\tCALL RETfromEBP"); }
+        else if (op == RETURN)  { printf("\n\tJMP RETfromEBP"); }
         else if (op == TARGET)  { printf("\n%s:", varName(a1)); }
         else if (op == JMP)     { printf("\n\tJMP %s", varName(a1)); }
         else if (op == JMPZ)    { printf("\n\tTEST EAX, EAX\n\tJZ %s", varName(a1)); }
@@ -308,17 +306,17 @@ void winLin(int seg) {
         G("\n%s: ; puts", asmName(findVar("puts", 'F')));
         G("\n\tCALL RETtoEBP\n\tMOV [%s], EAX\n\tPOP EAX", pv);
         G("\n\tcinvoke printf, \"%s\", [%s]", "%s", pv);
-        P("\n\tCALL RETfromEBP\n");
+        P("\n\tJMP RETfromEBP\n");
         
         G("\n%s: ; emit", asmName(findVar("emit", 'F')));
         G("\n\tCALL RETtoEBP\n\tMOV [%s], EAX\n\tPOP EAX", pv);
         G("\n\tcinvoke printf, \"%s\", [%s]", "%c", pv);
-        P("\n\tCALL RETfromEBP\n");
+        P("\n\tJMP RETfromEBP\n");
 
         G("\n%s: ; .d", asmName(findVar(".d", 'F')));
         G("\n\tCALL RETtoEBP\n\tMOV [%s], EAX\n\tPOP EAX", pv);
         G("\n\tcinvoke printf, \"%s\", [%s]", "%d", pv);
-        P("\n\tCALL RETfromEBP\n");
+        P("\n\tJMP RETfromEBP\n");
 
         P("\n;=============================================");
     }
