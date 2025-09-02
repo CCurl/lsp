@@ -217,7 +217,7 @@ void optimizeIRL() {
 }
 
 void genStartupCode() {
-    printf("\ninit:\n\tLEA EBP, [rstk]\n\tRET");
+    printf("\ninit:\n\tLEA EBP, [rstk]\n\tRET\n");
     printf("\n; Move the return addr to the [EBP] stack");
     printf("\n; NB: EDX is destroyed");
     printf("\nRETtoEBP:");
@@ -256,7 +256,7 @@ void genCode() {
         if (op == VARADDR) { printf("\n\tPUSH EAX\n\tLEA EAX, [%s] ; %s", asmName(a1), varName(a1)); }
         else if (op == LIT)     { printf("\n\tPUSH EAX\n\tMOV EAX,%d", a1); }
         else if (op == LOADSTR) { printf("\n\tPUSH EAX\n\tLEA EAX, [%s]", strings[a1].name); }
-        else if (op == STORE)   { printf("\n\tPOP ECX\n\tMOV [EAX], ECX"); }
+        else if (op == STORE)   { printf("\n\tPOP ECX\n\tMOV [EAX], ECX\n\tPOP EAX"); }
         else if (op == FETCH)   { printf("\n\tMOV EAX, [EAX]"); }
         else if (op == PLEQ)    { printf("\n\tPOP EAX\n\tADD [%s], EAX", asmName(a1)); }
         else if (op == DECTOS)  { printf("\n\tDEC EAX"); }
@@ -301,7 +301,7 @@ void winLin(int seg) {
         P("\nsection '.code' code readable executable");
         P("\n;=======================================*/");
         P("\nstart:\n\tCALL init");
-        G("\n\tJMP %s\n", asmName(findVar("main", 'F')));
+        G("\n\tCALL %s\n", asmName(findVar("main", 'F')));
         P("\n;================== library ==================");
         G("\n%s:\n\tPUSH 0\n\tCALL [ExitProcess]\n", asmName(findVar("bye", 'F')));
 

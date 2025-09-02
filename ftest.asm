@@ -6,7 +6,7 @@ section '.code' code readable executable
 ;=======================================*/
 start:
 	CALL init
-	JMP F13
+	CALL F13
 
 ;================== library ==================
 F1:
@@ -38,6 +38,7 @@ F4: ; .d
 init:
 	LEA EBP, [rstk]
 	RET
+
 ; Move the return addr to the [EBP] stack
 ; NB: EDX is destroyed
 RETtoEBP:
@@ -84,11 +85,15 @@ F8: ; T4
 	PUSH EAX
 	LEA EAX, [I6] ; num
 	MOV EAX, [EAX]
-	INC EAX
+	PUSH EAX
+	MOV EAX,4
+	POP EBX
+	ADD EAX, EBX
 	PUSH EAX
 	LEA EAX, [I7] ; x
 	POP ECX
 	MOV [EAX], ECX
+	POP EAX
 .t1:
 	CALL RETfromEBP
 
@@ -113,6 +118,7 @@ F13: ; main
 	LEA EAX, [I10] ; x
 	POP ECX
 	MOV [EAX], ECX
+	POP EAX
 	PUSH EAX
 	LEA EAX, [I10] ; x
 	MOV EAX, [EAX]
@@ -133,7 +139,6 @@ F13: ; main
 	PUSH EAX
 	LEA EAX, [S1]
 	CALL F2 ; puts (2)
-	CALL F1 ; bye (1)
 	CALL RETfromEBP
 
 ;================== data =====================
