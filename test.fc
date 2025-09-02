@@ -1,0 +1,19 @@
+var num
+var x
+
+: T4 x @ num @ 1- = if num @ 1+ x ! then ;
+
+var x
+var y
+// n -- n'
+: Mil 1000 * 1000 * ;
+
+: main
+	init
+	's' putc
+	500 Mil x !
+	x @ begin 1- while drop
+	'e' putc
+	" - all done!" puts
+	bye
+;
