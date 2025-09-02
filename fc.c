@@ -14,8 +14,6 @@
 #define G printf
 #define P(str) printf("%s",str)
 
-typedef unsigned char byte;
-
 //---------------------------------------------------------------------------
 // Tokens
 int ch = ' ', tok, is_num, digit, int_val;
@@ -203,40 +201,6 @@ void setA1(int h, int v)   { arg1[h?h:here] = v; }
 void setA2(int h, int v)   { arg2[h?h:here] = v; }
 void gen1(int op, int a1) { gen(op); setA1(here, a1); }
 void gen2(int op, int a1, int a2) { gen1(op, a1); setA2(here, a2); }
-
-void dumpIRL() {
-    // int i = 1;
-    // while (i <= here) {
-    //     int op = opcodes[i];
-    //     int a1 = arg1[i];
-    //     int a2 = arg2[i];
-    //     printf("\n; %3d: %-3d %-3d %-5d - ", i, opcodes[i], arg1[i], arg2[i] );
-    //     // printf("\n%3d: %d %d %d %d - ", i, opcodes[i], arg1[i], arg2[i], arg3[i] );
-    //     if (op == LOADVAR) { printf("LOADVAR %s, [%s]", regName(a1), genVarName(a2)); }
-    //     if (op == LOADIMM) { printf("LOADIMM %s, %d",   regName(a1), a2); }
-    //     if (op == LOADSTR) { printf("LOADSTR %s, [%s]", regName(a1), genVarName(a2)); }
-    //     if (op == STORE)   { printf("STORE [%s], EAX",  genVarName(a1)); }
-    //     if (op == PLEQ)    { printf("PLUSEQ [%s], EAX", genVarName(a1)); }
-    //     if (op == DECVAR)  { printf("DECVAR [%s]",      genVarName(a1)); }
-    //     if (op == INCVAR)  { printf("INCVAR [%s]",      genVarName(a1)); }
-    //     if (op == ADD)     { printf("ADD %s, %s",       regName(a1), regName(a2)); }
-    //     if (op == SUB)     { printf("SUB %s, %s",       regName(a1), regName(a2)); }
-    //     if (op == MULT)    { printf("MULT %s, %s",      regName(a1), regName(a2)); }
-    //     if (op == DIVIDE)  { printf("DIVIDE %s, %s",    regName(a1), regName(a2)); }
-    //     if (op == LT)      { printf("CMP_LT %s, %s",    regName(a1), regName(a2)); }
-    //     if (op == GT)      { printf("CMP_GT %s, %s",    regName(a1), regName(a2)); }
-    //     if (op == EQ)      { printf("CMP_EQ %s, %s",    regName(a1), regName(a2)); }
-    //     if (op == NEQ)     { printf("CMP_NEQ %s, %s",   regName(a1), regName(a2)); }
-    //     if (op == DEF)     { printf("DEF %s",           vars[a1].name); }
-    //     if (op == CALL)    { printf("CALL %s",          vars[a1].name); }
-    //     if (op == PARAM)   { printf("PARAM EAX"); }
-    //     if (op == RETURN)  { printf("RETURN"); }
-    //     if (op == TARGET)  { printf("TARGET %s",        vars[a1].name); }
-    //     if (op == JMP)     { printf("JMP %s",           vars[a1].name); }
-    //     if (op == JMPZ)    { printf("JMPZ %s",          vars[a1].name); }
-    //     i++;
-    // }
-}
 
 void optimizeIRL() {
     int i = 1;
@@ -525,7 +489,7 @@ int main(int argc, char *argv[]) {
     winLin('S');
     while (ch != EOF) { next_token(); parseDef(); }
     if (input_fp) { fclose(input_fp); }
-    //optimizeIRL();
+    optimizeIRL();
     winLin('C');
     genCode();
     winLin('D');

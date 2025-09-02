@@ -107,9 +107,6 @@ F12: ; Mil
 F13: ; main
 	CALL RETtoEBP
 	PUSH EAX
-	MOV EAX,115
-	CALL F3 ; emit (3)
-	PUSH EAX
 	MOV EAX,1000
 	CALL F12 ; Mil (12)
 	PUSH EAX
@@ -120,6 +117,9 @@ F13: ; main
 	LEA EAX, [I10] ; x
 	MOV EAX, [EAX]
 	CALL F4 ; .d (4)
+	PUSH EAX
+	MOV EAX,115
+	CALL F3 ; emit (3)
 	PUSH EAX
 	LEA EAX, [I10] ; x
 	MOV EAX, [EAX]

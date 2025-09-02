@@ -9,9 +9,9 @@ var y
 : Mil 1000 * 1000 * ;
 
 : main
-	's' emit
 	1000 Mil x !
 	x @ .d
+	's' emit
 	x @ begin 1- while drop
 	'e' emit
 	" - all done!" puts
