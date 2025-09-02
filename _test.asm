@@ -30,122 +30,106 @@ putc:
 	RET
 
 ;=============================================
-T4:
-	XCHG ESP, EDI
-	XCHG ESP, EDI
-	CALL x
-	XCHG ESP, EDI
-	XCHG ESP, EDI
-	CALL 
-	XCHG ESP, EDI
-	XCHG ESP, EDI
-	CALL num
-	XCHG ESP, EDI
-	XCHG ESP, EDI
-	CALL 
-	XCHG ESP, EDI
+; -x/0/0-
+; -@/0/0-
+; -num/0/0-
+; -@/0/0-
+; -1-/0/1-
+; -=/0/0-
+; -if/0/0-
+; -num/0/0-
+; -@/0/0-
+; -1+/0/1-
+; -x/0/0-
+; -!/0/0-
+; -then/0/0-
+; -;/0/0-
+; -///0/0-
+; -n/0/0-
+; ---/0/0-
+; -n'/0/0-
+; -1000/1/1000-
+; -*/0/0-
+; -1000/1/1000-
+; -*/0/0-
+; -;/0/0-
+; -init/0/0-
+; -'s'/0/0-
+; -putc/0/0-
+; -500/1/500-
+; -Mil/0/0-
+; -x/0/0-
+; -!/0/0-
+; -x/0/0-
+; -@/0/0-
+; -begin/0/0-
+; -1-/0/1-
+; -while/0/0-
+; -drop/0/0-
+; -'e'/0/0-
+; -putc/0/0-
+; -"/0/0-
+; --/0/0-
+; -all/0/0-
+; -done!"/0/0-
+; -puts/0/0-
+; -bye/0/0-
+; -;/0/0-
+; -/0/0-
+_v_5:
+	CALL _v_4 ; x (4)
+	CALL  ;  (0)
+	CALL _v_3 ; num (3)
+	CALL  ;  (0)
 	DEC []
 	CMP_GT EAX, EAX
-	XCHG ESP, EDI
-	CALL num
-	XCHG ESP, EDI
-	XCHG ESP, EDI
-	CALL 
-	XCHG ESP, EDI
+	CALL _v_3 ; num (3)
+	CALL  ;  (0)
 	INC []
-	XCHG ESP, EDI
-	CALL x
-	XCHG ESP, EDI
-	XCHG ESP, EDI
-	CALL 
-	XCHG ESP, EDI
-	XCHG ESP, EDI
-	CALL 
-	XCHG ESP, EDI
-	XCHG ESP, EDI
+	CALL _v_4 ; x (4)
+	CALL  ;  (0)
+	CALL  ;  (0)
 	RET
-Mil:
-	XCHG ESP, EDI
-	XCHG ESP, EDI
-	CALL 
-	XCHG ESP, EDI
+	CALL  ;  (0)
+	CALL  ;  (0)
+	CALL  ;  (0)
+	CALL  ;  (0)
+_v_8:
+	PUSH 1000
 	POP EBX
 	POP EAX
 	IMUL EAX, EBX
 	PUSH EAX
-	XCHG ESP, EDI
-	CALL 
-	XCHG ESP, EDI
+	PUSH 1000
 	POP EBX
 	POP EAX
 	IMUL EAX, EBX
 	PUSH EAX
-	XCHG ESP, EDI
 	RET
-main:
-	XCHG ESP, EDI
-	XCHG ESP, EDI
-	CALL 
-	XCHG ESP, EDI
-	XCHG ESP, EDI
-	CALL 
-	XCHG ESP, EDI
-	XCHG ESP, EDI
-	CALL 
-	XCHG ESP, EDI
-	XCHG ESP, EDI
-	CALL 
-	XCHG ESP, EDI
-	XCHG ESP, EDI
-	CALL Mil
-	XCHG ESP, EDI
-	XCHG ESP, EDI
-	CALL x
-	XCHG ESP, EDI
-	XCHG ESP, EDI
-	CALL 
-	XCHG ESP, EDI
-	XCHG ESP, EDI
-	CALL x
-	XCHG ESP, EDI
-	XCHG ESP, EDI
-	CALL 
-	XCHG ESP, EDI
+_v_9:
+	CALL  ;  (0)
+	CALL  ;  (0)
+	CALL  ;  (0)
+	PUSH 500
+	CALL _v_8 ; Mil (8)
+	CALL _v_6 ; x (6)
+	CALL  ;  (0)
+	CALL _v_6 ; x (6)
+	CALL  ;  (0)
 	DEC []
-	XCHG ESP, EDI
-	CALL 
-	XCHG ESP, EDI
-	XCHG ESP, EDI
-	CALL 
-	XCHG ESP, EDI
-	XCHG ESP, EDI
-	CALL 
-	XCHG ESP, EDI
-	XCHG ESP, EDI
-	CALL 
-	XCHG ESP, EDI
-	XCHG ESP, EDI
-	CALL 
-	XCHG ESP, EDI
+	CALL  ;  (0)
+	CALL  ;  (0)
+	CALL  ;  (0)
+	CALL  ;  (0)
+	CALL  ;  (0)
 	POP EAX
 	SUB [ESP], EAX
-	XCHG ESP, EDI
-	CALL 
-	XCHG ESP, EDI
-	XCHG ESP, EDI
-	CALL 
-	XCHG ESP, EDI
-	XCHG ESP, EDI
-	CALL 
-	XCHG ESP, EDI
-	XCHG ESP, EDI
-	CALL 
-	XCHG ESP, EDI
-	XCHG ESP, EDI
+	CALL  ;  (0)
+	CALL  ;  (0)
+	CALL  ;  (0)
+	CALL  ;  (0)
 	RET
-	XCHG ESP, EDI
-	CALL 
-	XCHG ESP, EDI
+	CALL  ;  (0)
 ;================== data =====================
 segment readable writeable
 ;=============================================

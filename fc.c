@@ -83,10 +83,36 @@ void next_ch() {
 
 /*---------------------------------------------------------------------------*/
 /* Lexer */
+int digit;
+int isDigit(char c, int b) {
+    if ((b == 2)  && (BTWI(c, '0','1'))) { digit = c - '0'; return 1; }
+    if ((b == 8)  && (BTWI(c, '0','7'))) { digit = c - '0'; return 1; }
+    if ((b == 10) && (BTWI(c, '0','9'))) { digit = c - '0'; return 1; }
+    if (b == 16) {
+        if (BTWI(c, '0','9')) { digit = c - '0'; return 1; }
+        if (BTWI(c, 'A','F')) { digit = c - 'A' + 10; return 1; }
+        if (BTWI(c, 'a','f')) { digit = c - 'a' + 10; return 1; }
+    }
+    return 0; 
+}
+
+int checkNumber(char *w, int base) {
+    int_val = 0;
+    if (*w == '%') { ++w; base = 2; }
+    else if (*w == 'o') { ++w; base = 8; }
+    else if (*w == '#') { ++w; base = 10; }
+    else if (*w == '$') { ++w; base = 16; }
+    if (*w == 0) { return 0; }
+    while (*w) {
+        if (isDigit(*(w++), base) == 0) { return 0; }
+        int_val = (int_val* base) + digit;
+    }
+    return 1;
+}
+
 void next_token() {
     start:
     id_name[0] = 0;
-    is_num = 0;
     tok = 0;
     while (BTWI(ch, 1, 32)) { next_ch(); }
     if (ch == EOF) { return; }
@@ -97,7 +123,7 @@ void next_token() {
     }
     id_name[tok] = 0;
     //printf("token=[%s]\n", id_name);
-    if (strcmp(id_name, "//") == 0) { next_line(); goto start; }
+    is_num = checkNumber(id_name, 10);
 }
 
 int accept(char *str) {
@@ -173,7 +199,7 @@ void dumpSymbols() {
 
 //---------------------------------------------------------------------------
 // IRL
-enum { NOTHING, LOADVAR, LOADIMM, LOADSTR, STORE
+enum { NOTHING, LOADVAR, LIT, LOADSTR, STORE
     , ADD, SUB, MULT, DIVIDE
     , AND, OR, XOR
     , JMP, JMPZ, JMPNZ, TARGET
@@ -253,10 +279,10 @@ void genCode() {
         int a2 = arg2[i];
         char *SW = "\n\tXCHG ESP, EDI";
         // printf("\n; %3d: %-3d %-3d %-5d\n\t", i, op, a1, a2);
-        if (op == LOADVAR) { printf("\n\tPUSH [%s]", asmName(a2)); }
-        if (op == LOADIMM) { printf("\n\tPUSH %d", a2); }
+        if (op == LOADVAR) { printf("\n\tPUSH [%s] ; %s", asmName(a1), varName(a1)); }
+        if (op == LIT)     { printf("\n\tPUSH %d", a1); }
         if (op == LOADSTR) { printf("\n\tLEA EAX, [%s]\n\tPUSH EAX", strings[a2].name); }
-        if (op == STORE)   { printf("\n\tPOP [%s]", asmName(a1)); }
+        if (op == STORE)   { printf("\n\tPOP [%s] ; %s", asmName(a1), varName(a1)); }
         if (op == PLEQ)    { printf("\n\tPOP EAX\n\tADD [%s], EAX", asmName(a1)); }
         if (op == DECVAR)  { printf("\n\tDEC [%s]", asmName(a1)); }
         if (op == INCVAR)  { printf("\n\tINC [%s]", asmName(a1)); }
@@ -268,13 +294,13 @@ void genCode() {
         if (op == GT)      { printf("\n\tCMP_GT %s, %s", regName(a1), regName(a2)); }
         if (op == EQ)      { printf("\n\tCMP_EQ %s, %s", regName(a1), regName(a2)); }
         if (op == NEQ)     { printf("\n\tCMP_NEQ %s, %s", regName(a1), regName(a2)); }
-        if (op == DEF)     { printf("\n%s:%s", vars[a1].name, SW); }
-        if (op == CALL)    { printf("%s\n\tCALL %s%s", SW, vars[a1].name, SW); }
+        if (op == DEF)     { printf("\n%s:", asmName(a1)); }
+        if (op == CALL)    { printf("\n\tCALL %s ; %s (%d)", asmName(a1), varName(a1), a1); }
         if (op == PARAM)   { printf("\n\t; PARAM"); }
-        if (op == RETURN)  { printf("%s\n\tRET", SW); }
-        if (op == TARGET)  { printf("\n%s:", vars[a1].name); }
-        if (op == JMP)     { printf("\n\tJMP %s", vars[a1].name); }
-        if (op == JMPZ)    { printf("\n\tJMPZ %s", vars[a1].name); }
+        if (op == RETURN)  { printf("\n\tRET"); }
+        if (op == TARGET)  { printf("\n%s:", varName(a1)); }
+        if (op == JMP)     { printf("\n\tJMP %s", varName(a1)); }
+        if (op == JMPZ)    { printf("\n\tJMPZ %s", varName(a1)); }
         i++;
     }
 }
@@ -361,8 +387,9 @@ void whileStmt() {
 }
 
 void statement() {
+    printf("\n; -%s/%d/%d-", id_name, is_num, int_val);
     tgtReg = 0;
-    if (is_num)               { gen1(LOADIMM, int_val); }
+    if (is_num)               { gen1(LIT, int_val); }
     else if (accept("1+"))    { gen(INCVAR); }
     else if (accept("if"))    { ifStmt(); }
     else if (accept("begin")) { whileStmt(); }
