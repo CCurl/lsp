@@ -16,33 +16,18 @@
 
 typedef unsigned char byte;
 
-// Tokens - NOTE: the first 8 must match the words list in tc.c
-enum {
-    NO_TOK, ELSE_TOK, IF_TOK, WHILE_TOK, VOID_TOK, INT_TOK, CHAR_TOK, RET_TOK
-    , TOK_LBRA, TOK_RBRA, TOK_LPAR, TOK_RPAR, TOK_LARR, TOK_RARR, TOK_COMMA
-    , TOK_PLUS, TOK_MINUS, TOK_STAR, TOK_SLASH, TOK_INC, TOK_DEC, TOK_PLEQ
-    , TOK_LT, TOK_EQ, TOK_GT, TOK_NEQ
-    , TOK_SET, TOK_NUM, TOK_ID, TOK_FUNC, TOK_STR
-    , TOK_OR, TOK_AND, TOK_XOR, TOK_LOR, TOK_LAND
-    , TOK_SEMI, EOI
-};
-
-// NOTE: these have to be in sync with the first <x> entries in the 
-// list of tokens
-char *words[] = { "", "else", "if" , "while", "void", "int", "char" , "return", NULL};
-
-int ch = ' ', tok, is_num, int_val;
-char id_name[256];
+//---------------------------------------------------------------------------
+// Tokens
+int ch = ' ', tok, is_num, digit, int_val;
 FILE *input_fp = NULL;
-char cur_line[256] = {0};
-int cur_off = 0, cur_lnum = 0, is_eof = 0;
-int tgtReg = 0, tok_len;
-char regs[6][4] = { "EAX", "EBX", "ECX", "EDX", "ESI", "EDI" };
-char *lReg, *rReg;
+char id_name[32], cur_line[256] = {0};
+int is_eof = 0, cur_lnum, cur_off;
+int stk[64], sp=0;
+
+void push(int x) { stk[++sp] = x; }
+int  pop() { return stk[sp--]; }
 
 void statement();
-void expr();
-int term();
 
 void msg(int fatal, char *s) {
     printf("\n%s at(%d, %d)", s, cur_lnum, cur_off);
@@ -51,11 +36,6 @@ void msg(int fatal, char *s) {
     if (fatal) { fprintf(stderr, "\n%s (see output for details)\n", s); exit(1); }
 }
 void syntax_error() { msg(1, "syntax error"); }
-
-char* regName(int regNum) { return regs[regNum]; }
-int isAlpha(int ch) { return BTWI(ch, 'A', 'Z') || BTWI(ch, 'a', 'z') || (ch == '_'); }
-int isNum(int ch) { return BTWI(ch, '0', '9'); }
-int isAlphaNum(int ch) { return isAlpha(ch) || isNum(ch); }
 
 void next_line() {
     cur_off = 0;
@@ -83,7 +63,10 @@ void next_ch() {
 
 /*---------------------------------------------------------------------------*/
 /* Lexer */
-int digit;
+
+int strEq(char *s1, char *s2) { return (strcmp(s1, s2) == 0) ? 1 : 0; }
+int accept(char *str) { return strEq(id_name, str); }
+
 int isDigit(char c, int b) {
     if ((b == 2)  && (BTWI(c, '0','1'))) { digit = c - '0'; return 1; }
     if ((b == 8)  && (BTWI(c, '0','7'))) { digit = c - '0'; return 1; }
@@ -98,6 +81,7 @@ int isDigit(char c, int b) {
 
 int checkNumber(char *w, int base) {
     int_val = 0;
+    if ((w[0] == '\'') && (w[2] == w[0]) && (w[3] == 0)) { int_val = w[1]; return 1; }
     if (*w == '%') { ++w; base = 2; }
     else if (*w == 'o') { ++w; base = 8; }
     else if (*w == '#') { ++w; base = 10; }
@@ -117,34 +101,34 @@ void next_token() {
     while (BTWI(ch, 1, 32)) { next_ch(); }
     if (ch == EOF) { return; }
     while (BTWI(ch, 33, 126)) {
-        //printf("ch=[%c]\n", ch);
         id_name[tok++] = ch;
         next_ch();
     }
     id_name[tok] = 0;
-    //printf("token=[%s]\n", id_name);
+    if (accept("//")) { next_line(); goto start; }
     is_num = checkNumber(id_name, 10);
-}
-
-int accept(char *str) {
-    if (strcmp(id_name, str) == 0) { return 1; }
-    return 0;
+    // printf("\n; -%s/%d/%d-", id_name, is_num, int_val);
 }
 
 //---------------------------------------------------------------------------
-// Symbols - 'I' = INT, 'C' = Char, 'P' = Parameter, 'L' = Local, 'S' = String, 'T' = Target
+// Symbols - 'I' = INT, 'F' = Function, 'S' = String, 'T' = Target
 typedef struct { char type, name[23]; char asmName[8]; int sz; } SYM_T;
 typedef struct { char name[32]; char *val; } STR_T;
 
 SYM_T vars[500];
 STR_T strings[500];
 int numVars, numStrings;
-int localOff, paramOff;
 
-int findVar(char *name) {
+int  varType(int i)  { return vars[i].type; }
+char *varName(int i) { return vars[i].name; }
+char *asmName(int i) { return vars[i].asmName; }
+
+int findVar(char *name, char type) {
     int i = numVars;
     while (0 < i) {
-        if (strcmp(vars[i].name, name) == 0) { return i; }
+        if (strEq(varName(i), name)) {
+            if ((varType(i) == type)) { return i; }
+        }
         i = i-1;
     }
     return 0;
@@ -158,7 +142,7 @@ int addVar(char *name, char type) {
     x->type = type;
     x->sz = 4;
     strcpy(x->name, name);
-    sprintf(x->asmName, "_v_%d", i);
+    sprintf(x->asmName, "%c%d", type, i);
     return i;
 }
 
@@ -175,7 +159,7 @@ int genTargetSymbol() {
 
 int addString(char *str) {
     int i = ++numStrings;
-    sprintf(strings[i].name, "_str%d", i);
+    sprintf(strings[i].name, "S%d", i);
     strings[i].val = hAlloc(strlen(str) + 1);
     strcpy(strings[i].val, str);
     return i;
@@ -194,18 +178,19 @@ void dumpSymbols() {
         STR_T *x = &strings[i];
         printf("%-10s db \"%s\", 0\n", x->name, x->val);
     }
-    printf("stk        rd 256\n");
+    printf("rstk       rd 256\n");
 }
 
 //---------------------------------------------------------------------------
 // IRL
-enum { NOTHING, LOADVAR, LIT, LOADSTR, STORE
+enum { NOTHING, VARADDR, LIT, LOADSTR, STORE, FETCH
     , ADD, SUB, MULT, DIVIDE
+    , DROP, SWAP, OVER
     , AND, OR, XOR
     , JMP, JMPZ, JMPNZ, TARGET
     , DEF, CALL, PARAM, RETURN
     , LT, GT, EQ, NEQ
-    , PLEQ, DECVAR, INCVAR
+    , PLEQ, DECTOS, INCTOS
 };
 
 int opcodes[10000], here;
@@ -267,11 +252,36 @@ void optimizeIRL() {
     }
 }
 
-char *varName(int i) { return vars[i].name; }
-char *asmName(int i) { return vars[i].asmName; }
+void genStartupCode() {
+    printf("\ninit:\n\tLEA EBP, [rstk]\n\tRET");
+    printf("\n; Move the return addr to the [EBP] stack");
+    printf("\n; NB: EDX is destroyed");
+    printf("\nRETtoEBP:");
+    printf("\n\tPOP  EDX");
+    printf("\n\tADD  EBP, 4");
+    printf("\n\tPOP  DWORD [EBP]");
+    printf("\n\tPUSH EDX");
+    printf("\n\tRET\n");
+    printf("\n; Restore the return addr from the [EBP] stack");
+    printf("\n; NB: EDX is destroyed");
+    printf("\nEBPtoRET:");
+    printf("\n\tPOP  EDX");
+    printf("\n\tPUSH DWORD [EBP]");
+    printf("\n\tSUB  EBP, 4");
+    printf("\n\tPUSH EDX");
+    printf("\n\tRET\n");
+    printf("\n; Perform a RET from the [EBP] stack");
+    printf("\n; NB: EDX is destroyed");
+    printf("\nRETfromEBP:");
+    printf("\n\tPOP  EDX");
+    printf("\n\tPUSH DWORD [EBP]");
+    printf("\n\tSUB  EBP, 4");
+    printf("\n\tRET");
+}
 
 void genCode() {
-    dumpIRL();
+    genStartupCode();
+
     int i = 1;
     while (i <= here) {
         int op = opcodes[i];
@@ -279,28 +289,30 @@ void genCode() {
         int a2 = arg2[i];
         char *SW = "\n\tXCHG ESP, EDI";
         // printf("\n; %3d: %-3d %-3d %-5d\n\t", i, op, a1, a2);
-        if (op == LOADVAR) { printf("\n\tPUSH [%s] ; %s", asmName(a1), varName(a1)); }
-        if (op == LIT)     { printf("\n\tPUSH %d", a1); }
-        if (op == LOADSTR) { printf("\n\tLEA EAX, [%s]\n\tPUSH EAX", strings[a2].name); }
-        if (op == STORE)   { printf("\n\tPOP [%s] ; %s", asmName(a1), varName(a1)); }
-        if (op == PLEQ)    { printf("\n\tPOP EAX\n\tADD [%s], EAX", asmName(a1)); }
-        if (op == DECVAR)  { printf("\n\tDEC [%s]", asmName(a1)); }
-        if (op == INCVAR)  { printf("\n\tINC [%s]", asmName(a1)); }
-        if (op == ADD)     { printf("\n\tPOP EAX\n\tADD [ESP], EAX"); }
-        if (op == SUB)     { printf("\n\tPOP EAX\n\tSUB [ESP], EAX"); }
-        if (op == MULT)    { printf("\n\tPOP EBX\n\tPOP EAX\n\tIMUL EAX, EBX\n\tPUSH EAX"); }
-        if (op == DIVIDE)  { printf("\n\tPOP EBX\n\tPOP EAX\n\tCDQ\n\tIDIV EBX\n\tPUSH EAX"); }
-        if (op == LT)      { printf("\n\tCMP_LT %s, %s", regName(a1), regName(a2)); }
-        if (op == GT)      { printf("\n\tCMP_GT %s, %s", regName(a1), regName(a2)); }
-        if (op == EQ)      { printf("\n\tCMP_EQ %s, %s", regName(a1), regName(a2)); }
-        if (op == NEQ)     { printf("\n\tCMP_NEQ %s, %s", regName(a1), regName(a2)); }
-        if (op == DEF)     { printf("\n%s:", asmName(a1)); }
-        if (op == CALL)    { printf("\n\tCALL %s ; %s (%d)", asmName(a1), varName(a1), a1); }
-        if (op == PARAM)   { printf("\n\t; PARAM"); }
-        if (op == RETURN)  { printf("\n\tRET"); }
-        if (op == TARGET)  { printf("\n%s:", varName(a1)); }
-        if (op == JMP)     { printf("\n\tJMP %s", varName(a1)); }
-        if (op == JMPZ)    { printf("\n\tJMPZ %s", varName(a1)); }
+        if (op == VARADDR) { printf("\n\tPUSH EAX\n\tLEA EAX, [%s] ; %s", asmName(a1), varName(a1)); }
+        else if (op == LIT)     { printf("\n\tPUSH EAX\n\tMOV EAX,%d", a1); }
+        else if (op == LOADSTR) { printf("\n\tPUSH EAX\n\tLEA EAX, [%s]", strings[a1].name); }
+        else if (op == STORE)   { printf("\n\tPOP ECX\n\tMOV [EAX], ECX"); }
+        else if (op == FETCH)   { printf("\n\tMOV EAX, [EAX]"); }
+        else if (op == PLEQ)    { printf("\n\tPOP EAX\n\tADD [%s], EAX", asmName(a1)); }
+        else if (op == DECTOS)  { printf("\n\tDEC EAX"); }
+        else if (op == INCTOS)  { printf("\n\tINC EAX"); }
+        else if (op == ADD)     { printf("\n\tPOP EBX\n\tADD EAX, EBX"); }
+        else if (op == SUB)     { printf("\n\tPOP EBX\n\tXCHG EAX, EBX\n\tSUB EAX, EBX"); }
+        else if (op == MULT)    { printf("\n\tPOP EBX\n\tIMUL EAX, EBX"); }
+        else if (op == DIVIDE)  { printf("\n\tPOP EBX\n\tXCHG EAX, EBX\n\tCDQ\n\tIDIV EBX"); }
+        else if (op == LT)      { printf("\n\tPOP EBX\n\tCMP EBX, EAX\n\tMOV EAX, 0\n\tJGE @F\n\tDEC EAX\n@@:"); }
+        else if (op == GT)      { printf("\n\tPOP EBX\n\tCMP EBX, EAX\n\tMOV EAX, 0\n\tJLE @F\n\tDEC EAX\n@@:"); }
+        else if (op == EQ)      { printf("\n\tPOP EBX\n\tCMP EBX, EAX\n\tMOV EAX, 0\n\tJNZ @F\n\tDEC EAX\n@@:"); }
+        else if (op == NEQ)     { printf("\n\tCMP_NEQ"); }
+        else if (op == DEF)     { printf("\n\n%s: ; %s\n\tCALL RETtoEBP", asmName(a1), varName(a1)); }
+        else if (op == CALL)    { printf("\n\tCALL %s ; %s (%d)", asmName(a1), varName(a1), a1); }
+        else if (op == PARAM)   { printf("\n\t; PARAM"); }
+        else if (op == RETURN)  { printf("\n\tCALL RETfromEBP"); }
+        else if (op == TARGET)  { printf("\n%s:", varName(a1)); }
+        else if (op == JMP)     { printf("\n\tJMP %s", varName(a1)); }
+        else if (op == JMPZ)    { printf("\n\tTEST EAX, EAX\n\tJZ %s", varName(a1)); }
+        else if (op == JMPNZ)   { printf("\n\tTEST EAX, EAX\n\tJNZ %s", varName(a1)); }
         i++;
     }
 }
@@ -310,26 +322,40 @@ void genCode() {
 void winLin(int seg) {
 #ifdef _WIN32
     // Windows (32-bit)
-    if (seg == 'C') {
-        int s = addFunction("exit");
+    if (seg == 'S') {
+        int s = addFunction("bye");
         s = addFunction("puts");
-        s = addFunction("putc");
-        s = addFunction("putd");
+        s = addFunction("emit");
+        s = addFunction(".d");
         s = addVar("pv", 'I');
+    }
+    if (seg == 'C') {
+        char* pv = asmName(findVar("pv", 'I'));
         P("format PE console");
         P("\ninclude 'win32ax.inc'\n");
         P("\n; ======================================= ");
         P("\nsection '.code' code readable executable");
         P("\n;=======================================*/");
-        P("\n\nstart: JMP main");
+        P("\nstart:\n\tCALL init");
+        G("\n\tJMP %s\n", asmName(findVar("main", 'F')));
         P("\n;================== library ==================");
-        P("\nexit:\n\tPUSH 0\n\tCALL [ExitProcess]\n");
-        P("\nputs:\n\tcinvoke printf, \"%s\", [pv]");
-        P("\n\tRET\n");
-        P("\nputc:\n\tcinvoke printf, \"%c\", [pv]");
-        P("\n\tRET\n");
-        P("\nputd:\n\tcinvoke printf, \"%d\", [pv]");
-        P("\n\tRET\n");
+        G("\n%s:\n\tPUSH 0\n\tCALL [ExitProcess]\n", asmName(findVar("bye", 'F')));
+
+        G("\n%s: ; puts", asmName(findVar("puts", 'F')));
+        G("\n\tCALL RETtoEBP\n\tMOV [%s], EAX\n\tPOP EAX", pv);
+        G("\n\tcinvoke printf, \"%s\", [%s]", "%s", pv);
+        P("\n\tCALL RETfromEBP\n");
+        
+        G("\n%s: ; emit", asmName(findVar("emit", 'F')));
+        G("\n\tCALL RETtoEBP\n\tMOV [%s], EAX\n\tPOP EAX", pv);
+        G("\n\tcinvoke printf, \"%s\", [%s]", "%c", pv);
+        P("\n\tCALL RETfromEBP\n");
+
+        G("\n%s: ; .d", asmName(findVar(".d", 'F')));
+        G("\n\tCALL RETtoEBP\n\tMOV [%s], EAX\n\tPOP EAX", pv);
+        G("\n\tcinvoke printf, \"%s\", [%s]", "%d", pv);
+        P("\n\tCALL RETfromEBP\n");
+
         P("\n;=============================================");
     }
     else if (seg == 'D') {
@@ -381,21 +407,78 @@ void winLin(int seg) {
 }
 
 void ifStmt() {
+    int i = genTargetSymbol();
+    push(i);
+    gen1(JMPZ, i);
+}
+
+void elseStmt() {
+    gen(JMP);
+    gen(JMPZ);
+}
+
+void thenStmt() {
+    int i = pop();
+    gen1(TARGET, i);
+}
+
+void beginStmt() {
+    int i = genTargetSymbol();
+    push(i);
+    gen1(TARGET, i);
 }
 
 void whileStmt() {
+    int i = pop();
+    gen1(JMPNZ, i);
+}
+
+void untilStmt() {
+    int i = pop();
+    gen1(JMPZ, i);
+}
+
+void againStmt() {
+    int i = pop();
+    gen1(JMP, i);
+}
+
+char tmpStr[256];
+void stringStmt() {
+    int i = 0;
+    next_ch();
+    while (ch != '"') {
+        if (ch == EOF) { syntax_error(); }
+        tmpStr[i++] = ch;
+        next_ch();
+    }
+    tmpStr[i] = 0;
+    next_ch();
+    i = addString(tmpStr);
+    gen1(LOADSTR, i);
 }
 
 void statement() {
-    printf("\n; -%s/%d/%d-", id_name, is_num, int_val);
-    tgtReg = 0;
-    if (is_num)               { gen1(LIT, int_val); }
-    else if (accept("1+"))    { gen(INCVAR); }
+    if (is_num) { gen1(LIT, int_val); return; }
+    int i = findVar(id_name, 'I');
+    if (i) { gen1(VARADDR, i); return; }
+    i = findVar(id_name, 'F');
+    if (i) { gen1(CALL, i); return; }
+
+    if (accept("@"))    { gen(FETCH); }
+    else if (accept("!"))     { gen(STORE); }
+    else if (accept("1+"))    { gen(INCTOS); }
+    else if (accept("1-"))    { gen(DECTOS); }
     else if (accept("if"))    { ifStmt(); }
-    else if (accept("begin")) { whileStmt(); }
+    else if (accept("else"))  { thenStmt(); }
+    else if (accept("then"))  { thenStmt(); }
+    else if (accept("begin")) { beginStmt(); }
+    else if (accept("while")) { whileStmt(); }
+    else if (accept("until")) { untilStmt(); }
+    else if (accept("again")) { againStmt(); }
     else if (accept("exit"))  { gen(RETURN); }
+    else if (accept("drop"))  { gen(DROP); }
     else if (accept(";"))     { gen(RETURN); }
-    else if (accept("1-"))    { gen(DECVAR); }
     else if (accept("+"))     { gen(ADD); }
     else if (accept("-"))     { gen(SUB); }
     else if (accept("*"))     { gen(MULT); }
@@ -403,7 +486,9 @@ void statement() {
     else if (accept("<"))     { gen(LT); }
     else if (accept(">"))     { gen(EQ); }
     else if (accept("="))     { gen(GT); }
-    else { gen1(CALL, findVar(id_name)); }
+    else if (accept("\""))    { stringStmt(); }
+    else if (accept(""))      { return; }
+    else { syntax_error(); }
 }
 
 void funcDef() {
@@ -437,10 +522,11 @@ int main(int argc, char *argv[]) {
         input_fp = fopen(fn, "rt");
         if (!input_fp) { msg(1, "cannot open source file!"); }
     }
-    winLin('C');
+    winLin('S');
     while (ch != EOF) { next_token(); parseDef(); }
     if (input_fp) { fclose(input_fp); }
     //optimizeIRL();
+    winLin('C');
     genCode();
     winLin('D');
     dumpSymbols();

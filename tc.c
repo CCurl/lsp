@@ -286,13 +286,13 @@ void dumpSymbols() {
 
 //---------------------------------------------------------------------------
 // IRL
-enum { NOTHING, LOADVAR, LOADIMM, LOADSTR, STORE
+enum { NOTHING, VARADDR, LOADIMM, LOADSTR, STORE
     , ADD, SUB, MULT, DIVIDE
     , AND, OR, XOR
     , JMP, JMPZ, JMPNZ, TARGET
     , DEF, CALL, PARAM, RETURN
     , LT, GT, EQ, NEQ
-    , PLEQ, DECVAR, INCVAR
+    , PLEQ, DECTOS, INCTOS
 };
 
 int opcodes[10000], here;
@@ -314,13 +314,13 @@ void dumpIRL() {
         int a2 = arg2[i];
         printf("\n; %3d: %-3d %-3d %-5d - ", i, opcodes[i], arg1[i], arg2[i] );
         // printf("\n%3d: %d %d %d %d - ", i, opcodes[i], arg1[i], arg2[i], arg3[i] );
-        if (op == LOADVAR) { printf("LOADVAR %s, [%s]", regName(a1), genVarName(a2)); }
+        if (op == VARADDR) { printf("VARADDR %s, [%s]", regName(a1), genVarName(a2)); }
         if (op == LOADIMM) { printf("LOADIMM %s, %d",   regName(a1), a2); }
         if (op == LOADSTR) { printf("LOADSTR %s, [%s]", regName(a1), genVarName(a2)); }
         if (op == STORE)   { printf("STORE [%s], EAX",  genVarName(a1)); }
         if (op == PLEQ)    { printf("PLUSEQ [%s], EAX", genVarName(a1)); }
-        if (op == DECVAR)  { printf("DECVAR [%s]",      genVarName(a1)); }
-        if (op == INCVAR)  { printf("INCVAR [%s]",      genVarName(a1)); }
+        if (op == DECTOS)  { printf("DECTOS [%s]",      genVarName(a1)); }
+        if (op == INCTOS)  { printf("INCTOS [%s]",      genVarName(a1)); }
         if (op == ADD)     { printf("ADD %s, %s",       regName(a1), regName(a2)); }
         if (op == SUB)     { printf("SUB %s, %s",       regName(a1), regName(a2)); }
         if (op == MULT)    { printf("MULT %s, %s",      regName(a1), regName(a2)); }
@@ -362,13 +362,13 @@ void genCode() {
         int a1 = arg1[i];
         int a2 = arg2[i];
         // printf("\n; %3d: %-3d %-3d %-5d\n\t", i, op, a1, a2);
-        if (op == LOADVAR) { printf("\n\tPUSH [%s]", genVarName(arg2[i])); }
+        if (op == VARADDR) { printf("\n\tPUSH [%s]", genVarName(arg2[i])); }
         if (op == LOADIMM) { printf("\n\tPUSH %d", a2); }
         if (op == LOADSTR) { printf("\n\tLEA EAX, [%s]\n\tPUSH EAX", strings[a2].name); }
         if (op == STORE)   { printf("\n\tPOP DWORD [%s]", genVarName(a1)); }
         if (op == PLEQ)    { printf("\n\tPOP EAX\n\tADD DWORD [%s], EAX", genVarName(a1)); }
-        if (op == DECVAR)  { printf("\n\tDEC DWORD [%s]", genVarName(a1)); }
-        if (op == INCVAR)  { printf("\n\tINC DWORD [%s]", genVarName(a1)); }
+        if (op == DECTOS)  { printf("\n\tDEC DWORD [%s]", genVarName(a1)); }
+        if (op == INCTOS)  { printf("\n\tINC DWORD [%s]", genVarName(a1)); }
         if (op == ADD)     { printf("\n\tPOP EAX\n\tADD [ESP], EAX"); }
         if (op == SUB)     { printf("\n\tPOP EAX\n\tSUB [ESP], EAX"); }
         if (op == MULT)    { printf("\n\tPOP EBX\n\tPOP EAX\n\tIMUL EAX, EBX\n\tPUSH EAX"); }
@@ -466,7 +466,7 @@ void winLin(int seg) {
 void parens() { expr(); tokenShouldBe(TOK_RPAR); }
 
 int term() {
-    if (tok == TOK_ID) { gen2(LOADVAR, tgtReg, findVar(id_name)); return 1; }
+    if (tok == TOK_ID) { gen2(VARADDR, tgtReg, findVar(id_name)); return 1; }
     if (tok == TOK_NUM) { gen2(LOADIMM, tgtReg, int_val); return 1; }
     if (tok == TOK_STR) { gen2(LOADSTR, tgtReg, addString(id_name)); return 1; }
     if (tok == TOK_LPAR) { next_token();  parens();  return 1; }
@@ -575,8 +575,8 @@ void idStmt() {
     next_token();
     if (tok == TOK_SET) { next_token(); expr(); gen1(STORE, si); }
     else if (tok == TOK_PLEQ) { next_token(); expr(); genVarName(si); gen1(PLEQ, si); }
-    else if (tok == TOK_DEC)  { next_token(); gen1(DECVAR, si); }
-    else if (tok == TOK_INC)  { next_token(); gen1(INCVAR, si); }
+    else if (tok == TOK_DEC)  { next_token(); gen1(DECTOS, si); }
+    else if (tok == TOK_INC)  { next_token(); gen1(INCTOS, si); }
     else { syntax_error(); }
     expectToken(TOK_SEMI);
 }
