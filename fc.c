@@ -335,25 +335,25 @@ void winLin(int seg) {
         printf("\nstart:\n\tCALL init");
         printf("\n\tCALL %s\n", asmName(findVar("main", 'F')));
         printf("\n%s:", asmName(findVar("bye", 'F')));
-        printf("\n\tMOV EAX, 1\n\tXOR EBX, EBX\n\tINT 0x80\n");
+        printf("\n\tMOV EAX, 1\n\tXOR EBX, EBX\n\tINT 0x80");
 
         printf("\n\n%s: ; puts", asmName(findVar("puts", 'F')));
         printf("\n\tCALL RETtoEBP");
         printf("\n\tMOV [%s], EAX", pv);
         printf("\n\tPOP EAX\n\tJMP RETfromEBP");
         
-        printf("\n\n%s:\n\tCALL RETtoEBP", asmName(findVar(".d", 'F')));
-        printf("\n\tMOV [%s], EAX", pv);
-        printf("\n\tPOP EAX\n\tJMP RETfromEBP");
-        
-        printf("\n%s: ; emit", asmName(findVar("emit", 'F')));
+        printf("\n\n%s: ; emit", asmName(findVar("emit", 'F')));
         printf("\n\tCALL RETtoEBP");
-        printf("\n\n\tMOV [%s], EAX", pv);
+        printf("\n\tMOV [%s], EAX", pv);
         printf("\n\tMOV EAX, 4");
         printf("\n\tMOV EBX, 0");
         printf("\n\tLEA ECX, [%s]", pv);
         printf("\n\tMOV EDX, 1");
         printf("\n\tINT 0x80\n\tJMP RETfromEBP\n");
+        
+        printf("\n\n%s:\n\tCALL RETtoEBP", asmName(findVar(".d", 'F')));
+        printf("\n\tMOV [%s], EAX", pv);
+        printf("\n\tPOP EAX\n\tJMP RETfromEBP");
         printf("\n;=============================================");
     }
     else if (seg == 'D') {

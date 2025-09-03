@@ -11,21 +11,14 @@ F1:
 	XOR EBX, EBX
 	INT 0x80
 
-
 F2: ; puts
 	CALL RETtoEBP
 	MOV [I5], EAX
 	POP EAX
 	JMP RETfromEBP
 
-F4:
-	CALL RETtoEBP
-	MOV [I5], EAX
-	POP EAX
-	JMP RETfromEBP
 F3: ; emit
 	CALL RETtoEBP
-
 	MOV [I5], EAX
 	MOV EAX, 4
 	MOV EBX, 0
@@ -34,6 +27,12 @@ F3: ; emit
 	INT 0x80
 	JMP RETfromEBP
 
+
+F4:
+	CALL RETtoEBP
+	MOV [I5], EAX
+	POP EAX
+	JMP RETfromEBP
 ;=============================================
 init:
 	LEA EBP, [rstk]
