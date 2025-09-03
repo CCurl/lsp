@@ -11,8 +11,8 @@
 // Change these to control the heap and index sizes.
 // For details, see heap.c
 
-#define HEAP_SZ        50000
-#define HEAPINDEX_SZ    5000
+#define HEAP_SZ        10000
+#define HEAPINDEX_SZ    500
 
 extern void hInit(int gran);
 extern char *hAlloc(int sz);

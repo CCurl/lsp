@@ -8,12 +8,28 @@ start: JMP main
        RET
 
 ;---------------------------------------------
+	POP EAX
+	POP EBX
+	POP DWORD [EBP+8]
+	MOV [EAX], EBX
+	RET
+;---------------------------------------------
+DPOP:
+	XCHG ESP, EBP
+	ADD EBP, 4
+	MOV [EBP], EAX
+	POP DWORD [x]
+	XCHG ESP, EBP
+	RET
+;---------------------------------------------
 Mil:
 	MOV 	EAX, [x]
 	MOV 	EBX, 1000
 	MOV 	ECX, 1000
 	IMUL	EBX, ECX
 	IMUL	EAX, EBX
+	CDQ
+	IDIV	EBX
 	MOV 	[x], EAX
 	RET
 
@@ -42,6 +58,17 @@ main:
         cinvoke scanf, "%d", Number1
         cinvoke printf, "Enter a number: "
         cinvoke scanf, "%d", Number2
+
+		push [x]
+		push 1
+		pop eax
+		pop ebx
+
+		POP EAX
+		ADD DWORD [ESP], EAX
+
+		POP EAX
+		SUB DWORD [ESP], EAX
 
         mov ecx, [Number1]
         mov ebx, [Number2]

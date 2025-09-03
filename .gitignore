@@ -19,3 +19,5 @@ bm
 *.exe
 *.hex
 tc.sym
+fc
+ftest

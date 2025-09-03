@@ -12,11 +12,15 @@ LDLIBS   := -lm
 # Targets
 # -------------------------------------------------------------------
 
-all: tc vm hex-dump
+all: tc fc vm hex-dump
 
 tc: tc.c heap.c heap.h
 	$(CXX) $(CFLAGS) $(LDFLAGS) -o tc tc.c heap.c $(LDLIBS)
 	ls -l tc
+
+fc: fc.c heap.c heap.h
+	$(CXX) $(CFLAGS) $(LDFLAGS) -o fc fc.c heap.c $(LDLIBS)
+	ls -l fc
 
 vm: vm.c
 	$(CXX) $(CFLAGS) $(LDFLAGS) -o vm vm.c $(LDLIBS)
@@ -44,6 +48,12 @@ test: all
 	fasm _test.asm test
 	chmod +x test
 	./hex-dump test > test.hex
+
+ftest: all
+	./fc ftest.tc > _ftest.asm
+	fasm _ftest.asm ftest
+	chmod +x ftest
+	./hex-dump ftest > ftest.hex
 
 bm: all
 	./tc bm.tc > _bm.asm

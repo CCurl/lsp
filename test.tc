@@ -16,7 +16,7 @@ void main() {
 	int c = 's';
 	pC(c);
 	x = 999;
-	Mil(1000, 500);
+	Mil(500, 1000);
 	pN(x);
 	num = x;
 	while (x) { x--; }
