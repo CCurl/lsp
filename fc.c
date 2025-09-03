@@ -18,7 +18,7 @@
 // Tokens
 int ch = ' ', tok, is_num, digit, int_val;
 FILE *input_fp = NULL;
-char id_name[32], cur_line[256] = {0};
+char token[32], cur_line[256] = {0};
 int is_eof = 0, cur_lnum, cur_off;
 int stk[64], sp=0;
 
@@ -41,12 +41,12 @@ void next_line() {
     if (fgets(cur_line, 256, input_fp) != cur_line) {
         is_eof = 1;
     }
-    int l = strlen(cur_line);
-    if ((0 < l) && (cur_line[l-1] == 10)) { cur_line[l-1] = 0; }
-    else { l++; }
-    cur_line[l-1] = 10;
-    cur_line[l] = 0;
+    // int l = strlen(cur_line);
+    // if ((0 < l) && (cur_line[l-1] == 10)) { cur_line[l-1] = 0; }
+    // else { l++; }
     // printf("ln=%s", cur_line);
+    // cur_line[l-1] = 10;
+    // cur_line[l] = 0;
 }
 
 void next_ch() {
@@ -63,7 +63,7 @@ void next_ch() {
 /* Lexer */
 
 int strEq(char *s1, char *s2) { return (strcmp(s1, s2) == 0) ? 1 : 0; }
-int accept(char *str) { return strEq(id_name, str); }
+int accept(char *str) { return strEq(token, str); }
 
 int isDigit(char c, int b) {
     if ((b == 2)  && (BTWI(c, '0','1'))) { digit = c - '0'; return 1; }
@@ -94,18 +94,18 @@ int checkNumber(char *w, int base) {
 
 void next_token() {
     start:
-    id_name[0] = 0;
+    token[0] = 0;
     tok = 0;
     while (BTWI(ch, 1, 32)) { next_ch(); }
     if (ch == EOF) { return; }
     while (BTWI(ch, 33, 126)) {
-        id_name[tok++] = ch;
+        token[tok++] = ch;
         next_ch();
     }
-    id_name[tok] = 0;
+    token[tok] = 0;
     if (accept("//")) { next_line(); goto start; }
-    is_num = checkNumber(id_name, 10);
-    // printf("\n; -%s/%d/%d-", id_name, is_num, int_val);
+    is_num = checkNumber(token, 10);
+    // printf("\n; -%s/%d/%d-", token, is_num, int_val);
 }
 
 //---------------------------------------------------------------------------
@@ -284,6 +284,89 @@ void genCode() {
 void winLin(int seg) {
 #ifdef _WIN32
     // Windows (32-bit)
+    if (seg == 'C') {
+        char *pv = asmName(findVar("pv", 'I'));
+        printf("format PE console");
+        printf("\ninclude 'win32ax.inc'\n");
+        printf("\n; ======================================= ");
+        printf("\nsection '.code' code readable executable");
+        printf("\n;=======================================*/");
+        printf("\nstart:\n\tCALL init");
+        printf("\n\tCALL %s\n", asmName(findVar("main", 'F')));
+        printf("\n;================== library ==================");
+        printf("\n%s:\n\tPUSH 0\n\tCALL [ExitProcess]\n", asmName(findVar("bye", 'F')));
+        P("\n;=============================================");
+        printf("\n%s: ; puts", asmName(findVar("puts", 'F')));
+        printf("\n\tCALL RETtoEBP\n\tMOV [%s], EAX\n\tPOP EAX", pv);
+        printf("\n\tcinvoke printf, \"%s\", [%s]", "%s", pv);
+        printf("\n\tJMP RETfromEBP\n");
+        
+        printf("\n%s: ; emit", asmName(findVar("emit", 'F')));
+        printf("\n\tCALL RETtoEBP\n\tMOV [%s], EAX\n\tPOP EAX", pv);
+        printf("\n\tcinvoke printf, \"%s\", [%s]", "%c", pv);
+        printf("\n\tJMP RETfromEBP\n");
+        
+        printf("\n%s: ; .d", asmName(findVar(".d", 'F')));
+        printf("\n\tCALL RETtoEBP\n\tMOV [%s], EAX\n\tPOP EAX", pv);
+        printf("\n\tcinvoke printf, \"%s\", [%s]", "%d", pv);
+        printf("\n\tJMP RETfromEBP\n");
+    }
+    else if (seg == 'D') {
+        printf("\n\n;================== data =====================");
+        printf("\nsection '.data' data readable writeable");
+        printf("\n;=============================================");
+    }
+    else if (seg == 'I') {
+        printf("\n;====================================");
+        printf("\nsection '.idata' import data readable");
+        printf("\n; ====================================");
+        printf("\nlibrary msvcrt, 'msvcrt.dll', kernel32, 'kernel32.dll'");
+        printf("\nimport msvcrt, printf,'printf', getch,'_getch'");
+        printf("\nimport kernel32, ExitProcess,'ExitProcess'\n");
+    }
+#else
+    // Linux (32-bit)
+    if (seg == 'C') {
+        char *pv = asmName(findVar("pv", 'I'));
+        printf("format ELF executable");
+        printf("\n;================== code =====================");
+        printf("\nsegment readable executable");
+        printf("\n;================== library ==================");
+        printf("\nstart:\n\tCALL init");
+        printf("\n\tCALL %s\n", asmName(findVar("main", 'F')));
+        printf("\n%s:", asmName(findVar("bye", 'F')));
+        printf("\n\tMOV EAX, 1\n\tXOR EBX, EBX\n\tINT 0x80\n");
+
+        printf("\n\n%s: ; puts", asmName(findVar("puts", 'F')));
+        printf("\n\tCALL RETtoEBP");
+        printf("\n\tMOV [%s], EAX", pv);
+        printf("\n\tPOP EAX\n\tJMP RETfromEBP");
+        
+        printf("\n\n%s:\n\tCALL RETtoEBP", asmName(findVar(".d", 'F')));
+        printf("\n\tMOV [%s], EAX", pv);
+        printf("\n\tPOP EAX\n\tJMP RETfromEBP");
+        
+        printf("\n%s: ; emit", asmName(findVar("emit", 'F')));
+        printf("\n\tCALL RETtoEBP");
+        printf("\n\n\tMOV [%s], EAX", pv);
+        printf("\n\tMOV EAX, 4");
+        printf("\n\tMOV EBX, 0");
+        printf("\n\tLEA ECX, [%s]", pv);
+        printf("\n\tMOV EDX, 1");
+        printf("\n\tINT 0x80\n\tJMP RETfromEBP\n");
+        printf("\n;=============================================");
+    }
+    else if (seg == 'D') {
+        printf("\n;================== data =====================");
+        printf("\nsegment readable writeable");
+        printf("\n;=============================================");
+    }
+    else if (seg == 'I') {
+        // printf("\n;================== data =====================");
+        // printf("\nsegment readable writeable");
+        // printf("\n;=============================================");
+    }
+#endif
     if (seg == 'S') {
         int s = addFunction("bye");
         s = addFunction("puts");
@@ -291,81 +374,6 @@ void winLin(int seg) {
         s = addFunction(".d");
         s = addVar("pv", 'I');
     }
-    if (seg == 'C') {
-        char* pv = asmName(findVar("pv", 'I'));
-        P("format PE console");
-        P("\ninclude 'win32ax.inc'\n");
-        P("\n; ======================================= ");
-        P("\nsection '.code' code readable executable");
-        P("\n;=======================================*/");
-        P("\nstart:\n\tCALL init");
-        G("\n\tCALL %s\n", asmName(findVar("main", 'F')));
-        P("\n;================== library ==================");
-        G("\n%s:\n\tPUSH 0\n\tCALL [ExitProcess]\n", asmName(findVar("bye", 'F')));
-
-        G("\n%s: ; puts", asmName(findVar("puts", 'F')));
-        G("\n\tCALL RETtoEBP\n\tMOV [%s], EAX\n\tPOP EAX", pv);
-        G("\n\tcinvoke printf, \"%s\", [%s]", "%s", pv);
-        P("\n\tJMP RETfromEBP\n");
-        
-        G("\n%s: ; emit", asmName(findVar("emit", 'F')));
-        G("\n\tCALL RETtoEBP\n\tMOV [%s], EAX\n\tPOP EAX", pv);
-        G("\n\tcinvoke printf, \"%s\", [%s]", "%c", pv);
-        P("\n\tJMP RETfromEBP\n");
-
-        G("\n%s: ; .d", asmName(findVar(".d", 'F')));
-        G("\n\tCALL RETtoEBP\n\tMOV [%s], EAX\n\tPOP EAX", pv);
-        G("\n\tcinvoke printf, \"%s\", [%s]", "%d", pv);
-        P("\n\tJMP RETfromEBP\n");
-
-        P("\n;=============================================");
-    }
-    else if (seg == 'D') {
-        P("\n\n;================== data =====================");
-        P("\nsection '.data' data readable writeable");
-        P("\n;=============================================");
-    }
-    else if (seg == 'I') {
-        P("\n;====================================");
-        P("\nsection '.idata' import data readable");
-        P("\n; ====================================");
-        P("\nlibrary msvcrt, 'msvcrt.dll', kernel32, 'kernel32.dll'");
-        P("\nimport msvcrt, printf,'printf', getch,'_getch'");
-        P("\nimport kernel32, ExitProcess,'ExitProcess'\n");
-    }
-#else
-    // Linux (32-bit)
-    if (seg == 'C') {
-        int s = addVar("exit", 'F');
-        s = addVar("pv", 'I');
-        P("format ELF executable");
-        P("\n;================== code =====================");
-        P("\nsegment readable executable");
-        P("\nentry main");
-        P("\n;================== library ==================");
-        P("\ninit:\n\tLEA EDI, [stk]\n\tADD EDI, 1024\n\tRET\n\n");
-        P("\nexit:\n\tMOV EAX, 1\n\tXOR EBX, EBX\n\tINT 0x80\n");
-        P("\nputs:\n\tMOV [pv], EAX\n\tRET");
-        P("\nputd:\n\tMOV [pv], EAX\n\tRET");
-        P("\nputc:\n\tMOV [pv], EAX");
-        P("\n\tMOV EAX, 4");
-        P("\n\tMOV EBX, 0");
-        P("\n\tLEA ECX, [pv]");
-        P("\n\tMOV EDX, 1");
-        P("\n\tINT 0x80\n\tRET\n");
-        P("\n;=============================================");
-    }
-    else if (seg == 'D') {
-        P("\n;================== data =====================");
-        P("\nsegment readable writeable");
-        P("\n;=============================================");
-    }
-    else if (seg == 'I') {
-        // P("\n;================== data =====================");
-        // P("\nsegment readable writeable");
-        // P("\n;=============================================");
-    }
-#endif
 }
 
 void ifStmt() {
@@ -422,9 +430,9 @@ void stringStmt() {
 
 void statement() {
     if (is_num) { gen1(LIT, int_val); return; }
-    int i = findVar(id_name, 'I');
+    int i = findVar(token, 'I');
     if (i) { gen1(VARADDR, i); return; }
-    i = findVar(id_name, 'F');
+    i = findVar(token, 'F');
     if (i) { gen1(CALL, i); return; }
 
     if (accept("@"))    { gen(FETCH); }
@@ -455,7 +463,7 @@ void statement() {
 
 void funcDef() {
     next_token();
-    int s = addVar(id_name, 'F');
+    int s = addVar(token, 'F');
     gen1(DEF, s);
     while (1) {
         next_token();
@@ -466,7 +474,7 @@ void funcDef() {
 
 void parseVar() {
     next_token();
-    addVar(id_name, 'I');
+    addVar(token, 'I');
 }
 
 void parseDef() {

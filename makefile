@@ -50,10 +50,10 @@ test: all
 	./hex-dump test > test.hex
 
 ftest: all
-	./fc test.fc > _test.asm
-	fasm _test.asm test
-	chmod +x test
-	./hex-dump test > test.hex
+	./fc ftest.tc > _ftest.asm
+	fasm _ftest.asm ftest
+	chmod +x ftest
+	./hex-dump ftest > ftest.hex
 
 bm: all
 	./tc bm.tc > _bm.asm
