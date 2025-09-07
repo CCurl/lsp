@@ -1,0 +1,7 @@
+int Abc;
+char Def[32];
+
+def main
+    A = 1 + Abc - 3;
+    B = A * B / C;
+end

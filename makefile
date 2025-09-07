@@ -18,6 +18,10 @@ tc: tc.c heap.c heap.h
 	$(CXX) $(CFLAGS) $(LDFLAGS) -o tc tc.c heap.c $(LDLIBS)
 	ls -l tc
 
+jn: jn.c heap.c heap.h
+	$(CXX) $(CFLAGS) $(LDFLAGS) -o jn jn.c heap.c $(LDLIBS)
+	ls -l jn
+
 vm: vm.c
 	$(CXX) $(CFLAGS) $(LDFLAGS) -o vm vm.c $(LDLIBS)
 	ls -l vm
@@ -50,3 +54,8 @@ bm: all
 	fasm _bm.asm bm
 	chmod +x bm
 	./hex-dump bm > bm.hex
+
+jnt: jn jnt.jn
+	./jn jnt.jn > jnt.asm
+	fasm jnt.asm jnt
+	chmod +x jnt
